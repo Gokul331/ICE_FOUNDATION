@@ -67,7 +67,7 @@ const Contact = () => {
           <span className="badge-dot"></span>
           Send your college plan questions
         </div>
-        <h1>Talk to the ICE Labs team<br />about your next step.</h1>
+        <h1>Talk to the ICE Foundation team<br />about your next step.</h1>
         <p>Whether you need help with matching, applications, or scholarships, our startup support team is here to help.</p>
       </div>
 
@@ -82,7 +82,7 @@ const Contact = () => {
             </div>
             <div>
               <div className="info-label">Phone</div>
-              <div className="info-val">+91 94443 12345</div>
+              <div className="info-val">+91 8778635855</div>
               <div className="info-sub">Mon – Sat, 9 AM – 6 PM</div>
             </div>
           </div>
@@ -95,7 +95,7 @@ const Contact = () => {
             </div>
             <div>
               <div className="info-label">Email</div>
-              <div className="info-val">hello@icelabs.co</div>
+              <div className="info-val">hello@icefoundations.com</div>
               <div className="info-sub">We reply within 24 hours</div>
             </div>
           </div>
@@ -108,8 +108,8 @@ const Contact = () => {
             </div>
             <div>
               <div className="info-label">Office</div>
-              <div className="info-val">Anna Salai, Chennai</div>
-              <div className="info-sub">Tamil Nadu — 600 002</div>
+              <div className="info-val">Puduchatram, Namakkal</div>
+              <div className="info-sub">Tamil Nadu — 637 018</div>
             </div>
           </div>
         </div>
@@ -256,11 +256,11 @@ const Contact = () => {
                   <div className="pin-pulse"></div>
                   <div className="pin-dot"></div>
                 </div>
-                <div className="pin-label">ICE Labs HQ</div>
+                <div className="pin-label">ICE FOUNDATION</div>
               </div>
             </div>
             <div className="map-footer">
-              <div className="map-addr">12, Anna Salai, 3rd Floor<br />Chennai, Tamil Nadu 600 002</div>
+              <div className="map-addr">Puduchatram<br />Namakkal, Tamil Nadu 637018</div>
               <button className="map-btn">Get directions →</button>
             </div>
           </div>
@@ -313,10 +313,9 @@ const Contact = () => {
                   </svg>
                 </div>
                 <div>
-                  <div className="s-name">Facebook</div>
-                  <div className="s-handle">@icelabs.in</div>
+                  <div className="s-handle">@icefoundation.in</div>
                 </div>
-                <span className="s-arr">→</span>
+                
               </div>
               <div className="social-link">
                 <div className="s-icon" style={{ background: '#E8F5FD' }}>
@@ -324,11 +323,9 @@ const Contact = () => {
                     <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
                   </svg>
                 </div>
-                <div>
-                  <div className="s-name">Twitter / X</div>
-                  <div className="s-handle">@icelabs</div>
-                </div>
-                <span className="s-arr">→</span>
+                
+                  <div className="s-handle">@icefoundation</div>  
+  
               </div>
               <div className="social-link">
                 <div className="s-icon" style={{ background: '#FFF0F0' }}>
@@ -346,10 +343,9 @@ const Contact = () => {
                   </svg>
                 </div>
                 <div>
-                  <div className="s-name">Instagram</div>
-                  <div className="s-handle">@icelabs</div>
+                  <div className="s-handle">@icefoundation</div>
                 </div>
-                <span className="s-arr">→</span>
+                
               </div>
             </div>
           </div>
@@ -373,7 +369,7 @@ const Contact = () => {
                   <polyline points="6 9 12 15 18 9"/>
                 </svg>
               </div>
-              <div className="faq-a">Yes! Your first 30-minute consultation with an ICE Labs advisor is completely free with no obligations.</div>
+              <div className="faq-a">Yes! Your first 30-minute consultation with an ICE Foundation advisor is completely free with no obligations.</div>
             </div>
             <div className="faq-item">
               <div className="faq-q" onClick={(e) => window.toggleFaq(e.target.parentElement)}>
@@ -399,8 +395,8 @@ const Contact = () => {
 
       {/* Footer */}
       <footer>
-        <div className="ft-logo"><span>ICE</span> Labs</div>
-        <div className="ft-copy">© 2025 ICE Labs. Supporting future-ready students across India.</div>
+        <div className="ft-logo"><span>ICE</span> Foundation</div>
+        <div className="ft-copy">© 2025 ICE Foundation. Supporting future-ready students across India.</div>
       </footer>
     </div>
   );

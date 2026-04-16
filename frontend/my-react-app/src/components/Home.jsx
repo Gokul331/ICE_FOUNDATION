@@ -105,7 +105,7 @@ function Home() {
           </div>
           <div className="hero-stats">
             <div className="stat"> 
-              <div className="stat-num">500<span>+</span></div>
+              <div className="stat-num">100<span>+</span></div>
               <div className="stat-label">Partner Colleges</div>
             </div>
             <div className="stat">
