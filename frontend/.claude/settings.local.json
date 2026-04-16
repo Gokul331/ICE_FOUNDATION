@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(pip install *)",
+      "Bash(python manage.py makemigrations accounts)",
+      "Bash(python manage.py migrate)",
+      "Bash(python seed_data.py)",
+      "Bash(python manage.py runserver 8000)",
+      "Bash(curl -s http://localhost:8000/api/colleges/)",
+      "Bash(curl -s http://localhost:5178/)"
+    ]
+  }
+}
