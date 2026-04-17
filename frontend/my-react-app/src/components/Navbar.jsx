@@ -83,10 +83,10 @@ function Navbar() {
   };
 
   const navLinks = [
-    { to: "/about", label: "About Us" },
-    { to: "/colleges", label: "College Matches" },
-    { to: "/college-suggestion", label: "College Suggestion" },
-    { to: "/contact", label: "Contact" }
+    { to: "/about", label: "ABOUT US" },
+    { to: "/colleges", label: "COLLEGE MATCHES" },
+    { to: "/college-suggestion", label: "SUGGESTION" },
+    { to: "/contact", label: "CONTACT" }
   ];
 
   return (

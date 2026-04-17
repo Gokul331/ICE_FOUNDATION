@@ -89,14 +89,15 @@
   font-weight: 700;
   cursor: pointer;
   transition: all 0.3s ease;
-  border: none;
   font-family: 'Inter', sans-serif;
+  border : 2px solid rgba(255, 255, 255, 0.988);
 }
 
 .btn-primary {
   background: linear-gradient(135deg, #fff, #f0f9fe);
   color: var(--primary-dark);
   box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+ 
 }
 
 .btn-primary:hover {
