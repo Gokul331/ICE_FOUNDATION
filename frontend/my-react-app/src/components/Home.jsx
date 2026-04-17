@@ -150,10 +150,15 @@ function Home() {
 
                   {/* COURSES */}
                   <div className="course-list">
+                    <span className="course-label">Popular Courses:</span>
                     {college.courses?.slice(0, 3).map(course => (
-                      <span key={course.id} className="course-chip">
-                        {course.name} ({course.cutoff_oc})
-                      </span>
+                      
+                      <div key={course.id} className="course-chip "
+                        style={{ fontSize: '12px', padding: '4px 10px', background: '#F0F4F8', borderRadius: '16px', marginRight: '6px', marginBottom: '6px' }}
+                        >
+                        
+                        {course.name}
+                      </div>
                     ))}
                   </div>
 
@@ -164,7 +169,9 @@ function Home() {
                         Scholarship Available
                       </span>
                     )}
-                    <div className="card-arrow">→</div>
+                    <Link to={`/colleges/${college.id}`} className="card-arrow">
+                      →
+                    </Link>
                   </div>
 
                 </div>

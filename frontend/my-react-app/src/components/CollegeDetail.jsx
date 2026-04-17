@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { getCollegeDetail } from '../services/api';
 
 function CollegeDetail() {
   const { id } = useParams();
@@ -9,32 +10,17 @@ function CollegeDetail() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    fetch(`http://localhost:8000/api/colleges/${id}/`)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('College not found');
-        }
-        return response.json();
-      })
-      .then(data => {
-        // Enhance with additional data like in Colleges.js
-        const enhancedData = {
-          ...data,
-          city: getCityForCollege(data.name),
-          stream: getStreamForCollege(data.name),
-          type: getTypeForCollege(data.name),
-          rating: 4.5 + Math.random() * 0.4,
-          logo: getLogoForCollege(data.name),
-          bg: getBgForCollege(data.name),
-          fg: getFgForCollege(data.name)
-        };
-        setCollege(enhancedData);
+    const fetchCollege = async () => {
+      try {
+        const response = await getCollegeDetail(id);
+        setCollege(response.data);
         setLoading(false);
-      })
-      .catch(error => {
-        setError(error.message);
+      } catch (err) {
+        setError('College not found');
         setLoading(false);
-      });
+      }
+    };
+    fetchCollege();
   }, [id]);
 
   useEffect(() => {
@@ -49,71 +35,30 @@ function CollegeDetail() {
     setUser(null);
   };
 
-  // Helper functions (same as Colleges.js)
-  const getCityForCollege = (name) => {
-    const cities = {
-      "IIT Madras": "Chennai, TN",
-      "St. Stephen's College": "New Delhi, DL",
-      "Loyola College": "Chennai, TN",
-      "SRM Institute": "Kattankulathur, TN",
-      "Christ University": "Bangalore, KA"
-    };
-    return cities[name] || "India";
+  // Generate logo letters from college name
+  const getLogoLetters = (collegeName) => {
+    const words = collegeName.split(' ');
+    if (words.length === 1) {
+      return words[0].substring(0, 2).toUpperCase();
+    }
+    return words
+      .map(word => word.charAt(0))
+      .join('')
+      .substring(0, 2)
+      .toUpperCase();
   };
 
-  const getStreamForCollege = (name) => {
-    const streams = {
-      "IIT Madras": "Engineering",
-      "St. Stephen's College": "Arts & Science",
-      "Loyola College": "Arts & Science",
-      "SRM Institute": "Engineering",
-      "Christ University": "Arts & Science"
-    };
-    return streams[name] || "Engineering";
-  };
-
-  const getTypeForCollege = (name) => {
-    const types = {
-      "IIT Madras": "Government",
-      "St. Stephen's College": "Private",
-      "Loyola College": "Private",
-      "SRM Institute": "Deemed",
-      "Christ University": "Deemed"
-    };
-    return types[name] || "Private";
-  };
-
-  const getLogoForCollege = (name) => {
-    const logos = {
-      "IIT Madras": "IIT",
-      "St. Stephen's College": "SS",
-      "Loyola College": "LC",
-      "SRM Institute": "SRM",
-      "Christ University": "CU"
-    };
-    return logos[name] || name.substring(0, 3).toUpperCase();
-  };
-
-  const getBgForCollege = (name) => {
-    const bgs = {
-      "IIT Madras": "#EAF7FD",
-      "St. Stephen's College": "#FFF0EA",
-      "Loyola College": "#EAF0FD",
-      "SRM Institute": "#EAF7FD",
-      "Christ University": "#EDF0FD"
-    };
-    return bgs[name] || "#EAF7FD";
-  };
-
-  const getFgForCollege = (name) => {
-    const fgs = {
-      "IIT Madras": "#3AAAD4",
-      "St. Stephen's College": "#C85A30",
-      "Loyola College": "#3A5AD4",
-      "SRM Institute": "#1B7AB5",
-      "Christ University": "#2A4A8A"
-    };
-    return fgs[name] || "#3AAAD4";
+  // Get college colors based on name hash
+  const getCollegeColors = (name) => {
+    const colors = [
+      { bg: "#EAF7FD", fg: "#3AAAD4" },
+      { bg: "#FFF0EA", fg: "#C85A30" },
+      { bg: "#EAF0FD", fg: "#3A5AD4" },
+      { bg: "#EDF7ED", fg: "#2A8A2A" },
+      { bg: "#FDF5EA", fg: "#C8A530" }
+    ];
+    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
   };
 
   if (loading) {
@@ -133,17 +78,19 @@ function CollegeDetail() {
     );
   }
 
+  const colors = getCollegeColors(college.name);
+
   return (
     <>
       {/* Navbar */}
       <nav>
         <Link to="/" className="logo-area nav-link">
-                 <div className="logo-mark">ICE</div>
-                 <div className="flex flex-col">
-                 <span className="logo-text"><span>ICE</span> Foundation</span>
-                 <span className = "logo-subtext">Inspire Connect Empower</span>
-                 </div>
-               </Link>
+          <div className="logo-mark">ICE</div>
+          <div className="flex flex-col">
+            <span className="logo-text"><span>ICE</span> Foundation</span>
+            <span className="logo-subtext">Inspire Connect Empower</span>
+          </div>
+        </Link>
         <div className="nav-links">
           <Link to="/about" className="nav-link">About Us</Link>
           <Link to="/colleges" className="nav-link active">College Matches</Link>
@@ -169,18 +116,18 @@ function CollegeDetail() {
           <div style={{
             flex: '1',
             minWidth: '300px',
-            background: college.bg,
+            background: colors.bg,
             borderRadius: '16px',
             padding: '32px',
             boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-            border: `1px solid ${college.fg}20`
+            border: `1px solid ${colors.fg}20`
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
               <div style={{
                 width: '60px',
                 height: '60px',
                 borderRadius: '12px',
-                background: `linear-gradient(135deg, ${college.fg}, ${college.fg}CC)`,
+                background: `linear-gradient(135deg, ${colors.fg}, ${colors.fg}CC)`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -188,36 +135,40 @@ function CollegeDetail() {
                 fontWeight: '800',
                 color: '#fff'
               }}>
-                {college.logo}
+                {getLogoLetters(college.name)}
               </div>
               <div>
                 <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0A1628', margin: '0 0 4px 0' }}>{college.name}</h2>
-                <div style={{ fontSize: '14px', color: '#4A6580' }}>{college.city}</div>
+                <div style={{ fontSize: '14px', color: '#4A6580' }}>{college.district}, {college.state}</div>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-              <span style={{
-                padding: '4px 12px',
-                background: '#fff',
-                borderRadius: '20px',
-                fontSize: '12px',
-                fontWeight: '600',
-                color: college.fg
-              }}>
-                {college.stream}
-              </span>
-              <span style={{
-                padding: '4px 12px',
-                background: '#fff',
-                borderRadius: '20px',
-                fontSize: '12px',
-                fontWeight: '600',
-                color: college.fg
-              }}>
-                {college.type}
-              </span>
-              {college.scholarship && (
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+              {college.type && (
+                <span style={{
+                  padding: '4px 12px',
+                  background: '#fff',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: colors.fg
+                }}>
+                  {college.type}
+                </span>
+              )}
+              {college.affiliation && (
+                <span style={{
+                  padding: '4px 12px',
+                  background: '#fff',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: colors.fg
+                }}>
+                  {college.affiliation}
+                </span>
+              )}
+              {college.scholarship_available && (
                 <span style={{
                   padding: '4px 12px',
                   background: '#1D9E75',
@@ -231,23 +182,22 @@ function CollegeDetail() {
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-              <div style={{ fontSize: '14px', color: '#4A6580' }}>Rating:</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '16px', fontWeight: '600', color: '#0A1628' }}>{college.rating.toFixed(1)}</span>
-                <div style={{ display: 'flex' }}>
-                  {[...Array(5)].map((_, i) => (
-                    <span key={i} style={{
-                      color: i < Math.floor(college.rating) ? '#FFD700' : '#E0E0E0',
-                      fontSize: '14px'
-                    }}>★</span>
-                  ))}
-                </div>
+            {college.naac_grade && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                <div style={{ fontSize: '14px', color: '#4A6580' }}>NAAC Grade:</div>
+                <span style={{ fontSize: '16px', fontWeight: '600', color: colors.fg }}>{college.naac_grade}</span>
               </div>
-            </div>
+            )}
+
+            {college.nirf_ranking && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                <div style={{ fontSize: '14px', color: '#4A6580' }}>NIRF Ranking:</div>
+                <span style={{ fontSize: '16px', fontWeight: '600', color: colors.fg }}>#{college.nirf_ranking}</span>
+              </div>
+            )}
 
             <p style={{ fontSize: '15px', color: '#2D3E55', lineHeight: '1.6', margin: '0' }}>
-              {college.desc}
+              {college.description || 'No description available.'}
             </p>
           </div>
 
@@ -264,6 +214,13 @@ function CollegeDetail() {
               Ready to Apply?
             </h3>
 
+            {college.fees && (
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ fontSize: '14px', color: '#4A6580', marginBottom: '8px' }}>Annual Fees</div>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: '#0A1628' }}>₹{college.fees.toLocaleString()}</div>
+              </div>
+            )}
+
             <div style={{ marginBottom: '24px' }}>
               <div style={{ fontSize: '14px', color: '#4A6580', marginBottom: '8px' }}>Application Fee</div>
               <div style={{ fontSize: '18px', fontWeight: '600', color: '#0A1628' }}>₹1,500</div>
@@ -277,7 +234,7 @@ function CollegeDetail() {
             <button style={{
               width: '100%',
               padding: '16px',
-              background: college.fg,
+              background: colors.fg,
               color: '#fff',
               border: 'none',
               borderRadius: '12px',
@@ -296,6 +253,91 @@ function CollegeDetail() {
             </div>
           </div>
         </div>
+
+        {/* Courses Section */}
+        {college.courses && college.courses.length > 0 && (
+          <div style={{ marginTop: '40px' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#0A1628', marginBottom: '20px' }}>Available Courses</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+              {college.courses.map(course => (
+                <div key={course.id} style={{
+                  background: '#fff',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                  border: '1px solid #E2ECF5',
+                  textTransform : 'capitalize',
+                }}>
+                  <h4 style={{ fontSize: '16px', fontWeight: '600', color: '#0A1628', margin: '0 0 12px 0' }}>{course.name}</h4>
+                  {course.stream && (
+                    <div style={{ fontSize: '13px', color: '#4A6580', marginBottom: '8px' }}>Stream: {course.stream}</div>
+                  )}
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {course.fees && (
+                      <span style={{ fontSize: '12px', padding: '2px 8px', background: '#F0F4F8', borderRadius: '4px' }}>
+                        Fees : ₹{course.fees.toLocaleString()}
+                      </span>
+                    )}
+                   
+                    {course.intake && (
+                      <span style={{ fontSize: '12px', padding: '2px 8px', background: '#F0F4F8', borderRadius: '4px' }}>
+                        Intake: {course.intake}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Placement Stats */}
+        {(college.placement_percentage || college.highest_package || college.average_package) && (
+          <div style={{ marginTop: '40px' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#0A1628', marginBottom: '20px' }}>Placement Statistics</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
+              {college.placement_percentage && (
+                <div style={{
+                  background: '#fff',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                  border: '1px solid #E2ECF5',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '32px', fontWeight: '700', color: '#1D9E75' }}>{college.placement_percentage}%</div>
+                  <div style={{ fontSize: '14px', color: '#4A6580' }}>Placement Rate</div>
+                </div>
+              )}
+              {college.highest_package && (
+                <div style={{
+                  background: '#fff',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                  border: '1px solid #E2ECF5',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '32px', fontWeight: '700', color: colors.fg }}>₹{(college.highest_package / 100000).toFixed(1)} LPA</div>
+                  <div style={{ fontSize: '14px', color: '#4A6580' }}>Highest Package</div>
+                </div>
+              )}
+              {college.average_package && (
+                <div style={{
+                  background: '#fff',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                  border: '1px solid #E2ECF5',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '32px', fontWeight: '700', color: colors.fg }}>₹{(college.average_package / 100000).toFixed(1)} LPA</div>
+                  <div style={{ fontSize: '14px', color: '#4A6580' }}>Average Package</div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <style jsx>{`
@@ -338,6 +380,12 @@ function CollegeDetail() {
         }
         .logo-text span {
           color: #5BB8E0;
+        }
+        .logo-subtext {
+          font-size: 10px;
+          font-weight: 500;
+          color: #4A6580;
+          letter-spacing: 0.5px;
         }
         .nav-links {
           display: flex;

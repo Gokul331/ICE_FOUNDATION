@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from './Navbar';
+import { suggestColleges } from '../services/api';
 import '../styles/collegesuggestion.css';
 
 function CollegeSuggestion() {
-  const [colleges, setColleges] = useState([]);
   const [user, setUser] = useState(null);
   const [formData, setFormData] = useState({
     cutoffMark: '',
@@ -14,13 +14,7 @@ function CollegeSuggestion() {
   });
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    fetch('http://localhost:8000/api/colleges/')
-      .then(response => response.json())
-      .then(data => setColleges(data))
-      .catch(error => console.error('Error fetching colleges:', error));
-  }, []);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -42,24 +36,27 @@ function CollegeSuggestion() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
-    // Filter colleges based on criteria
-    const filtered = colleges.filter(college => {
-      const cutoffMatch = !formData.cutoffMark || parseFloat(college.cutoff_mark) <= parseFloat(formData.cutoffMark);
-      const communityMatch = !formData.communityCategory || college.community_category.toLowerCase().includes(formData.communityCategory.toLowerCase());
-      const branchMatch = !formData.preferredBranch || college.branch.toLowerCase().includes(formData.preferredBranch.toLowerCase());
-      const districtMatch = !formData.preferredDistrict || college.district.toLowerCase().includes(formData.preferredDistrict.toLowerCase());
+    try {
+      const params = {
+        cutoff_mark: formData.cutoffMark,
+        community: formData.communityCategory.toLowerCase(),
+        preferred_stream: formData.preferredBranch,
+        preferred_district: formData.preferredDistrict
+      };
 
-      return cutoffMatch && communityMatch && branchMatch && districtMatch;
-    });
-
-    setTimeout(() => {
-      setSuggestions(filtered);
+      const response = await suggestColleges(params);
+      setSuggestions(response.data);
+    } catch (err) {
+      console.error('Error fetching suggestions:', err);
+      setError('Failed to fetch college suggestions. Please try again.');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   // Generate logo letters from college name
@@ -77,8 +74,8 @@ function CollegeSuggestion() {
 
   return (
     <div className="suggestion-page">
-      <Navbar user={user} onLogout={handleLogout} />  
-      
+      <Navbar user={user} onLogout={handleLogout} />
+
       <div className="hero">
         <div className="hero-ring ring-1"></div>
         <div className="hero-ring ring-2"></div>
@@ -134,7 +131,6 @@ function CollegeSuggestion() {
                   <option value="MBC">MBC</option>
                   <option value="SC">SC</option>
                   <option value="ST">ST</option>
-                  <option value="General">General</option>
                 </select>
               </div>
 
@@ -147,18 +143,12 @@ function CollegeSuggestion() {
                   className="form-input"
                 >
                   <option value="">All</option>
-                  <option value="Computer Science">Computer Science</option>
-                  <option value="Mechanical">Mechanical</option>
-                  <option value="Electrical">Electrical</option>
-                  <option value="Civil">Civil</option>
-                  <option value="Chemical">Chemical</option>
-                  <option value="Biotechnology">Biotechnology</option>
-                  <option value="Information Technology">Information Technology</option>
-                  <option value="Engineering">Engineering</option>
-                  <option value="Arts & Science">Arts & Science</option>
-                  <option value="Management">Management</option>
-                  <option value="Medical">Medical</option>
-                  <option value="Law">Law</option>
+                  <option value="engineering">Engineering</option>
+                  <option value="management">Management</option>
+                  <option value="science">Science</option>
+                  <option value="arts">Arts</option>
+                  <option value="medical">Medical</option>
+                  <option value="law">Law</option>
                 </select>
               </div>
 
@@ -181,7 +171,6 @@ function CollegeSuggestion() {
                   <option value="Vellore">Vellore</option>
                   <option value="Erode">Erode</option>
                   <option value="Thoothukudi">Thoothukudi</option>
-                  <option value="India">Any (India)</option>
                 </select>
               </div>
             </div>
@@ -200,6 +189,12 @@ function CollegeSuggestion() {
           </div>
         )}
 
+        {error && (
+          <div className="error-message">
+            {error}
+          </div>
+        )}
+
         {suggestions.length > 0 && !loading && (
           <div className="suggestions-container">
             <h2 className="suggestions-title">
@@ -213,7 +208,7 @@ function CollegeSuggestion() {
                   </div>
                   <div className="suggestion-info">
                     <div className="suggestion-name">{college.name}</div>
-                    <div className="suggestion-meta">{college.district}, {college.branch}</div>
+                    <div className="suggestion-meta">{college.district}</div>
                   </div>
                   <Link to={`/colleges/${college.id}`} className="suggestion-link">
                     View Details →
@@ -221,12 +216,15 @@ function CollegeSuggestion() {
                 </div>
                 <div className="suggestion-desc">{college.description}</div>
                 <div className="suggestion-details">
-                  <span className="detail-item">Cutoff: {college.cutoff_mark}</span>
-                  <span className="detail-item">Category: {college.community_category}</span>
-                  <span className="detail-item">Branch: {college.branch}</span>
                   <span className="detail-item">District: {college.district}</span>
                   {college.scholarship_available && (
                     <span className="detail-item scholarship-badge">Scholarship Available</span>
+                  )}
+                  {college.naac_grade && (
+                    <span className="detail-item">NAAC: {college.naac_grade}</span>
+                  )}
+                  {college.placement_percentage && (
+                    <span className="detail-item">Placement: {college.placement_percentage}%</span>
                   )}
                 </div>
               </div>

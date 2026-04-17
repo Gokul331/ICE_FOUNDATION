@@ -97,7 +97,7 @@
   background: linear-gradient(135deg, #fff, #f0f9fe);
   color: var(--primary-dark);
   box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
- 
+  border: 2px white;
 }
 
 .btn-primary:hover {
@@ -408,7 +408,7 @@
   font-weight: 700;
   color: #ffffff;
   background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  border: 2px var(--glass);
+  border: 2px solid white;
   border-radius: var(--radius);
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -437,6 +437,7 @@
   box-shadow: 0 12px 30px rgba(128, 190, 219, 0.4);
   color: var(--primary-dark);
   background: var(--glass);
+  border : 2px solid var(--primary-dark)
  
 }
 
@@ -1018,3 +1019,4 @@ footer {
     margin: 0 1rem clamp(2rem, 8vw, 3rem);
   }
 }
+

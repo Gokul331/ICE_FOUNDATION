@@ -93,7 +93,7 @@ function Navbar() {
     <>
       <nav>
         <Link to="/" className="logo-area nav-link" onClick={closeMobileMenu}>
-          <div className="logo-mark">ICE</div>
+          <img src="/favicon.png" alt="ICE Foundation" className="logo-name" />
           <div className="logo-text-wrapper">
             <span className="logo-text"><span>ICE</span> Foundation</span>
             <span className="logo-subtext">Inspire Connect Empower</span>
@@ -195,7 +195,7 @@ function Navbar() {
       {/* Mobile Navigation Menu */}
       <div className={`mobile-nav-menu ${mobileMenuOpen ? 'open' : ''}`} ref={mobileMenuRef}>
         <div className="mobile-nav-header">
-          <div className="logo-mark">ICE</div>
+          <img src="/favicon.png" alt="ICE Foundation" className="logo-name" />
           <span className="mobile-nav-title">ICE Foundation</span>
         </div>
         

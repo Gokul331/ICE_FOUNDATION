@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/auth.css';
 
+// IMPORTANT: Set your backend URL here
+const API_BASE_URL = 'http://127.0.0.1:8000/api';  // Use 127.0.0.1 instead of localhost
+
 const passwordStrength = (value) => {
   let score = 0;
   if (value.length >= 8) score += 1;
@@ -28,6 +31,7 @@ function Auth({ initialTab = 'login' }) {
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null);
   const [statusType, setStatusType] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -54,25 +58,41 @@ function Auth({ initialTab = 'login' }) {
       return;
     }
 
+    setLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/login/', {
+      // Use the correct backend URL
+      const response = await fetch(`${API_BASE_URL}/login/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: loginEmail, password: loginPassword }),
+        headers: { 
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          username: loginEmail, 
+          password: loginPassword 
+        }),
       });
+      
+      // Check if response is OK
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Login failed');
+      }
+      
       const data = await response.json();
+      
       if (response.ok) {
-        localStorage.setItem('user', JSON.stringify(data));
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
         setStatusMessage('Signed in successfully.');
         setStatusType('success');
         setTimeout(() => navigate('/'), 800);
-      } else {
-        setStatusMessage(data.error || 'Login failed. Check your credentials.');
-        setStatusType('error');
       }
     } catch (error) {
-      setStatusMessage('Unable to sign in. Please try again later.');
+      console.error('Login error:', error);
+      setStatusMessage(error.message || 'Unable to sign in. Please try again later.');
       setStatusType('error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -84,28 +104,54 @@ function Auth({ initialTab = 'login' }) {
       return;
     }
 
+    if (registerPassword.length < 8) {
+      setStatusMessage('Password must be at least 8 characters long.');
+      setStatusType('error');
+      return;
+    }
+
+    setLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/register/', {
+      // Use the correct backend URL
+      const response = await fetch(`${API_BASE_URL}/register/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           username: registerEmail,
           email: registerEmail,
           password: registerPassword,
+          password2: registerPassword,
+          first_name: registerFirstName,
+          last_name: registerLastName,
+          phone: registerPhone,
         }),
       });
+      
       const data = await response.json();
+      
       if (response.ok) {
-        setStatusMessage('Account created successfully. You can sign in now.');
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setStatusMessage('Account created successfully! Redirecting...');
         setStatusType('success');
-        setTimeout(() => switchTab('login'), 1000);
+        setTimeout(() => navigate('/'), 1000);
       } else {
-        setStatusMessage(data.error || data.password?.[0] || data.username?.[0] || 'Registration failed.');
+        let errorMsg = 'Registration failed.';
+        if (data.password) errorMsg = data.password[0];
+        else if (data.username) errorMsg = data.username[0];
+        else if (data.email) errorMsg = data.email[0];
+        else if (data.error) errorMsg = data.error;
+        setStatusMessage(errorMsg);
         setStatusType('error');
       }
     } catch (error) {
-      setStatusMessage('Unable to register. Please try again later.');
+      console.error('Registration error:', error);
+      setStatusMessage('Unable to register. Please make sure backend is running on http://127.0.0.1:8000');
       setStatusType('error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -146,6 +192,7 @@ function Auth({ initialTab = 'login' }) {
                 type="button"
                 onClick={() => switchTab('login')}
                 className={`tab-btn ${activeTab === 'login' ? 'active' : ''}`}
+                disabled={loading}
               >
                 Sign in
               </button>
@@ -153,6 +200,7 @@ function Auth({ initialTab = 'login' }) {
                 type="button"
                 onClick={() => switchTab('register')}
                 className={`tab-btn ${activeTab === 'register' ? 'active' : ''}`}
+                disabled={loading}
               >
                 Create account
               </button>
@@ -161,6 +209,7 @@ function Auth({ initialTab = 'login' }) {
               type="button"
               onClick={() => navigate('/')}
               className="back-home-btn"
+              disabled={loading}
             >
               Back to home
             </button>
@@ -177,16 +226,15 @@ function Auth({ initialTab = 'login' }) {
               <div className="form-welcome">
                 <h2>Welcome back</h2>
                 <p>
-                  No account? <button type="button" onClick={() => switchTab('register')} className="link-btn">Register free</button>
+                  No account? <button type="button" onClick={() => switchTab('register')} className="link-btn" disabled={loading}>Register free</button>
                 </p>
               </div>
 
               <div className="social-buttons">
-                <button type="button" className="social-btn">
+                <button type="button" className="social-btn" disabled={loading}>
                   <span className="social-icon">G</span>
                   Google
                 </button>
-                
               </div>
 
               <div className="divider">or with email</div>
@@ -204,6 +252,7 @@ function Auth({ initialTab = 'login' }) {
                     onChange={(e) => setLoginEmail(e.target.value)}
                     placeholder="you@example.com"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -222,11 +271,13 @@ function Auth({ initialTab = 'login' }) {
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="Your password"
                     required
+                    disabled={loading}
                   />
                   <button
                     type="button"
                     className="password-toggle"
                     onClick={() => setShowLoginPassword((prev) => !prev)}
+                    disabled={loading}
                   >
                     {showLoginPassword ? 'Hide' : 'Show'}
                   </button>
@@ -234,17 +285,19 @@ function Auth({ initialTab = 'login' }) {
               </div>
 
               <div className="forgot-password">
-                <button type="button" className="forgot-link">Forgot password?</button>
+                <button type="button" className="forgot-link" disabled={loading}>Forgot password?</button>
               </div>
 
-              <button type="submit" className="submit-btn">Sign in</button>
+              <button type="submit" className="submit-btn" disabled={loading}>
+                {loading ? 'Signing in...' : 'Sign in'}
+              </button>
             </form>
           ) : (
             <form onSubmit={handleRegister} className="auth-form">
               <div className="form-welcome">
                 <h2>Join ICE Foundation</h2>
                 <p>
-                  Have an account? <button type="button" onClick={() => switchTab('login')} className="link-btn">Sign in</button>
+                  Have an account? <button type="button" onClick={() => switchTab('login')} className="link-btn" disabled={loading}>Sign in</button>
                 </p>
               </div>
 
@@ -261,6 +314,7 @@ function Auth({ initialTab = 'login' }) {
                       value={registerFirstName}
                       onChange={(e) => setRegisterFirstName(e.target.value)}
                       placeholder="Arjun"
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -276,6 +330,7 @@ function Auth({ initialTab = 'login' }) {
                       value={registerLastName}
                       onChange={(e) => setRegisterLastName(e.target.value)}
                       placeholder="Kumar"
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -294,6 +349,7 @@ function Auth({ initialTab = 'login' }) {
                     onChange={(e) => setRegisterEmail(e.target.value)}
                     placeholder="you@example.com"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -309,6 +365,7 @@ function Auth({ initialTab = 'login' }) {
                     value={registerPhone}
                     onChange={(e) => setRegisterPhone(e.target.value)}
                     placeholder="+91 98765 43210"
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -327,11 +384,13 @@ function Auth({ initialTab = 'login' }) {
                     onChange={(e) => setRegisterPassword(e.target.value)}
                     placeholder="Min. 8 characters"
                     required
+                    disabled={loading}
                   />
                   <button
                     type="button"
                     className="password-toggle"
                     onClick={() => setShowRegisterPassword((prev) => !prev)}
+                    disabled={loading}
                   >
                     {showRegisterPassword ? 'Hide' : 'Show'}
                   </button>
@@ -351,16 +410,19 @@ function Auth({ initialTab = 'login' }) {
                   type="checkbox"
                   checked={agreeTerms}
                   onChange={(e) => setAgreeTerms(e.target.checked)}
+                  disabled={loading}
                 />
                 <span>
-                  I agree to the <Link to="/" className="terms-link">Terms of Service</Link> and <Link to="/" className="terms-link">Privacy Policy</Link>
+                  I agree to the <Link to="/terms" className="terms-link">Terms of Service</Link> and <Link to="/privacy" className="terms-link">Privacy Policy</Link>
                 </span>
               </label>
 
-              <button type="submit" className="submit-btn">Create account</button>
+              <button type="submit" className="submit-btn" disabled={loading}>
+                {loading ? 'Creating account...' : 'Create account'}
+              </button>
               
               <p className="terms-note">
-                By continuing you agree to our <Link to="/" className="terms-link">Terms</Link> & <Link to="/" className="terms-link">Privacy Policy</Link>
+                By continuing you agree to our <Link to="/terms" className="terms-link">Terms</Link> & <Link to="/privacy" className="terms-link">Privacy Policy</Link>
               </p>
             </form>
           )}

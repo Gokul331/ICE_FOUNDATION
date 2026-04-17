@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python manage.py makemigrations colleges)",
+      "Bash(python manage.py migrate)",
+      "Bash(python manage.py check)",
+      "Bash(curl -s -X POST http://127.0.0.1:8000/api/register/ -H \"Content-Type: application/json\" -d '{\"username\":\"testuser123\",\"email\":\"test123@example.com\",\"password\":\"testpass123\",\"password2\":\"testpass123\"}')",
+      "Bash(curl -s -X POST http://127.0.0.1:8000/api/register/ -H \"Content-Type: application/json\" -d '{\"username\":\"testuser456\",\"email\":\"test456@example.com\",\"password\":\"testpass123\",\"password2\":\"testpass123\"}')",
+      "Bash(curl -s -X POST http://127.0.0.1:8000/api/register/ -H \"Content-Type: application/json\" -d '{\"username\":\"newuser@test.com\",\"email\":\"newuser@test.com\",\"password\":\"password123\",\"password2\":\"password123\",\"first_name\":\"John\",\"last_name\":\"Doe\",\"phone\":\"9876543210\"}')",
+      "Bash(curl -s -X POST http://127.0.0.1:8000/api/login/ -H \"Content-Type: application/json\" -d '{\"username\":\"newuser@test.com\",\"password\":\"password123\"}')",
+      "Bash(curl -s -X OPTIONS http://127.0.0.1:8000/api/register/ -H \"Origin: http://localhost:5173\" -H \"Access-Control-Request-Method: POST\" -v)"
+    ]
+  }
+}

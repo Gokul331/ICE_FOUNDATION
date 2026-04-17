@@ -18,22 +18,13 @@ nav {
 .logo-area {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
   text-decoration: none;
 }
 
-.logo-mark {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #87CEEB, #5BB8E0);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 14px;
-  color: #fff;
-  letter-spacing: -0.5px;
+.logo-name {
+  width: 60px;
+  height: 60px;
 }
 
 .logo-text-wrapper {
@@ -339,9 +330,9 @@ nav {
   gap: 12px;
 }
 
-.mobile-nav-header .logo-mark {
-  width: 40px;
-  height: 40px;
+.mobile-nav-header .logo-name {
+  width: 60px;
+  height: 60px;
   background: #fff;
   color: #5BB8E0;
 }
@@ -569,14 +560,12 @@ nav {
     padding: 12px 24px;
   }
   
-  .logo-area {
-    flex: 1;
-  }
   
-  .logo-mark {
+  
+  .logo-name {
     width: 36px;
     height: 36px;
-    font-size: 12px;
+    
   }
   
   .logo-text {
@@ -601,10 +590,10 @@ nav {
     padding: 10px 20px;
   }
   
-  .logo-mark {
-    width: 32px;
-    height: 32px;
-    font-size: 11px;
+  .logo-name {
+    width: 45px;
+    height: 45px;
+    
   }
   
   .logo-text {
@@ -657,7 +646,7 @@ nav {
     gap: 8px;
   }
   
-  .logo-mark {
+  .logo-name {
     width: 28px;
     height: 28px;
     font-size: 10px;
@@ -710,9 +699,9 @@ nav {
     padding: 20px 16px;
   }
   
-  .mobile-nav-header .logo-mark {
-    width: 32px;
-    height: 32px;
+  .mobile-nav-header .logo-name {
+    width: 45px;
+    height: 45px;
     font-size: 10px;
   }
   
@@ -760,7 +749,7 @@ nav {
     padding: 8px 12px;
   }
   
-  .logo-mark {
+  .logo-name {
     width: 24px;
     height: 24px;
     font-size: 9px;
@@ -823,7 +812,7 @@ nav {
     padding: 16px;
   }
   
-  .mobile-nav-header .logo-mark {
+  .mobile-nav-header .logo-name {
     width: 28px;
     height: 28px;
     font-size: 9px;
@@ -880,7 +869,7 @@ nav {
     padding: 6px 10px;
   }
   
-  .logo-mark {
+  .logo-name {
     width: 22px;
     height: 22px;
     font-size: 8px;
@@ -915,7 +904,7 @@ nav {
     padding: 14px;
   }
   
-  .mobile-nav-header .logo-mark {
+  .mobile-nav-header .logo-name {
     width: 24px;
     height: 24px;
     font-size: 8px;
@@ -980,7 +969,7 @@ nav {
     padding: 6px 20px;
   }
   
-  .logo-mark {
+  .logo-name {
     width: 28px;
     height: 28px;
     font-size: 10px;
@@ -1008,7 +997,7 @@ nav {
 
 /* High DPI Screens (Retina) */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-  .logo-mark,
+  .logo-name,
   .user-avatar,
   .nav-btn {
     image-rendering: crisp-edges;

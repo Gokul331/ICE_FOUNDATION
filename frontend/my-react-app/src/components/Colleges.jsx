@@ -1,37 +1,31 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from './Navbar';
+import { getColleges } from '../services/api';
 import '../styles/colleges.css';
 
 function Colleges() {
   const [colleges, setColleges] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({ stream: 'All', type: 'All' });
-  const [sortBy, setSortBy] = useState('rating');
+  const [sortBy, setSortBy] = useState('name');
   const [viewMode, setViewMode] = useState('grid');
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/colleges/')
-      .then(response => response.json())
-      .then(data => {
-        const enhancedData = data.map((college, index) => ({
-          ...college,
-          id: college.id,
-          name: college.name,
-          city: getCityForCollege(college.name),
-          stream: getStreamForCollege(college.name),
-          type: getTypeForCollege(college.name),
-          rating: 4.5 + Math.random() * 0.4,
-          scholarship: college.scholarship_available,
-          desc: college.description,
-          logo: getLogoForCollege(college.name),
-          bg: getBgForCollege(college.name),
-          fg: getFgForCollege(college.name)
-        }));
-        setColleges(enhancedData);
-      })
-      .catch(error => console.error('Error fetching colleges:', error));
+    const fetchColleges = async () => {
+      try {
+        const response = await getColleges();
+        setColleges(response.data);
+        setLoading(false);
+      } catch (err) {
+        setError('Failed to load colleges');
+        setLoading(false);
+      }
+    };
+    fetchColleges();
   }, []);
 
   useEffect(() => {
@@ -46,100 +40,83 @@ function Colleges() {
     setUser(null);
   };
 
-  const getCityForCollege = (name) => {
-    const cities = {
-      "IIT Madras": "Chennai, TN",
-      "St. Stephen's College": "New Delhi, DL",
-      "Loyola College": "Chennai, TN",
-      "SRM Institute": "Kattankulathur, TN",
-      "Christ University": "Bangalore, KA"
-    };
-    return cities[name] || "India";
+  // Get colors for college based on name hash
+  const getCollegeColors = (name) => {
+    const colors = [
+      { bg: "#EAF7FD", fg: "#3AAAD4" },
+      { bg: "#FFF0EA", fg: "#C85A30" },
+      { bg: "#EAF0FD", fg: "#3A5AD4" },
+      { bg: "#EDF7ED", fg: "#2A8A2A" },
+      { bg: "#FDF5EA", fg: "#C8A530" }
+    ];
+    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
   };
 
-  const getStreamForCollege = (name) => {
-    const streams = {
-      "IIT Madras": "Engineering",
-      "St. Stephen's College": "Arts & Science",
-      "Loyola College": "Arts & Science",
-      "SRM Institute": "Engineering",
-      "Christ University": "Arts & Science"
-    };
-    return streams[name] || "Engineering";
+  // Generate logo letters from college name
+  const getLogoLetters = (collegeName) => {
+    const words = collegeName.split(' ');
+    if (words.length === 1) {
+      return words[0].substring(0, 2).toUpperCase();
+    }
+    return words
+      .map(word => word.charAt(0))
+      .join('')
+      .substring(0, 2)
+      .toUpperCase();
   };
 
-  const getTypeForCollege = (name) => {
-    const types = {
-      "IIT Madras": "Government",
-      "St. Stephen's College": "Private",
-      "Loyola College": "Private",
-      "SRM Institute": "Deemed",
-      "Christ University": "Deemed"
-    };
-    return types[name] || "Private";
+  // Format type for display (capitalize)
+  const formatType = (type) => {
+    if (!type) return 'Private';
+    return type.charAt(0).toUpperCase() + type.slice(1);
   };
 
-  const getLogoForCollege = (name) => {
-    const logos = {
-      "IIT Madras": "IIT",
-      "St. Stephen's College": "SS",
-      "Loyola College": "LC",
-      "SRM Institute": "SRM",
-      "Christ University": "CU"
-    };
-    return logos[name] || name.substring(0, 3).toUpperCase();
-  };
-
-  const getBgForCollege = (name) => {
-    const bgs = {
-      "IIT Madras": "#EAF7FD",
-      "St. Stephen's College": "#FFF0EA",
-      "Loyola College": "#EAF0FD",
-      "SRM Institute": "#EAF7FD",
-      "Christ University": "#EDF0FD"
-    };
-    return bgs[name] || "#EAF7FD";
-  };
-
-  const getFgForCollege = (name) => {
-    const fgs = {
-      "IIT Madras": "#3AAAD4",
-      "St. Stephen's College": "#C85A30",
-      "Loyola College": "#3A5AD4",
-      "SRM Institute": "#1B7AB5",
-      "Christ University": "#2A4A8A"
-    };
-    return fgs[name] || "#3AAAD4";
-  };
+  const enhancedColleges = useMemo(() => {
+    return colleges.map(college => {
+      const colors = getCollegeColors(college.name);
+      return {
+        ...college,
+        city: college.district || 'Tamil Nadu',
+        stream: college.type || 'Engineering',
+        type: formatType(college.type),
+        scholarship: college.scholarship_available,
+        desc: college.description || 'No description available.',
+        logo: getLogoLetters(college.name),
+        bg: colors.bg,
+        fg: colors.fg
+      };
+    });
+  }, [colleges]);
 
   const filteredAndSortedColleges = useMemo(() => {
-    let filtered = colleges.filter(college => {
+    let filtered = enhancedColleges.filter(college => {
       const matchesSearch = searchQuery === '' ||
         college.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        college.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        college.stream.toLowerCase().includes(searchQuery.toLowerCase());
+        (college.city && college.city.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      const matchesStream = filters.stream === 'All' || college.stream === filters.stream;
       const matchesType = filters.type === 'All' || college.type === filters.type;
 
-      return matchesSearch && matchesStream && matchesType;
+      return matchesSearch && matchesType;
     });
 
     filtered.sort((a, b) => {
       switch (sortBy) {
-        case 'rating':
-          return b.rating - a.rating;
         case 'name':
           return a.name.localeCompare(b.name);
-        case 'scholarship':
-          return b.scholarship - a.scholarship;
+        case 'placement':
+          return (b.placement_percentage || 0) - (a.placement_percentage || 0);
+        case 'fees':
+          return (a.fees || 0) - (b.fees || 0);
+        case 'nirf':
+          return (a.nirf_ranking || 999) - (b.nirf_ranking || 999);
         default:
           return 0;
       }
     });
 
     return filtered;
-  }, [colleges, searchQuery, filters, sortBy]);
+  }, [enhancedColleges, searchQuery, filters, sortBy]);
 
   const handleFilterChange = (filterType, value) => {
     setFilters(prev => ({ ...prev, [filterType]: value }));
@@ -182,13 +159,12 @@ function Colleges() {
               <div className="card-tags">
                 {college.scholarship && <span className="tag tag-scholarship">Scholarship Available</span>}
                 <span className="tag tag-type">{college.type}</span>
-                <span className="tag tag-stream">{college.stream}</span>
+                {college.naac_grade && <span className="tag tag-stream">NAAC: {college.naac_grade}</span>}
               </div>
             </div>
             <div className="card-footer">
               <div className="card-rating">
-                <div className="stars">{renderStars(college.rating)}</div>
-                {college.rating.toFixed(1)}
+                {college.nirf_ranking ? <span>NIRF: #{college.nirf_ranking}</span> : <span>NIRF: N/A</span>}
               </div>
               <button className="apply-btn">Apply now</button>
             </div>
@@ -212,13 +188,11 @@ function Colleges() {
               <div className="list-tags">
                 {college.scholarship && <span className="tag tag-scholarship">Scholarship Available</span>}
                 <span className="tag tag-type">{college.type}</span>
-                <span className="tag tag-stream">{college.stream}</span>
               </div>
             </div>
             <div className="list-right">
               <div className="list-rating">
-                <div className="stars">{renderStars(college.rating)}</div>
-                {college.rating.toFixed(1)}
+                {college.nirf_ranking ? <span>NIRF: #{college.nirf_ranking}</span> : <span>NIRF: N/A</span>}
               </div>
               <button className="apply-btn">Apply now</button>
             </div>
@@ -227,6 +201,29 @@ function Colleges() {
       );
     }
   };
+
+  if (loading) {
+    return (
+      <div className="colleges-page">
+        <Navbar user={user} onLogout={handleLogout} />
+        <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div>Loading colleges...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="colleges-page">
+        <Navbar user={user} onLogout={handleLogout} />
+        <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+          <div style={{ color: '#E24B4A', marginBottom: '20px' }}>{error}</div>
+          <button onClick={() => window.location.reload()} className="apply-btn">Retry</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="colleges-page">
@@ -258,18 +255,8 @@ function Colleges() {
       </div>
 
       <div className="filter-bar">
-        <span className="filter-label">Stream</span>
-        {['All', 'Engineering', 'Arts & Science', 'Management', 'Medical', 'Law'].map(stream => (
-          <button
-            key={stream}
-            className={`chip ${filters.stream === stream ? 'active' : ''}`}
-            onClick={() => handleFilterChange('stream', stream)}
-          >
-            {stream}
-          </button>
-        ))}
-        <span className="filter-label" style={{ marginLeft: '12px' }}>Type</span>
-        {['All', 'Government', 'Private', 'Deemed'].map(type => (
+        <span className="filter-label">Type</span>
+        {['All', 'Government', 'Private', 'Aided', 'Autonomous'].map(type => (
           <button
             key={type}
             className={`chip ${filters.type === type ? 'active' : ''}`}
@@ -283,9 +270,10 @@ function Colleges() {
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
         >
-          <option value="rating">Sort: Top rated</option>
           <option value="name">Sort: A–Z</option>
-          <option value="scholarship">Sort: Scholarship first</option>
+          <option value="placement">Sort: Placement %</option>
+          <option value="fees">Sort: Lowest Fees</option>
+          <option value="nirf">Sort: NIRF Ranking</option>
         </select>
       </div>
 
@@ -324,23 +312,12 @@ function Colleges() {
           {filteredAndSortedColleges.map(college => renderCollegeCard(college))}
         </div>
 
-        <div className="pagination">
-          <button className="pg-arrow">
-            <svg fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-              <polyline points="15 18 9 12 15 6"/>
-            </svg>
-          </button>
-          <button className="pg-btn active">1</button>
-          <button className="pg-btn">2</button>
-          <button className="pg-btn">3</button>
-          <span style={{ fontSize: '13px', color: '#B0CEDE', padding: '0 4px' }}>...</span>
-          <button className="pg-btn">12</button>
-          <button className="pg-arrow">
-            <svg fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-          </button>
-        </div>
+        {filteredAndSortedColleges.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#4A6580' }}>
+            <div style={{ fontSize: '18px', marginBottom: '12px' }}>No colleges found</div>
+            <div>Try adjusting your search or filters</div>
+          </div>
+        )}
       </div>
     </div>
   );
