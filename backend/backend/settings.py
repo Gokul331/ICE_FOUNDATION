@@ -23,9 +23,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-&z+ca)$#0^a(l^nve5dhf0y*8c32om^-$ey#oij06cst@1cpy8'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'icefoundation.vercel.app', 'www.icefoundation.in']
 
 
 # Application definition
@@ -58,10 +58,9 @@ MIDDLEWARE = [
 CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
     "http://localhost:5179",
-    "http://127.0.0.1:5179",
+    "http://127.0.0.1:3000",
+    "https://icefoundation.vercel.app",
 ]
 
 ROOT_URLCONF = 'backend.urls'
