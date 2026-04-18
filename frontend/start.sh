@@ -19,7 +19,7 @@ check_port() {
 if check_port 8000; then
   echo "⚠️  Port 8000 is in use - Django may already be running"
 else
-  echo "🚀 Starting Django Backend on http://localhost:8000"
+  echo "🚀 Starting Django Backend on https://ice-foundation-1.onrender.com/api/"
   cd backend && python manage.py runserver 8000 &
 fi
 
@@ -30,13 +30,13 @@ sleep 2
 if check_port 5173; then
   echo "⚠️  Port 5173 is in use - Frontend may already be running"
 else
-  echo "🚀 Starting React Frontend on http://localhost:5173"
+  echo "🚀 Starting React Frontend on https://icefoundation.vercel.app/"
   cd my-react-app && npm run dev &
 fi
 
 echo ""
 echo "✅ Servers starting..."
-echo "   Frontend: http://localhost:5173"
-echo "   Backend:  http://localhost:8000"
+echo "   Frontend: https://icefoundation.vercel.app/"
+echo "   Backend:  https://ice-foundation-1.onrender.com/api/"
 echo ""
 echo "Press Ctrl+C to stop servers"
