@@ -25,7 +25,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'backend',
     'colleges',
-     'college.apps.CollegeConfig',
+    'colleges.apps.CollegeConfig',
 ]
 
 MIDDLEWARE = [
