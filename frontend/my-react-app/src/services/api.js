@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "https://ice-foundation-1.onrender.com/api/",  // Use the correct backend URL
+  baseURL: "https://ice-foundation-1.onrender.com/api",  // Use the correct backend URL
 });
 
 // Colleges

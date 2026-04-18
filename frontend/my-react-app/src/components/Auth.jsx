@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import '../styles/auth.css';
 
 // IMPORTANT: Set your backend URL here
-const API_BASE_URL = 'https://ice-foundation-1.onrender.com/api/';  // Use 127.0.0.1 instead of localhost
+const API_BASE_URL = 'https://ice-foundation-1.onrender.com/api';  
 
 const passwordStrength = (value) => {
   let score = 0;
@@ -148,7 +148,7 @@ function Auth({ initialTab = 'login' }) {
       }
     } catch (error) {
       console.error('Registration error:', error);
-      setStatusMessage('Unable to register. Please make sure backend is running on https://ice-foundation-1.onrender.com/api/');
+      setStatusMessage('Unable to register. Please make sure backend is running on https://ice-foundation-1.onrender.com/api');
       setStatusType('error');
     } finally {
       setLoading(false);
