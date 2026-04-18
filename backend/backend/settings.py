@@ -159,7 +159,7 @@ JAZZMIN_SETTINGS = {
     "site_brand": "ICE Foundation",
 
     # Logo to use for your site, must be present in static files
-    "site_logo": "assets/img/logo.png",  # Optional: add your logo
+    "site_logo": "assets/img/favicon.png",  # Optional: add your logo
 
     # CSS classes that are applied to the logo
     "site_logo_classes": "img-circle",
