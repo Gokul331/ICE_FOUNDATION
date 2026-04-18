@@ -11,7 +11,7 @@ function Home() {
 
   // Fetch colleges
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/api/colleges/')
+    fetch('https://ice-foundation-1.onrender.com/api/colleges/')
       .then(res => res.json())
       .then(data => {
         setColleges(data);
@@ -125,7 +125,7 @@ function Home() {
                       {/* Image or fallback */}
                       {college.image ? (
                         <img
-                         src={`http://127.0.0.1:8000${college.image}`}
+                         src={`https://ice-foundation-1.onrender.com${college.image}`}
                           alt={college.name}
                         />
                       ) : (
