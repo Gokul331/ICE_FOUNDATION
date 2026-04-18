@@ -24,7 +24,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
     'backend',
-    'colleges.apps.CollegeConfig',
+    'colleges',
 ]
 
 MIDDLEWARE = [
