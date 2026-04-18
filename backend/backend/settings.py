@@ -24,6 +24,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'backend',
     'colleges',
+    'jazzmin',
+
 ]
 
 MIDDLEWARE = [
@@ -129,3 +131,136 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+INSTALLED_APPS = [
+    'jazzmin',  # ⚠️ MUST be before 'django.contrib.admin'
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework.authtoken',
+    'corsheaders',
+    'backend',
+    'colleges',
+]
+
+# Add Jazzmin settings (add after your INSTALLED_APPS)
+JAZZMIN_SETTINGS = {
+    # Title of the window (Will default to current_admin_site.site_title)
+    "site_title": "ICE Foundation Admin",
+
+    # Title on the login screen (19 chars max)
+    "site_header": "ICE Foundation",
+
+    # Title on the brand (19 chars max)
+    "site_brand": "ICE Foundation",
+
+    # Logo to use for your site, must be present in static files
+    "site_logo": "assets/img/logo.png",  # Optional: add your logo
+
+    # CSS classes that are applied to the logo
+    "site_logo_classes": "img-circle",
+
+    # Welcome text on the login screen
+    "welcome_sign": "Welcome to ICE Foundation Admin Panel",
+
+    # Copyright footer
+    "copyright": "ICE Foundation",
+
+    # The model admin to search from the search bar
+    "search_model": "auth.User",
+
+    # Field name on user model that contains avatar image
+    "user_avatar": None,
+
+    ############
+    # Top Menu #
+    ############
+    # Links to put along the top menu
+    "topmenu_links": [
+        # Url that gets reversed (Permissions can be added)
+        {"name": "Home", "url": "admin:index", "permissions": ["auth.view_user"]},
+        
+        # External url that opens in a new window
+        {"name": "Frontend", "url": "https://icefoundation.vercel.app", "new_window": True},
+        
+        # Model admin to link to
+        {"model": "auth.User"},
+    ],
+
+    #############
+    # Side Menu #
+    #############
+    # Whether to display the side menu
+    "show_sidebar": True,
+
+    # Whether to aut expand the menu
+    "navigation_expanded": True,
+
+    # Hide these apps when generating side menu
+    "hide_apps": [],
+
+    # Hide these models when generating side menu
+    "hide_models": [],
+
+    # Custom icons for side menu apps/models
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.group": "fas fa-users",
+        "colleges.College": "fas fa-university",
+        "colleges.Company": "fas fa-building",
+        "colleges.UserProfile": "fas fa-id-card",
+    },
+
+    # Icons that are used when one is not manually specified
+    "default_icon_parents": "fas fa-chevron-circle-right",
+    "default_icon_children": "fas fa-circle",
+
+    #################
+    # Related Modal #
+    #################
+    # Use modals instead of popups
+    "related_modal_active": False,
+
+    #############
+    # UI Tweaks #
+    #############
+    # Relative paths to custom CSS/JS scripts
+    "custom_css": None,
+    "custom_js": None,
+    # Whether to show the UI builder
+    "show_ui_builder": True,  # ⚠️ Enable this for live customization
+
+    ###############
+    # Change view #
+    ###############
+    # Render out the change view as a single form
+    "changeform_format": "horizontal_tabs",
+    "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs"},
+}
+
+# UI Tweaks for colors, sidebar style, etc.
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small": False,
+    "footer_small": False,
+    "body_small": False,
+    "brand_small": False,
+    "sidebar_nav_small": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "flatly",  # Options: 'default', 'darkly', 'flatly', 'litera', 'lumen', 'minty', 'pulse', 'sandstone', 'simplex', 'spacelab', 'united', 'yeti', 'cyborg'
+    "dark_mode_theme": None,
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success",
+    },
+    "actions_sticky_top": False,
+}
