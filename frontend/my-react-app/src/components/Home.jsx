@@ -125,7 +125,7 @@ function Home() {
                       {/* Image or fallback */}
                       {college.image ? (
                         <img
-                         src={`https://ice-foundation-1.onrender.com${college.image}`}
+                         src={`https://ice-foundation-1.onrender.com/api${college.image}`}
                           alt={college.name}
                         />
                       ) : (

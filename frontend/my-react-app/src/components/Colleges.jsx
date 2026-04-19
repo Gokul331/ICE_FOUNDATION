@@ -82,7 +82,7 @@ function Colleges() {
         type: formatType(college.type),
         scholarship: college.scholarship_available,
         desc: college.description || 'No description available.',
-        logo: getLogoLetters(college.name),
+        logo: "https://ice-foundation-1.onrender.com/api" + college.image || getLogoLetters(college.name),
         bg: colors.bg,
         fg: colors.fg
       };

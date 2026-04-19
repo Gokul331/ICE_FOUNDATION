@@ -135,8 +135,19 @@ function CollegeDetail() {
                 fontWeight: '800',
                 color: '#fff'
               }}>
-                {getLogoLetters(college.name)}
+              
+               {college.image ? (
+                        <img
+                         src={`https://ice-foundation-1.onrender.com/api${college.image}`}
+                          alt={college.name}
+                        />
+                      ) : (
+                        <div className="logo-fallback">
+                          {college.name.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
               </div>
+
               <div>
                 <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0A1628', margin: '0 0 4px 0' }}>{college.name}</h2>
                 <div style={{ fontSize: '14px', color: '#4A6580' }}>{college.district}, {college.state}</div>
