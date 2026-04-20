@@ -3,7 +3,8 @@ from .views import (
     get_colleges, get_college_detail,
     get_courses, get_course_detail, suggest_colleges,
     user_profiles, user_profile_detail,
-    timeline_events, timeline_event_detail
+    timeline_events, timeline_event_detail,
+    get_college_courses  # Add this import
 )
 from . import views
 from django.conf import settings
@@ -13,6 +14,7 @@ urlpatterns = [
     # Colleges
     path('colleges/', get_colleges, name='get_colleges'),
     path('colleges/<int:college_id>/', get_college_detail, name='get_college_detail'),
+    path('colleges/<int:college_id>/courses/', get_college_courses, name='get_college_courses'),  # Add this line
 
     # Courses
     path('courses/', get_courses, name='get_courses'),

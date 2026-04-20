@@ -4,11 +4,13 @@ from rest_framework import status
 from rest_framework.views import APIView
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods  # Add this import
 from django.utils.decorators import method_decorator
-from .models import College, Course, UserProfile, TimelineEvent  # Removed Company
+from django.http import JsonResponse  # Add this import
+from .models import College, Course, UserProfile, TimelineEvent
 from .serializers import (
     CollegeSerializer, CollegeListSerializer, CourseSerializer,
-    UserProfileSerializer, TimelineEventSerializer, RegisterSerializer, LoginSerializer  # Removed CompanySerializer
+    UserProfileSerializer, TimelineEventSerializer, RegisterSerializer, LoginSerializer
 )
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout 
@@ -25,7 +27,7 @@ def get_colleges(request):
     # Filter by city/district
     district = request.GET.get('district')
     if district:
-        colleges = colleges.filter(location_city__icontains=district)  # Fixed field name
+        colleges = colleges.filter(location_city__icontains=district)
 
     # Filter by state
     state = request.GET.get('state')
@@ -50,7 +52,7 @@ def get_colleges(request):
     # Filter by nirf ranking
     nirf = request.GET.get('nirf')
     if nirf:
-        colleges = colleges.filter(nirf_rank__lte=int(nirf))  # Fixed field name
+        colleges = colleges.filter(nirf_rank__lte=int(nirf))
 
     # Filter by naac grade
     naac = request.GET.get('naac_grade')
@@ -65,11 +67,43 @@ def get_colleges(request):
 def get_college_detail(request, college_id):
     """Get a single college by ID"""
     try:
-        college = College.objects.get(college_id=college_id)  # Fixed field name
+        college = College.objects.get(college_id=college_id)
         serializer = CollegeSerializer(college)
         return Response(serializer.data)
     except College.DoesNotExist:
         return Response({'error': 'College not found'}, status=404)
+
+
+@api_view(['GET'])
+def get_college_courses(request, college_id):
+    """Get all courses for a specific college"""
+    try:
+        # Check if college exists
+        college = College.objects.filter(college_id=college_id).first()
+        if not college:
+            return Response({'error': 'College not found'}, status=404)
+        
+        # Get courses for this college
+        # Assuming Course model has a college_id field
+        courses = Course.objects.filter(college_id=college_id)
+        
+        courses_data = [
+            {
+                'course_id': course.course_id,
+                'course_name': course.course_name,
+                'degree_name': getattr(course, 'degree_name', None),
+                'duration_years': getattr(course, 'duration_years', None),
+                'specialization': getattr(course, 'specialization', None),
+                'intake_seats': getattr(course, 'intake_seats', None),
+                'fees': getattr(course, 'fees', None),
+            }
+            for course in courses
+        ]
+        
+        return Response(courses_data, status=200)
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
 
 
 @api_view(['GET'])
@@ -115,7 +149,7 @@ def get_courses(request):
 def get_course_detail(request, course_id):
     """Get a single course by ID"""
     try:
-        course = Course.objects.get(course_id=course_id)  # Fixed field name
+        course = Course.objects.get(course_id=course_id)
         serializer = CourseSerializer(course)
         return Response(serializer.data)
     except Course.DoesNotExist:
@@ -148,7 +182,7 @@ def suggest_colleges(request):
     college_ids = courses.values_list('college_id', flat=True).distinct()
 
     # Filter colleges by district if provided
-    colleges = College.objects.filter(college_id__in=college_ids)  # Fixed field name
+    colleges = College.objects.filter(college_id__in=college_ids)
     if district:
         colleges = colleges.filter(location_city__icontains=district)
 
