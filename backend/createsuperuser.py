@@ -1,6 +1,7 @@
 import os
 from django.contrib.auth import get_user_model
 
+print("🔥 Running superuser script...")
 User = get_user_model()
 
 username = os.environ.get("DJANGO_SUPERUSER_USERNAME", "admin")
