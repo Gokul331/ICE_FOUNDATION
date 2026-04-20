@@ -2,13 +2,76 @@ from django.contrib import admin
 from .models import College, Course, UserProfile, Company, TeamMember, TimelineEvent
 
 
+from django.contrib import admin
+from .models import College
+
 @admin.register(College)
 class CollegeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'district', 'state', 'type', 'affiliation', 'fees', 'scholarship_available', 'placement_percentage', 'naac_grade', 'nirf_ranking', 'created_at')
-    search_fields = ('name', 'district', 'state', 'type', 'affiliation')
-    list_filter = ('state', 'type', 'affiliation', 'naac_grade')
+    list_display = (
+        'college_name',
+        'short_name',
+        'counselling_code',
+        'location_city',
+        'location_state',
+        'type',
+        'affiliation',
+        'naac_grade',
+        'nirf_rank',
+        'placement_percentage',
+        'median_salary',
+        'hostel_available',
+        'created_at'
+    )
+    
+    search_fields = (
+        'college_name',
+        'short_name',
+        'counselling_code',
+        'location_city',
+        'location_state',
+        'type',
+        'affiliation',
+        'naac_grade'
+    )
+    
+    list_filter = (
+        'location_state',
+        'type',
+        'affiliation',
+        'naac_grade',
+        'hostel_available',
+        'established_year'
+    )
+    
     readonly_fields = ('created_at', 'updated_at')
-
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('college_name', 'short_name', 'counselling_code', 'logo_url', 'type', 'affiliation')
+        }),
+        ('Location', {
+            'fields': ('location_city', 'location_state', 'location_pincode', 'address')
+        }),
+        ('Campus Details', {
+            'fields': ('established_year', 'total_campus_area', 'hostel_available')
+        }),
+        ('Rankings & Accreditation', {
+            'fields': ('naac_grade', 'nirf_rank')
+        }),
+        ('Placement', {
+            'fields': ('placement_percentage', 'median_salary', 'highest_salary', 'avg_salary')
+        }),
+        ('Contact & Web', {
+            'fields': ('website_url', 'email_domain', 'contact_phone')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def __str__(self):
+        return self.college_name
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
