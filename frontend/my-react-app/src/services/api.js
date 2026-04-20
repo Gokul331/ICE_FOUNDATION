@@ -25,3 +25,4 @@ export const getCompanyDetail = (id) => API.get(`companies/${id}/`);
 
 // Timeline Events
 export const getTimelineEvents = (params) => API.get("timeline/", { params });
+

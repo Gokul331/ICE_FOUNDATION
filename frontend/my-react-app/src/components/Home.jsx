@@ -14,17 +14,18 @@ function Home() {
     fetch('https://ice-foundation-1.onrender.com/api/colleges/')
       .then(res => res.json())
       .then(data => {
-        setColleges(data);
+        // ✅ FIX: Ensure data is an array
+        const collegesArray = Array.isArray(data) ? data : (data.results || []);
+        setColleges(collegesArray);
         setLoading(false);
-        
       })
       .catch(err => {
         console.error(err);
         setError("Failed to load colleges");
+        setColleges([]); // ✅ Set empty array on error
         setLoading(false);
       });
   }, []);
- 
 
   // Get user from localStorage
   useEffect(() => {
@@ -41,29 +42,23 @@ function Home() {
 
   return (
     <div className="home-container">
-
-      {/* NAVBAR */}
       <Navbar user={user} onLogout={handleLogout} />
 
-      {/* HERO */}
+      {/* HERO SECTION - unchanged */}
       <section className="hero">
         <div className="hero-bg"></div>
         <div className="hero-grid"></div>
-
         <div className="hero-content">
           <div className="hero-badge">
             <span className="badge-dot"></span>
             Your dream college is closer than you think.
           </div>
-
           <h1>
             Your Bridge from School to <em>Success.</em>
           </h1>
-
           <p className="hero-sub">
             Expert consulting for 12th-grade students to find the perfect college, course, and scholarship — tailored just for you.
           </p>
-
           <div className="hero-actions">
             {user ? (
               <Link to="/colleges" className="btn-primary">
@@ -78,7 +73,6 @@ function Home() {
               Explore Colleges →
             </Link>
           </div>
-
           <div className="hero-stats">
             <div className="stat">
               <div className="stat-num">100<span>+</span></div>
@@ -92,77 +86,60 @@ function Home() {
         </div>
       </section>
 
-      {/* COLLEGES */}
+      {/* COLLEGES SECTION */}
       <section className="colleges">
         <div className="colleges-container">
-
           <div className="section-header">
             <div className="section-tag">Featured Colleges</div>
             <h2>Find Your Perfect Institution</h2>
             <p>Explore top-ranked colleges across India.</p>
           </div>
 
-          {/* Loading */}
-          {loading && (
-            <div className="loading">Loading colleges...</div>
-          )}
+          {loading && <div className="loading">Loading colleges...</div>}
+          {error && <div className="error">{error}</div>}
 
-          {/* Error */}
-          {error && (
-            <div className="error">{error}</div>
-          )}
-
-          {/* Colleges Grid */}
-          {!loading && !error && (
+          {/* ✅ FIX: Added array check */}
+          {!loading && !error && Array.isArray(colleges) && colleges.length > 0 && (
             <div className="colleges-grid">
               {colleges.slice(0, 15).map((college) => (
                 <div key={college.id} className="college-card">
-
-                  {/* TOP */}
                   <div className="card-top">
                     <div className="card-logo-wrapper">
-
-                      {/* Image or fallback */}
                       {college.image ? (
                         <img
-                         src={`https://ice-foundation-1.onrender.com/api${college.image}`}
+                          src={`https://ice-foundation-1.onrender.com/api${college.image}`}
                           alt={college.name}
                         />
                       ) : (
                         <div className="logo-fallback">
-                          {college.name.slice(0, 2).toUpperCase()}
+                          {college.name ? college.name.slice(0, 2).toUpperCase() : 'CO'}
                         </div>
                       )}
                     </div>
-
                     <div className="card-info">
-                      <div className="card-name">{college.name}</div>
+                      <div className="card-name">{college.name || 'College Name'}</div>
                       <div className="card-location">
-                        {college.district}, {college.state}
+                        {college.district || 'District'}, {college.state || 'State'}
                       </div>
                     </div>
                   </div>
 
-                  {/* DESCRIPTION */}
                   <p className="card-desc">
-                    {college.description}
+                    {college.description || 'No description available'}
                   </p>
 
-                  {/* COURSES */}
+                  {/* ✅ FIX: Added courses array check */}
                   <div className="course-list">
                     <span className="course-label">Popular Courses:</span>
-                    {college.courses?.slice(0, 3).map(course => (
-                      
-                      <div key={course.id} className="course-chip "
+                    {college.courses && Array.isArray(college.courses) && college.courses.slice(0, 3).map(course => (
+                      <div key={course.id} className="course-chip"
                         style={{ fontSize: '12px', padding: '4px 10px', background: '#F0F4F8', borderRadius: '16px', marginRight: '6px', marginBottom: '6px' }}
-                        >
-                        
+                      >
                         {course.name}
                       </div>
                     ))}
                   </div>
 
-                  {/* FOOTER */}
                   <div className="card-footer">
                     {college.scholarship_available && (
                       <span className="scholarship-tag">
@@ -173,10 +150,14 @@ function Home() {
                       →
                     </Link>
                   </div>
-
                 </div>
               ))}
             </div>
+          )}
+
+          {/* Show message if no colleges */}
+          {!loading && !error && (!Array.isArray(colleges) || colleges.length === 0) && (
+            <div className="no-colleges">No colleges found</div>
           )}
 
           <div className="view-all-container">
@@ -184,31 +165,27 @@ function Home() {
               View All Colleges →
             </Link>
           </div>
-
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
+      {/* REST OF YOUR COMPONENT - unchanged */}
       <section className="how">
         <div className="how-inner">
           <div className="section-header">
             <div className="section-tag">How It Works</div>
             <h2>Three Steps to Your Dream College</h2>
           </div>
-
           <div className="steps">
             <div className="step">
               <div className="step-num">01</div>
               <h3>Create Profile</h3>
               <p>Tell us your interests and marks.</p>
             </div>
-
             <div className="step">
               <div className="step-num">02</div>
               <h3>Get Guidance</h3>
               <p>Expert counselling for best colleges.</p>
             </div>
-
             <div className="step">
               <div className="step-num">03</div>
               <h3>Secure Admission</h3>
@@ -218,7 +195,6 @@ function Home() {
         </div>
       </section>
 
-      {/* CTA */}
       <div className="cta-banner">
         <h2>Ready to Find Your Path?</h2>
         <p>Join thousands of students today.</p>
@@ -227,7 +203,6 @@ function Home() {
         </Link>
       </div>
 
-      {/* FOOTER */}
       <footer>
         <div className="footer-logo">
           <span>ICE</span> Foundation
@@ -236,7 +211,6 @@ function Home() {
           © 2025 ICE Foundation.
         </div>
       </footer>
-
     </div>
   );
 }

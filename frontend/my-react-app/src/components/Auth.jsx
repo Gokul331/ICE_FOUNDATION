@@ -125,7 +125,7 @@ function Auth({ initialTab = 'login' }) {
           password2: registerPassword,
           first_name: registerFirstName,
           last_name: registerLastName,
-          phone: registerPhone,
+          phone_number: registerPhone,
         }),
       });
       
@@ -364,7 +364,7 @@ function Auth({ initialTab = 'login' }) {
                     type="tel"
                     value={registerPhone}
                     onChange={(e) => setRegisterPhone(e.target.value)}
-                    placeholder="+91 98765 43210"
+                    placeholder="9876543210"
                     disabled={loading}
                   />
                 </div>

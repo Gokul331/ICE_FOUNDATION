@@ -25,6 +25,7 @@ function CollegeSuggestion() {
 
   const handleLogout = () => {
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
     setUser(null);
   };
 
@@ -61,6 +62,7 @@ function CollegeSuggestion() {
 
   // Generate logo letters from college name
   const getLogoLetters = (collegeName) => {
+    if (!collegeName) return 'CL';
     const words = collegeName.split(' ');
     if (words.length === 1) {
       return words[0].substring(0, 2).toUpperCase();
@@ -70,6 +72,20 @@ function CollegeSuggestion() {
       .join('')
       .substring(0, 2)
       .toUpperCase();
+  };
+
+  // Get college colors based on name hash
+  const getCollegeColors = (name) => {
+    if (!name) return { bg: "#EAF7FD", fg: "#3AAAD4" };
+    const colors = [
+      { bg: "#EAF7FD", fg: "#3AAAD4" },
+      { bg: "#FFF0EA", fg: "#C85A30" },
+      { bg: "#EAF0FD", fg: "#3A5AD4" },
+      { bg: "#EDF7ED", fg: "#2A8A2A" },
+      { bg: "#FDF5EA", fg: "#C8A530" }
+    ];
+    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
   };
 
   return (
@@ -128,8 +144,10 @@ function CollegeSuggestion() {
                   <option value="">Select Category</option>
                   <option value="OC">OC</option>
                   <option value="BC">BC</option>
+                  <option value="BCM">BCM</option>
                   <option value="MBC">MBC</option>
                   <option value="SC">SC</option>
+                  <option value="SCA">SCA</option>
                   <option value="ST">ST</option>
                 </select>
               </div>
@@ -200,35 +218,51 @@ function CollegeSuggestion() {
             <h2 className="suggestions-title">
               Recommended Colleges ({suggestions.length})
             </h2>
-            {suggestions.map(college => (
-              <div key={college.id} className="suggestion-card">
-                <div className="suggestion-header">
-                  <div className="suggestion-logo">
-                    {getLogoLetters(college.name)}
+            {suggestions.map(college => {
+              const colors = getCollegeColors(college.college_name);
+              return (
+                <div key={college.college_id} className="suggestion-card" style={{ borderLeftColor: colors.fg }}>
+                  <div className="suggestion-header">
+                    <div className="suggestion-logo" style={{ background: colors.fg }}>
+                      {getLogoLetters(college.college_name)}
+                    </div>
+                    <div className="suggestion-info">
+                      <div className="suggestion-name">{college.college_name}</div>
+                      <div className="suggestion-meta">{college.location_city}, {college.location_state}</div>
+                    </div>
+                    <Link to={`/colleges/${college.college_id}`} className="suggestion-link" style={{ color: colors.fg }}>
+                      View Details →
+                    </Link>
                   </div>
-                  <div className="suggestion-info">
-                    <div className="suggestion-name">{college.name}</div>
-                    <div className="suggestion-meta">{college.district}</div>
+                  {college.description && (
+                    <div className="suggestion-desc">{college.description.substring(0, 150)}...</div>
+                  )}
+                  <div className="suggestion-details">
+                    <span className="detail-item">📍 {college.location_city}</span>
+                    {college.type && (
+                      <span className="detail-item" style={{ textTransform: 'capitalize' }}>
+                        🏛️ {college.type.replace('_', ' ')}
+                      </span>
+                    )}
+                    {college.scholarship_available && (
+                      <span className="detail-item scholarship-badge">💰 Scholarship Available</span>
+                    )}
+                    {college.naac_grade && (
+                      <span className="detail-item">⭐ NAAC: {college.naac_grade}</span>
+                    )}
+                    {college.placement_percentage && (
+                      <span className="detail-item">📊 Placement: {college.placement_percentage}%</span>
+                    )}
+                    {college.nirf_rank && (
+                      <span className="detail-item">🏆 NIRF Rank: #{college.nirf_rank}</span>
+                    )}
+                    {college.hostel_available && (
+                      <span className="detail-item">🏠 Hostel Available</span>
+                    )}
                   </div>
-                  <Link to={`/colleges/${college.id}`} className="suggestion-link">
-                    View Details →
-                  </Link>
                 </div>
-                <div className="suggestion-desc">{college.description}</div>
-                <div className="suggestion-details">
-                  <span className="detail-item">District: {college.district}</span>
-                  {college.scholarship_available && (
-                    <span className="detail-item scholarship-badge">Scholarship Available</span>
-                  )}
-                  {college.naac_grade && (
-                    <span className="detail-item">NAAC: {college.naac_grade}</span>
-                  )}
-                  {college.placement_percentage && (
-                    <span className="detail-item">Placement: {college.placement_percentage}%</span>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

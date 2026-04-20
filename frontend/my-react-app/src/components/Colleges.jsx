@@ -82,7 +82,7 @@ function Colleges() {
         type: formatType(college.type),
         scholarship: college.scholarship_available,
         desc: college.description || 'No description available.',
-        logo: "https://ice-foundation-1.onrender.com/api" + college.image || getLogoLetters(college.name),
+        logo: college.logo ? getLogoLetters(college.name) : 'NA',
         bg: colors.bg,
         fg: colors.fg
       };
@@ -142,7 +142,13 @@ function Colleges() {
         <Link key={college.id} to={`/colleges/${college.id}`} className="college-card-link">
           <div className="college-card">
             <div className="card-header">
-              <div className="card-logo" style={{ background: college.bg, color: college.fg }}>{college.logo}</div>
+              <div className="card-logo" style={{ background: college.bg, color: college.fg }}>
+                {college.logo ? (
+                  <img src={college.logo} alt={college.name} />
+                ) : (
+                  getLogoLetters(college.name)
+                )}
+              </div>
               <div className="card-meta">
                 <div className="card-name">{college.name}</div>
                 <div className="card-location">
