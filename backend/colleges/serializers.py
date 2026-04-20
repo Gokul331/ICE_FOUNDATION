@@ -18,7 +18,17 @@ class CollegeListSerializer(serializers.ModelSerializer):
                   'scholarship_available', 'placement_percentage', 
                   'naac_grade', 'nirf_rank', 'logo_url', 'hostel_available']
 
-
+class CollegeWithCoursesSerializer(serializers.ModelSerializer):
+    courses = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = College
+        fields = '__all__'
+    
+    def get_courses(self, obj):
+        courses = Course.objects.filter(college_id=obj.college_id)
+        return CourseSerializer(courses, many=True).data
+    
 class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course

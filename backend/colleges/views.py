@@ -4,9 +4,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods  # Add this import
 from django.utils.decorators import method_decorator
-from django.http import JsonResponse  # Add this import
 from .models import College, Course, UserProfile, TimelineEvent
 from .serializers import (
     CollegeSerializer, CollegeListSerializer, CourseSerializer,
@@ -84,23 +82,12 @@ def get_college_courses(request, college_id):
             return Response({'error': 'College not found'}, status=404)
         
         # Get courses for this college
-        # Assuming Course model has a college_id field
+        # Assuming Course model has a college_id foreign key
         courses = Course.objects.filter(college_id=college_id)
         
-        courses_data = [
-            {
-                'course_id': course.course_id,
-                'course_name': course.course_name,
-                'degree_name': getattr(course, 'degree_name', None),
-                'duration_years': getattr(course, 'duration_years', None),
-                'specialization': getattr(course, 'specialization', None),
-                'intake_seats': getattr(course, 'intake_seats', None),
-                'fees': getattr(course, 'fees', None),
-            }
-            for course in courses
-        ]
-        
-        return Response(courses_data, status=200)
+        # Use the CourseSerializer to serialize the data
+        serializer = CourseSerializer(courses, many=True)
+        return Response(serializer.data, status=200)
         
     except Exception as e:
         return Response({'error': str(e)}, status=500)
