@@ -16,32 +16,42 @@ class College(models.Model):
         ('deemed_university', 'Deemed University'),
     ]
 
-    name = models.CharField(max_length=255, unique=True)
-    district = models.CharField(max_length=100, null=True, blank=True)
-    state = models.CharField(max_length=100, default="Tamil Nadu", null=True, blank=True)
+    college_id = models.AutoField(primary_key=True)
+    college_name = models.CharField(max_length=200, unique=True)
+    short_name = models.CharField(max_length=50, null=True, blank=True)
+    counselling_code = models.CharField(max_length=20, unique=True, null=True, blank=True)
+    logo_url = models.URLField(max_length=500, null=True, blank=True)
+    location_city = models.CharField(max_length=100)
+    location_state = models.CharField(max_length=100)
+    location_pincode = models.CharField(max_length=10, null=True, blank=True)
+    established_year = models.IntegerField(null=True, blank=True)
+    
+    # Using TYPE_CHOICES
     type = models.CharField(max_length=50, choices=TYPE_CHOICES, null=True, blank=True)
+    
+    # Using AFFILIATION_CHOICES
     affiliation = models.CharField(max_length=100, choices=AFFILIATION_CHOICES, null=True, blank=True)
-    fees = models.IntegerField(null=True, blank=True)
-    scholarship_available = models.BooleanField(default=False)
-    placement_percentage = models.IntegerField(null=True, blank=True)
-    highest_package = models.IntegerField(null=True, blank=True)
-    average_package = models.IntegerField(null=True, blank=True)
-    top_recruiters = models.JSONField(null=True, blank=True)
-    naac_grade = models.CharField(max_length=10, null=True, blank=True)
-    nirf_ranking = models.IntegerField(null=True, blank=True)
-    description = models.TextField(null=True, blank=True)
-    website = models.URLField(null=True, blank=True)
-    image = models.ImageField(upload_to='colleges/', null=True, blank=True)
+    
+    naac_grade = models.CharField(max_length=5, null=True, blank=True)
+    nirf_rank = models.IntegerField(null=True, blank=True)
+    website_url = models.URLField(max_length=255, null=True, blank=True)
+    email_domain = models.CharField(max_length=100, null=True, blank=True)
+    contact_phone = models.CharField(max_length=20, null=True, blank=True)
+    address = models.TextField(null=True, blank=True)
+    total_campus_area = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    hostel_available = models.BooleanField(default=True)
+    placement_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    median_salary = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    highest_salary = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    avg_salary = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.name
+        return self.college_name
 
     class Meta:
-        ordering = ['name']
-
-
+        ordering = ['college_name']
 class Course(models.Model):
     STREAM_CHOICES = [
         ('engineering', 'Engineering'),
