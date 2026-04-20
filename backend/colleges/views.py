@@ -5,10 +5,10 @@ from rest_framework.views import APIView
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from .models import College, Course, UserProfile, Company, TimelineEvent
+from .models import College, Course, UserProfile, TimelineEvent  # Removed Company
 from .serializers import (
     CollegeSerializer, CollegeListSerializer, CourseSerializer,
-    UserProfileSerializer, CompanySerializer, TimelineEventSerializer, RegisterSerializer, LoginSerializer
+    UserProfileSerializer, TimelineEventSerializer, RegisterSerializer, LoginSerializer  # Removed CompanySerializer
 )
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout 
@@ -22,15 +22,15 @@ def get_colleges(request):
     """Get all colleges with optional filtering"""
     colleges = College.objects.all()
 
-    # Filter by district
+    # Filter by city/district
     district = request.GET.get('district')
     if district:
-        colleges = colleges.filter(district__icontains=district)
+        colleges = colleges.filter(location_city__icontains=district)  # Fixed field name
 
     # Filter by state
     state = request.GET.get('state')
     if state:
-        colleges = colleges.filter(state__icontains=state)
+        colleges = colleges.filter(location_state__icontains=state)
 
     # Filter by type
     college_type = request.GET.get('type')
@@ -42,11 +42,6 @@ def get_colleges(request):
     if affiliation:
         colleges = colleges.filter(affiliation=affiliation)
 
-    # Filter by max fees
-    max_fees = request.GET.get('max_fees')
-    if max_fees:
-        colleges = colleges.filter(fees__lte=int(max_fees))
-
     # Filter by min placement
     min_placement = request.GET.get('min_placement')
     if min_placement:
@@ -55,7 +50,7 @@ def get_colleges(request):
     # Filter by nirf ranking
     nirf = request.GET.get('nirf')
     if nirf:
-        colleges = colleges.filter(nirf_ranking__lte=int(nirf))
+        colleges = colleges.filter(nirf_rank__lte=int(nirf))  # Fixed field name
 
     # Filter by naac grade
     naac = request.GET.get('naac_grade')
@@ -70,7 +65,7 @@ def get_colleges(request):
 def get_college_detail(request, college_id):
     """Get a single college by ID"""
     try:
-        college = College.objects.get(id=college_id)
+        college = College.objects.get(college_id=college_id)  # Fixed field name
         serializer = CollegeSerializer(college)
         return Response(serializer.data)
     except College.DoesNotExist:
@@ -87,10 +82,10 @@ def get_courses(request):
     if college_id:
         courses = courses.filter(college_id=college_id)
 
-    # Filter by stream
+    # Filter by specialization/stream
     stream = request.GET.get('stream')
     if stream:
-        courses = courses.filter(stream=stream)
+        courses = courses.filter(specialization__icontains=stream)
 
     # Filter by min cutoff (for a community)
     cutoff = request.GET.get('cutoff')
@@ -101,17 +96,16 @@ def get_courses(request):
             courses = courses.filter(cutoff_oc__lte=cutoff)
         elif community == 'bc':
             courses = courses.filter(cutoff_bc__lte=cutoff)
+        elif community == 'bcm':
+            courses = courses.filter(cutoff_bcm__lte=cutoff)
         elif community == 'mbc':
             courses = courses.filter(cutoff_mbc__lte=cutoff)
         elif community == 'sc':
             courses = courses.filter(cutoff_sc__lte=cutoff)
+        elif community == 'sca':
+            courses = courses.filter(cutoff_sca__lte=cutoff)
         elif community == 'st':
             courses = courses.filter(cutoff_st__lte=cutoff)
-
-    # Filter by max fees
-    max_fees = request.GET.get('max_fees')
-    if max_fees:
-        courses = courses.filter(fees__lte=int(max_fees))
 
     serializer = CourseSerializer(courses, many=True)
     return Response(serializer.data)
@@ -121,7 +115,7 @@ def get_courses(request):
 def get_course_detail(request, course_id):
     """Get a single course by ID"""
     try:
-        course = Course.objects.get(id=course_id)
+        course = Course.objects.get(course_id=course_id)  # Fixed field name
         serializer = CourseSerializer(course)
         return Response(serializer.data)
     except Course.DoesNotExist:
@@ -148,17 +142,17 @@ def suggest_colleges(request):
     courses = Course.objects.filter(**{cutoff_field + '__lte': cutoff})
 
     if stream:
-        courses = courses.filter(stream=stream)
+        courses = courses.filter(specialization__icontains=stream)
 
     # Get college IDs from filtered courses
     college_ids = courses.values_list('college_id', flat=True).distinct()
 
     # Filter colleges by district if provided
-    colleges = College.objects.filter(id__in=college_ids)
+    colleges = College.objects.filter(college_id__in=college_ids)  # Fixed field name
     if district:
-        colleges = colleges.filter(district__icontains=district)
+        colleges = colleges.filter(location_city__icontains=district)
 
-    colleges = colleges.order_by('-placement_percentage', '-nirf_ranking')[:20]
+    colleges = colleges.order_by('-placement_percentage', 'nirf_rank')[:20]
 
     serializer = CollegeListSerializer(colleges, many=True)
     return Response(serializer.data)
@@ -198,43 +192,6 @@ def user_profile_detail(request, profile_id):
         return Response(serializer.errors, status=400)
     elif request.method == 'DELETE':
         profile.delete()
-        return Response(status=204)
-
-
-@api_view(['GET', 'POST'])
-def companies(request):
-    """GET: List all companies, POST: Create a company"""
-    if request.method == 'GET':
-        companies = Company.objects.all()
-        serializer = CompanySerializer(companies, many=True)
-        return Response(serializer.data)
-    elif request.method == 'POST':
-        serializer = CompanySerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=201)
-        return Response(serializer.errors, status=400)
-
-
-@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
-def company_detail(request, company_id):
-    """Get, update, or delete a company"""
-    try:
-        company = Company.objects.get(id=company_id)
-    except Company.DoesNotExist:
-        return Response({'error': 'Company not found'}, status=404)
-
-    if request.method == 'GET':
-        serializer = CompanySerializer(company)
-        return Response(serializer.data)
-    elif request.method in ['PUT', 'PATCH']:
-        serializer = CompanySerializer(company, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
-    elif request.method == 'DELETE':
-        company.delete()
         return Response(status=204)
 
 
@@ -292,7 +249,9 @@ def timeline_event_detail(request, event_id):
         event.delete()
         return Response(status=204)
 
-# Update your RegisterView
+
+# ==================== AUTH VIEWS ====================
+
 @method_decorator(csrf_exempt, name='dispatch')
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -336,7 +295,7 @@ class RegisterView(APIView):
         print("Serializer errors:", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# Update your LoginView
+
 @method_decorator(csrf_exempt, name='dispatch')
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -387,6 +346,7 @@ class LoginView(APIView):
         print("Login serializer errors:", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class CheckAuthView(APIView):
     permission_classes = [IsAuthenticated]
     
@@ -401,6 +361,8 @@ class CheckAuthView(APIView):
                 'last_name': request.user.last_name,
             }
         })
+
+
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -412,6 +374,7 @@ class LogoutView(APIView):
             return Response({'message': 'Logout successful'}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
