@@ -103,6 +103,16 @@ def get_courses(request):
     if college_id:
         courses = courses.filter(college_id=college_id)
 
+    # ✅ Add filter by course code
+    course_code = request.GET.get('course_code')
+    if course_code:
+        courses = courses.filter(course_code=course_code)
+
+    # ✅ Add filter by course name
+    course_name = request.GET.get('course_name')
+    if course_name:
+        courses = courses.filter(course_name__icontains=course_name)
+
     # Filter by specialization/stream
     stream = request.GET.get('stream')
     if stream:
@@ -130,7 +140,6 @@ def get_courses(request):
 
     serializer = CourseSerializer(courses, many=True)
     return Response(serializer.data)
-
 
 @api_view(['GET'])
 def get_course_detail(request, course_id):

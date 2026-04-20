@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from .models import College, Course, UserProfile, TimelineEvent  # Removed Company
+from .models import College, Course, UserProfile, TimelineEvent
 
 
 class CollegeSerializer(serializers.ModelSerializer):
@@ -18,6 +18,7 @@ class CollegeListSerializer(serializers.ModelSerializer):
                   'scholarship_available', 'placement_percentage', 
                   'naac_grade', 'nirf_rank', 'logo_url', 'hostel_available']
 
+
 class CollegeWithCoursesSerializer(serializers.ModelSerializer):
     courses = serializers.SerializerMethodField()
     
@@ -28,11 +29,26 @@ class CollegeWithCoursesSerializer(serializers.ModelSerializer):
     def get_courses(self, obj):
         courses = Course.objects.filter(college_id=obj.college_id)
         return CourseSerializer(courses, many=True).data
-    
+
+
 class CourseSerializer(serializers.ModelSerializer):
+    # Add display fields for better readability
+    course_code_display = serializers.SerializerMethodField()
+    course_name_display = serializers.SerializerMethodField()
+    degree_type_display = serializers.SerializerMethodField()
+    
     class Meta:
         model = Course
         fields = '__all__'
+    
+    def get_course_code_display(self, obj):
+        return obj.get_course_code_display()
+    
+    def get_course_name_display(self, obj):
+        return obj.get_course_name_display()
+    
+    def get_degree_type_display(self, obj):
+        return obj.get_degree_type_display()
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -51,6 +67,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True)
     phone_number = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    
     class Meta:
         model = User
         fields = ['username', 'email', 'password', 'password2', 'first_name', 'last_name', 'phone_number']
@@ -80,13 +97,14 @@ class RegisterSerializer(serializers.ModelSerializer):
             first_name=validated_data.get('first_name', ''),
             last_name=validated_data.get('last_name', '')
         )
+        
         UserProfile.objects.create(
             user=user,
             first_name=validated_data.get('first_name', ''),
             last_name=validated_data.get('last_name', ''),
             email=validated_data['email'],
-            phone_number=validated_data.get('phone_number', ''),  # Make sure to add phone_number to serializer fields
-            address='',  # Default empty, user can update later
+            phone_number=validated_data.get('phone_number', ''),
+            address='',
             city='',
             state='Tamil Nadu',
             pincode=''

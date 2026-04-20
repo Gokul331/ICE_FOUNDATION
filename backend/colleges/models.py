@@ -61,46 +61,236 @@ class Course(models.Model):
         ('integrated', 'Integrated'),
     ]
 
+    # Course Code Choices (only the code)
+    COURSE_CODE_CHOICES = [
+        ('AD', 'AD'),
+        ('AE', 'AE'),
+        ('AG', 'AG'),
+        ('AI', 'AI'),
+        ('AM', 'AM'),
+        ('AO', 'AO'),
+        ('AP', 'AP'),
+        ('AR', 'AR'),
+        ('AS', 'AS'),
+        ('AU', 'AU'),
+        ('BD', 'BD'),
+        ('BM', 'BM'),
+        ('BR', 'BR'),
+        ('BS', 'BS'),
+        ('BT', 'BT'),
+        ('BY', 'BY'),
+        ('CA', 'CA'),
+        ('CB', 'CB'),
+        ('CC', 'CC'),
+        ('CE', 'CE'),
+        ('CH', 'CH'),
+        ('CL', 'CL'),
+        ('CM', 'CM'),
+        ('CN', 'CN'),
+        ('CO', 'CO'),
+        ('CP', 'CP'),
+        ('CR', 'CR'),
+        ('CS', 'CS'),
+        ('CT', 'CT'),
+        ('CW', 'CW'),
+        ('CY', 'CY'),
+        ('EC', 'EC'),
+        ('EE', 'EE'),
+        ('EI', 'EI'),
+        ('EM', 'EM'),
+        ('EN', 'EN'),
+        ('ES', 'ES'),
+        ('ET', 'ET'),
+        ('EX', 'EX'),
+        ('EY', 'EY'),
+        ('FD', 'FD'),
+        ('FS', 'FS'),
+        ('FT', 'FT'),
+        ('FY', 'FY'),
+        ('GI', 'GI'),
+        ('HT', 'HT'),
+        ('IB', 'IB'),
+        ('IC', 'IC'),
+        ('IE', 'IE'),
+        ('IG', 'IG'),
+        ('IM', 'IM'),
+        ('IN', 'IN'),
+        ('IS', 'IS'),
+        ('IT', 'IT'),
+        ('IY', 'IY'),
+        ('LE', 'LE'),
+        ('MA', 'MA'),
+        ('MC', 'MC'),
+        ('MD', 'MD'),
+        ('ME', 'ME'),
+        ('MF', 'MF'),
+        ('MG', 'MG'),
+        ('MH', 'MH'),
+        ('MI', 'MI'),
+        ('MN', 'MN'),
+        ('MO', 'MO'),
+        ('MR', 'MR'),
+        ('MS', 'MS'),
+        ('MT', 'MT'),
+        ('MU', 'MU'),
+        ('MY', 'MY'),
+        ('MZ', 'MZ'),
+        ('NS', 'NS'),
+        ('PA', 'PA'),
+        ('PC', 'PC'),
+        ('PD', 'PD'),
+        ('PE', 'PE'),
+        ('PH', 'PH'),
+        ('PL', 'PL'),
+        ('PM', 'PM'),
+        ('PN', 'PN'),
+        ('PP', 'PP'),
+        ('PR', 'PR'),
+        ('PS', 'PS'),
+        ('PT', 'PT'),
+        ('RA', 'RA'),
+        ('RM', 'RM'),
+        ('RP', 'RP'),
+        ('SB', 'SB'),
+        ('TC', 'TC'),
+        ('TS', 'TS'),
+        ('TT', 'TT'),
+        ('TX', 'TX'),
+        ('XC', 'XC'),
+        ('XM', 'XM'),
+    ]
+
+    # Course Name Choices (full names)
+    COURSE_NAME_CHOICES = [
+        ('Artificial Intelligence and Data Science', 'Artificial Intelligence and Data Science'),
+        ('Aeronautical Engineering', 'Aeronautical Engineering'),
+        ('Agriculture Engineering', 'Agriculture Engineering'),
+        ('Agricultural and Irrigation Engineering (SS)', 'Agricultural and Irrigation Engineering (SS)'),
+        ('Computer Science and Engineering (AI and Machine Learning)', 'Computer Science and Engineering (AI and Machine Learning)'),
+        ('Aerospace Engineering', 'Aerospace Engineering'),
+        ('Apparel Technology (SS)', 'Apparel Technology (SS)'),
+        ('Architecture', 'Architecture'),
+        ('Automobile Engineering (SS)', 'Automobile Engineering (SS)'),
+        ('Automobile Engineering', 'Automobile Engineering'),
+        ('Computer Science and Engineering (Big Data Analytics)', 'Computer Science and Engineering (Big Data Analytics)'),
+        ('Bio-Medical Engineering', 'Bio-Medical Engineering'),
+        ('Architecture (SS)', 'Architecture (SS)'),
+        ('Bio Technology (SS)', 'Bio Technology (SS)'),
+        ('Bio Technology', 'Bio Technology'),
+        ('Bio-Medical Engineering (SS)', 'Bio-Medical Engineering (SS)'),
+        ('Civil and Structural Engineering', 'Civil and Structural Engineering'),
+        ('Computer Science and Business System', 'Computer Science and Business System'),
+        ('Chemical and Electro Chemical Engineering (SS)', 'Chemical and Electro Chemical Engineering (SS)'),
+        ('Civil Engineering', 'Civil Engineering'),
+        ('Chemical Engineering', 'Chemical Engineering'),
+        ('Chemical Engineering (SS)', 'Chemical Engineering (SS)'),
+        ('Computer Science and Engineering (SS)', 'Computer Science and Engineering (SS)'),
+        ('Civil Engineering (SS)', 'Civil Engineering (SS)'),
+        ('Computer and Communication Engineering', 'Computer and Communication Engineering'),
+        ('Civil Engg. and Planning', 'Civil Engg. and Planning'),
+        ('Ceramic Technology (SS)', 'Ceramic Technology (SS)'),
+        ('Computer Science and Engineering', 'Computer Science and Engineering'),
+        ('Computer Technology', 'Computer Technology'),
+        ('Computer Science and Business System (SS)', 'Computer Science and Business System (SS)'),
+        ('Cyber Security', 'Cyber Security'),
+        ('Electronics and Communication Engineering', 'Electronics and Communication Engineering'),
+        ('Electrical and Electronics Engineering', 'Electrical and Electronics Engineering'),
+        ('Electronics and Instrumentation Engineering', 'Electronics and Instrumentation Engineering'),
+        ('Electronics and Communication Engg. (SS)', 'Electronics and Communication Engg. (SS)'),
+        ('Environmental Engg.', 'Environmental Engg.'),
+        ('Electrical and Electronics (Sandwich) (SS)', 'Electrical and Electronics (Sandwich) (SS)'),
+        ('Electronics and Telecommunication Engg.', 'Electronics and Telecommunication Engg.'),
+        ('Electronics and Instrumentation Engg. (SS)', 'Electronics and Instrumentation Engg. (SS)'),
+        ('Elec. And Electronics Engg (SS)', 'Elec. And Electronics Engg (SS)'),
+        ('Food Technology', 'Food Technology'),
+        ('Food Technology (SS)', 'Food Technology (SS)'),
+        ('Fashion Technology', 'Fashion Technology'),
+        ('Fashion Technology (SS)', 'Fashion Technology (SS)'),
+        ('Geo-Informatics', 'Geo-Informatics'),
+        ('Handloom and Textile Technology', 'Handloom and Textile Technology'),
+        ('Industrial Bio-Technology', 'Industrial Bio-Technology'),
+        ('Instrumentation and Control Engineering', 'Instrumentation and Control Engineering'),
+        ('Industrial Engineering', 'Industrial Engineering'),
+        ('Information Science and Engineering', 'Information Science and Engineering'),
+        ('Information Tech. (SS)', 'Information Tech. (SS)'),
+        ('Industrial Engineering and Management', 'Industrial Engineering and Management'),
+        ('Industrial Bio-Tech. (SS)', 'Industrial Bio-Tech. (SS)'),
+        ('Information Technology', 'Information Technology'),
+        ('Instrumentation and Control Engineering (SS)', 'Instrumentation and Control Engineering (SS)'),
+        ('Leather Technology', 'Leather Technology'),
+        ('Material Science and Engineering (SS)', 'Material Science and Engineering (SS)'),
+        ('Mechatronics', 'Mechatronics'),
+        ('Medical Electronics Engg.', 'Medical Electronics Engg.'),
+        ('Mechanical Engineering', 'Mechanical Engineering'),
+        ('Mechanical (Manufacturing)', 'Mechanical (Manufacturing)'),
+        ('Mechatronics (SS)', 'Mechatronics (SS)'),
+        ('Mechanical Engineering (Sandwich)', 'Mechanical Engineering (Sandwich)'),
+        ('Mining Engineering', 'Mining Engineering'),
+        ('Manufacturing Engineering', 'Manufacturing Engineering'),
+        ('Mechanical and Mechatronics Engineering (Additive Manufacturing)', 'Mechanical and Mechatronics Engineering (Additive Manufacturing)'),
+        ('Marine Engineering', 'Marine Engineering'),
+        ('Mechanical Engineering (Sandwich) (SS)', 'Mechanical Engineering (Sandwich) (SS)'),
+        ('Metallurgical Engineering', 'Metallurgical Engineering'),
+        ('Mechanical and Automation Engineering', 'Mechanical and Automation Engineering'),
+        ('Metallurgical Engg. (SS)', 'Metallurgical Engg. (SS)'),
+        ('Nano Science and Technology', 'Nano Science and Technology'),
+        ('Plastic Technology', 'Plastic Technology'),
+        ('Petro Chemical Technology', 'Petro Chemical Technology'),
+        ('Petrochemical Engineering', 'Petrochemical Engineering'),
+        ('Petroleum Engineering', 'Petroleum Engineering'),
+        ('Pharmaceutical Technology', 'Pharmaceutical Technology'),
+        ('Polymer Technology', 'Polymer Technology'),
+        ('Pharmaceutical Tech (SS)', 'Pharmaceutical Tech (SS)'),
+        ('Production Engineering (SS)', 'Production Engineering (SS)'),
+        ('Petroleum Engineering and Technology (SS)', 'Petroleum Engineering and Technology (SS)'),
+        ('Production Engineering', 'Production Engineering'),
+        ('Production Engineering (Sandwich) (SS)', 'Production Engineering (Sandwich) (SS)'),
+        ('Printing and Packaging Technology', 'Printing and Packaging Technology'),
+        ('Robotics and Automation (SS)', 'Robotics and Automation (SS)'),
+        ('Robotics and Automation', 'Robotics and Automation'),
+        ('Rubber and Plastic Tech.', 'Rubber and Plastic Tech.'),
+        ('Computer Science and Engineering (Internet of Things and Cyber Security including Block Chain Technology)', 'Computer Science and Engineering (Internet of Things and Cyber Security including Block Chain Technology)'),
+        ('Textile Chemistry', 'Textile Chemistry'),
+        ('Computer science and Technology', 'Computer science and Technology'),
+        ('Textile Technology (SS)', 'Textile Technology (SS)'),
+        ('Textile Technology', 'Textile Technology'),
+        ('Civil Engineering (Tamil Medium)', 'Civil Engineering (Tamil Medium)'),
+        ('Mechanical Engineering (Tamil Medium)', 'Mechanical Engineering (Tamil Medium)'),
+    ]
+
     course_id = models.AutoField(primary_key=True)
-    college = models.ForeignKey(College, on_delete=models.CASCADE, related_name='courses')
-    course_name = models.CharField(max_length=150)
-    course_code = models.CharField(max_length=20, null=True, blank=True)
+    college = models.ForeignKey('College', on_delete=models.CASCADE, related_name='courses')
+    
+    course_code = models.CharField(max_length=20, choices=COURSE_CODE_CHOICES, help_text="Select course code")
+    course_name = models.CharField(max_length=200, choices=COURSE_NAME_CHOICES, help_text="Select course name")
+    
     degree_type = models.CharField(max_length=20, choices=DEGREE_TYPE_CHOICES)
     degree_name = models.CharField(max_length=50)
     duration_years = models.DecimalField(max_digits=3, decimal_places=1)
     specialization = models.CharField(max_length=100, null=True, blank=True)
     intake_seats = models.IntegerField(null=True, blank=True)
     
-    cutoff_oc = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Cutoff mark for OC")
-    cutoff_bc = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Cutoff mark for BC")
-    cutoff_bcm = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Cutoff mark for BCM")
-    cutoff_mbc = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Cutoff mark for MBC")
-    cutoff_sc = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Cutoff mark for SC")
-    cutoff_sca = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Cutoff mark for SCA")
-    cutoff_st = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Cutoff mark for ST")
+    cutoff_oc = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    cutoff_bc = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    cutoff_bcm = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    cutoff_mbc = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    cutoff_sc = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    cutoff_sca = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    cutoff_st = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     
-    scholarship_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Scholarship amount in INR per year")
-    scholarship_criteria = models.TextField(null=True, blank=True, help_text="Eligibility criteria for scholarship")
+    scholarship_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    scholarship_criteria = models.TextField(null=True, blank=True)
     
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.course_name} - {self.degree_name} ({self.college.college_name})"
-
-    def get_cutoff_by_community(self, community):
-        community_field_map = {
-            'OC': 'cutoff_oc', 'BC': 'cutoff_bc', 'BCM': 'cutoff_bcm',
-            'MBC': 'cutoff_mbc', 'SC': 'cutoff_sc', 'SCA': 'cutoff_sca', 'ST': 'cutoff_st',
-        }
-        field_name = community_field_map.get(community.upper())
-        return getattr(self, field_name, None) if field_name else None
+        return f"{self.course_code} - {self.course_name}"
 
     class Meta:
-        ordering = ['college__college_name', 'course_name']
+        ordering = ['college__college_name', 'course_code']
         unique_together = ['college', 'course_code']
-
 
 # ==================== FEES MODEL ====================
 class Fees(models.Model):
