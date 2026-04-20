@@ -14,23 +14,28 @@ function Colleges() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchColleges = async () => {
-      try {
-        const response = await getColleges();
-        setColleges(response.data);
-        setLoading(false);
-      } catch (err) {
-        setError('Failed to load colleges');
-        setLoading(false);
-      }
-    };
-    fetchColleges();
-  }, []);
+useEffect(() => {
+  const fetchColleges = async () => {
+    try {
+      setLoading(true);
+      const data = await getColleges(); // data is now the actual college array
+      // Handle both array and object responses
+      const collegesArray = Array.isArray(data) ? data : (data.results || []);
+      setColleges(collegesArray);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching colleges:', err);
+      setError('Failed to load colleges');
+      setLoading(false);
+    }
+  };
+  fetchColleges();
+}, []);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUser(JSON.parse(storedUser));
     }
   }, []);
@@ -55,6 +60,7 @@ function Colleges() {
 
   // Generate logo letters from college name
   const getLogoLetters = (collegeName) => {
+    if (!collegeName) return 'CO';
     const words = collegeName.split(' ');
     if (words.length === 1) {
       return words[0].substring(0, 2).toUpperCase();
@@ -74,17 +80,29 @@ function Colleges() {
 
   const enhancedColleges = useMemo(() => {
     return colleges.map(college => {
-      const colors = getCollegeColors(college.name);
+      const colors = getCollegeColors(college.college_name || college.name);
       return {
         ...college,
-        city: college.district || 'Tamil Nadu',
+        // ✅ FIX: Map API fields to component fields
+        id: college.college_id || college.id,
+        name: college.college_name || college.name,
+        city: college.location_city || college.district || 'Tamil Nadu',
+        state: college.location_state || college.state,
+        address: college.address,
         stream: college.type || 'Engineering',
         type: formatType(college.type),
-        scholarship: college.scholarship_available,
-        desc: college.description || 'No description available.',
-        logo: college.logo ? getLogoLetters(college.name) : 'NA',
+        scholarship: college.scholarship_available || college.median_salary || false,
+        desc: college.description || college.address || 'No description available.',
+        logo: college.logo_url || college.logo,
         bg: colors.bg,
-        fg: colors.fg
+        fg: colors.fg,
+        placement_percentage: college.placement_percentage,
+        nirf_ranking: college.nirf_rank,
+        naac_grade: college.naac_grade,
+        hostel_available: college.hostel_available,
+        fees: college.fees || 'N/A',
+        established_year: college.established_year,
+        counselling_code: college.counselling_code
       };
     });
   }, [colleges]);
@@ -107,7 +125,9 @@ function Colleges() {
         case 'placement':
           return (b.placement_percentage || 0) - (a.placement_percentage || 0);
         case 'fees':
-          return (a.fees || 0) - (b.fees || 0);
+          { const feesA = a.fees === 'N/A' ? Infinity : parseInt(a.fees);
+          const feesB = b.fees === 'N/A' ? Infinity : parseInt(b.fees);
+          return feesA - feesB; }
         case 'nirf':
           return (a.nirf_ranking || 999) - (b.nirf_ranking || 999);
         default:
@@ -120,20 +140,6 @@ function Colleges() {
 
   const handleFilterChange = (filterType, value) => {
     setFilters(prev => ({ ...prev, [filterType]: value }));
-  };
-
-  const renderStars = (rating) => {
-    const stars = [];
-    for (let i = 1; i <= 5; i++) {
-      if (rating >= i) {
-        stars.push(<div key={i} className="star" />);
-      } else if (rating >= i - 0.5) {
-        stars.push(<div key={i} className="star half" />);
-      } else {
-        stars.push(<div key={i} className="star empty" />);
-      }
-    }
-    return stars;
   };
 
   const renderCollegeCard = (college) => {
@@ -161,16 +167,25 @@ function Colleges() {
               </div>
             </div>
             <div className="card-body">
-              <div className="card-desc">{college.desc}</div>
+              <div className="card-desc">{college.desc.substring(0, 100)}...</div>
               <div className="card-tags">
-                {college.scholarship && <span className="tag tag-scholarship">Scholarship Available</span>}
+                {college.scholarship && <span className="tag tag-scholarship">💰 Scholarship Available</span>}
+                {college.hostel_available && <span className="tag tag-stream">🏠 Hostel Available</span>}
                 <span className="tag tag-type">{college.type}</span>
                 {college.naac_grade && <span className="tag tag-stream">NAAC: {college.naac_grade}</span>}
+                {college.counselling_code && <span className="tag tag-stream">Code: {college.counselling_code}</span>}
               </div>
             </div>
             <div className="card-footer">
               <div className="card-rating">
-                {college.nirf_ranking ? <span>NIRF: #{college.nirf_ranking}</span> : <span>NIRF: N/A</span>}
+                {college.nirf_ranking ? (
+                  <span>🏆 NIRF: #{college.nirf_ranking}</span>
+                ) : (
+                  <span>📊 NIRF: Not Ranked</span>
+                )}
+                {college.placement_percentage && (
+                  <span style={{ marginLeft: '12px' }}>💼 Placement: {college.placement_percentage}%</span>
+                )}
               </div>
               <button className="apply-btn">Apply now</button>
             </div>
@@ -181,7 +196,9 @@ function Colleges() {
       return (
         <Link key={college.id} to={`/colleges/${college.id}`} className="college-card-link">
           <div className="list-card">
-            <div className="list-logo" style={{ background: college.bg, color: college.fg }}>{college.logo}</div>
+            <div className="list-logo" style={{ background: college.bg, color: college.fg }}>
+              {getLogoLetters(college.name)}
+            </div>
             <div className="list-info">
               <div className="list-name">{college.name}</div>
               <div className="list-loc">
@@ -189,16 +206,21 @@ function Colleges() {
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
                   <circle cx="12" cy="10" r="3"/>
                 </svg>
-                {college.city}
+                {college.city}, {college.state}
               </div>
               <div className="list-tags">
-                {college.scholarship && <span className="tag tag-scholarship">Scholarship Available</span>}
+                {college.scholarship && <span className="tag tag-scholarship">💰 Scholarship</span>}
+                {college.hostel_available && <span className="tag tag-stream">🏠 Hostel</span>}
                 <span className="tag tag-type">{college.type}</span>
               </div>
             </div>
             <div className="list-right">
               <div className="list-rating">
-                {college.nirf_ranking ? <span>NIRF: #{college.nirf_ranking}</span> : <span>NIRF: N/A</span>}
+                {college.nirf_ranking ? (
+                  <span>NIRF: #{college.nirf_ranking}</span>
+                ) : (
+                  <span>NIRF: N/A</span>
+                )}
               </div>
               <button className="apply-btn">Apply now</button>
             </div>

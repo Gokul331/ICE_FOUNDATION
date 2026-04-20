@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { getColleges } from '../services/api';
 import '../styles/home.css';
 import Navbar from './Navbar';
 
@@ -9,22 +10,24 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch colleges
+  // Fetch colleges - SINGLE useEffect
   useEffect(() => {
-    fetch('https://ice-foundation-1.onrender.com/api/colleges/')
-      .then(res => res.json())
-      .then(data => {
-        // ✅ FIX: Ensure data is an array
+    const fetchColleges = async () => {
+      try {
+        setLoading(true);
+        const data = await getColleges();
+        // Handle both array and object responses
         const collegesArray = Array.isArray(data) ? data : (data.results || []);
         setColleges(collegesArray);
         setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
+      } catch (err) {
+        console.error('Error fetching colleges:', err);
         setError("Failed to load colleges");
-        setColleges([]); // ✅ Set empty array on error
+        setColleges([]);
         setLoading(false);
-      });
+      }
+    };
+    fetchColleges();
   }, []);
 
   // Get user from localStorage
@@ -44,7 +47,7 @@ function Home() {
     <div className="home-container">
       <Navbar user={user} onLogout={handleLogout} />
 
-      {/* HERO SECTION - unchanged */}
+      {/* HERO SECTION */}
       <section className="hero">
         <div className="hero-bg"></div>
         <div className="hero-grid"></div>
@@ -98,55 +101,77 @@ function Home() {
           {loading && <div className="loading">Loading colleges...</div>}
           {error && <div className="error">{error}</div>}
 
-          {/* ✅ FIX: Added array check */}
           {!loading && !error && Array.isArray(colleges) && colleges.length > 0 && (
             <div className="colleges-grid">
               {colleges.slice(0, 15).map((college) => (
-                <div key={college.id} className="college-card">
+                <div key={college.college_id} className="college-card">
                   <div className="card-top">
                     <div className="card-logo-wrapper">
-                      {college.image ? (
+                      {college.logo_url ? (
                         <img
-                          src={`https://ice-foundation-1.onrender.com/api${college.image}`}
-                          alt={college.name}
+                          src={college.logo_url}
+                          alt={college.college_name}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.parentElement.querySelector('.logo-fallback').style.display = 'flex';
+                          }}
                         />
-                      ) : (
-                        <div className="logo-fallback">
-                          {college.name ? college.name.slice(0, 2).toUpperCase() : 'CO'}
-                        </div>
-                      )}
+                      ) : null}
+                      <div 
+                        className="logo-fallback" 
+                        style={{ display: college.logo_url ? 'none' : 'flex' }}
+                      >
+                        {college.college_name ? college.college_name.slice(0, 2).toUpperCase() : 'CO'}
+                      </div>
                     </div>
                     <div className="card-info">
-                      <div className="card-name">{college.name || 'College Name'}</div>
+                      <div className="card-name">{college.college_name || 'College Name'}</div>
                       <div className="card-location">
-                        {college.district || 'District'}, {college.state || 'State'}
+                        {college.location_city || 'City'}, {college.location_state || 'State'}
                       </div>
                     </div>
                   </div>
 
                   <p className="card-desc">
-                    {college.description || 'No description available'}
+                    {college.address ? 
+                      (college.address.length > 120 ? `${college.address.substring(0, 120)}...` : college.address) 
+                      : 'No description available'}
                   </p>
 
-                  {/* ✅ FIX: Added courses array check */}
                   <div className="course-list">
                     <span className="course-label">Popular Courses:</span>
-                    {college.courses && Array.isArray(college.courses) && college.courses.slice(0, 3).map(course => (
-                      <div key={course.id} className="course-chip"
-                        style={{ fontSize: '12px', padding: '4px 10px', background: '#F0F4F8', borderRadius: '16px', marginRight: '6px', marginBottom: '6px' }}
-                      >
-                        {course.name}
-                      </div>
-                    ))}
+                    {college.courses && Array.isArray(college.courses) && college.courses.length > 0 ? (
+                      college.courses.slice(0, 3).map((course, idx) => (
+                        <div key={idx} className="course-chip"
+                          style={{ fontSize: '12px', padding: '4px 10px', background: '#F0F4F8', borderRadius: '16px', marginRight: '6px', marginBottom: '6px', display: 'inline-block' }}
+                        >
+                          {course.name || course.course_name}
+                        </div>
+                      ))
+                    ) : (
+                      <span className="no-courses" style={{ fontSize: '12px', color: '#666' }}>
+                        Courses information coming soon
+                      </span>
+                    )}
                   </div>
 
                   <div className="card-footer">
-                    {college.scholarship_available && (
-                      <span className="scholarship-tag">
-                        Scholarship Available
+                    {college.median_salary && (
+                      <span className="scholarship-tag" style={{ background: '#1D9E75', color: '#fff' }}>
+                        💰 Avg: ₹{(college.median_salary / 100000).toFixed(1)}L
                       </span>
                     )}
-                    <Link to={`/colleges/${college.id}`} className="card-arrow">
+                    {college.hostel_available && (
+                      <span className="scholarship-tag" style={{ background: '#5BB8E0', color: '#fff' }}>
+                        🏠 Hostel
+                      </span>
+                    )}
+                    {college.placement_percentage && (
+                      <span className="scholarship-tag" style={{ background: '#FF9800', color: '#fff' }}>
+                        📊 {college.placement_percentage}% Placed
+                      </span>
+                    )}
+                    <Link to={`/colleges/${college.college_id}`} className="card-arrow">
                       →
                     </Link>
                   </div>
@@ -155,9 +180,10 @@ function Home() {
             </div>
           )}
 
-          {/* Show message if no colleges */}
           {!loading && !error && (!Array.isArray(colleges) || colleges.length === 0) && (
-            <div className="no-colleges">No colleges found</div>
+            <div className="no-colleges" style={{ textAlign: 'center', padding: '40px' }}>
+              No colleges found
+            </div>
           )}
 
           <div className="view-all-container">
@@ -168,7 +194,7 @@ function Home() {
         </div>
       </section>
 
-      {/* REST OF YOUR COMPONENT - unchanged */}
+      {/* HOW IT WORKS */}
       <section className="how">
         <div className="how-inner">
           <div className="section-header">
@@ -195,6 +221,7 @@ function Home() {
         </div>
       </section>
 
+      {/* CTA */}
       <div className="cta-banner">
         <h2>Ready to Find Your Path?</h2>
         <p>Join thousands of students today.</p>
@@ -203,6 +230,7 @@ function Home() {
         </Link>
       </div>
 
+      {/* FOOTER */}
       <footer>
         <div className="footer-logo">
           <span>ICE</span> Foundation
