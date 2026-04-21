@@ -84,7 +84,7 @@ function Navbar() {
 
   const navLinks = [
     { to: "/about", label: "ABOUT US" },
-    { to: "/colleges", label: "COLLEGE MATCHES" },
+    { to: "/colleges", label: "COLLEGES" },
     { to: "/college-suggestion", label: "SUGGESTION" },
     { to: "/contact", label: "CONTACT" }
   ];

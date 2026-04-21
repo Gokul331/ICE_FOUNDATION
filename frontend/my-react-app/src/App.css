@@ -49,14 +49,14 @@ p {
 
 /* Links */
 a {
-  color: #0284c7;
+  color: #000000;
   text-decoration: none;
   transition: all 0.2s ease;
 }
 
 a:hover {
   color: #0369a1;
-  text-decoration: underline;
+  
 }
 
 /* Buttons */

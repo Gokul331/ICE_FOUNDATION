@@ -4,20 +4,48 @@ const API = axios.create({
   baseURL: "https://ice-foundation-1.onrender.com/api",
 });
 
-// Add a response interceptor to handle errors consistently
+// Add a request interceptor to add token to every request
+API.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Token ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add a response interceptor to handle errors
 API.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Handle 401 Unauthorized errors
+    if (error.response?.status === 401) {
+      console.warn('Authentication failed. Clearing stored token.');
+      // Clear invalid token
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      
+      // Optional: Redirect to login page
+      // window.location.href = '/login';
+    }
+    
     console.error("API Error:", error.response?.data || error.message);
     return Promise.reject(error);
   }
 );
 
-// Colleges
+// ==================== PUBLIC ENDPOINTS (No Auth Required) ====================
+
+// Colleges - Public
 export const getColleges = async (params) => {
   try {
+    // Remove any Authorization header for this request
     const response = await API.get("colleges/", { params });
-    return response.data; // Return just the data
+    return response.data;
   } catch (error) {
     console.error("Error fetching colleges:", error);
     throw error;
@@ -27,7 +55,7 @@ export const getColleges = async (params) => {
 export const getCollegeDetail = async (id) => {
   try {
     const response = await API.get(`colleges/${id}/`);
-    return response.data; // Return just the data
+    return response.data;
   } catch (error) {
     console.error(`Error fetching college ${id}:`, error);
     throw error;
@@ -36,13 +64,21 @@ export const getCollegeDetail = async (id) => {
 
 export const getCollegeCourses = async (collegeId) => {
   try {
-    // Try to fetch courses for this college
     const response = await API.get(`colleges/${collegeId}/courses/`);
     return response.data;
   } catch (error) {
-    // If courses endpoint doesn't exist, return empty array
-    console.log(`No courses found for college ${collegeId},`, error);
-    return []; // Return empty array instead of throwing
+    console.log(`No courses found for college ${collegeId}`);
+    return [];
+  }
+};
+
+export const getCollegeFees = async (collegeId, params = {}) => {
+  try {
+    const response = await API.get(`colleges/${collegeId}/fees/`, { params });
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching fees for college ${collegeId}:`, error);
+    return [];
   }
 };
 
@@ -56,7 +92,7 @@ export const suggestColleges = async (params) => {
   }
 };
 
-// Courses
+// Courses - Public
 export const getCourses = async (params) => {
   try {
     const response = await API.get("courses/", { params });
@@ -77,10 +113,112 @@ export const getCourseDetail = async (id) => {
   }
 };
 
-// User Profiles
+// Timeline Events - Public
+export const getTimelineEvents = async (params) => {
+  try {
+    const response = await API.get("timeline/", { params });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching timeline events:", error);
+    throw error;
+  }
+};
+
+// ==================== AUTH ENDPOINTS (No Auth Required) ====================
+
+export const register = async (userData) => {
+  try {
+    const response = await API.post("register/", userData);
+    if (response.data.token) {
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
+    }
+    return response.data;
+  } catch (error) {
+    console.error("Error registering:", error);
+    throw error;
+  }
+};
+
+export const login = async (credentials) => {
+  try {
+    const response = await API.post("login/", credentials);
+    if (response.data.token) {
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
+    }
+    return response.data;
+  } catch (error) {
+    console.error("Error logging in:", error);
+    throw error;
+  }
+};
+
+export const logout = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (token) {
+      await API.post("logout/", {}, {
+        headers: { Authorization: `Token ${token}` }
+      });
+    }
+  } catch (error) {
+    console.error("Error logging out:", error);
+  } finally {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  }
+};
+
+export const checkAuth = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return { isAuthenticated: false };
+    
+    const response = await API.get("check-auth/", {
+      headers: { Authorization: `Token ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    return { isAuthenticated: false };
+  }
+};
+
+// ==================== PROTECTED ENDPOINTS (Requires Auth) ====================
+
+export const getUserProfile = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await API.get("profile/", {
+      headers: { Authorization: `Token ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    throw error;
+  }
+};
+
+export const updateUserProfile = async (data) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await API.put("profile/", data, {
+      headers: { Authorization: `Token ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    throw error;
+  }
+};
+
+// User Profiles - Admin/Protected
 export const getProfiles = async () => {
   try {
-    const response = await API.get("profiles/");
+    const token = localStorage.getItem("token");
+    const response = await API.get("user-profiles/", {
+      headers: { Authorization: `Token ${token}` }
+    });
     return response.data;
   } catch (error) {
     console.error("Error fetching profiles:", error);
@@ -90,7 +228,10 @@ export const getProfiles = async () => {
 
 export const getProfileDetail = async (id) => {
   try {
-    const response = await API.get(`profiles/${id}/`);
+    const token = localStorage.getItem("token");
+    const response = await API.get(`user-profiles/${id}/`, {
+      headers: { Authorization: `Token ${token}` }
+    });
     return response.data;
   } catch (error) {
     console.error(`Error fetching profile ${id}:`, error);
@@ -100,7 +241,10 @@ export const getProfileDetail = async (id) => {
 
 export const createProfile = async (data) => {
   try {
-    const response = await API.post("profiles/", data);
+    const token = localStorage.getItem("token");
+    const response = await API.post("user-profiles/", data, {
+      headers: { Authorization: `Token ${token}` }
+    });
     return response.data;
   } catch (error) {
     console.error("Error creating profile:", error);
@@ -110,42 +254,13 @@ export const createProfile = async (data) => {
 
 export const updateProfile = async (id, data) => {
   try {
-    const response = await API.patch(`profiles/${id}/`, data);
+    const token = localStorage.getItem("token");
+    const response = await API.patch(`user-profiles/${id}/`, data, {
+      headers: { Authorization: `Token ${token}` }
+    });
     return response.data;
   } catch (error) {
     console.error(`Error updating profile ${id}:`, error);
-    throw error;
-  }
-};
-
-// Companies
-export const getCompanies = async () => {
-  try {
-    const response = await API.get("companies/");
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching companies:", error);
-    throw error;
-  }
-};
-
-export const getCompanyDetail = async (id) => {
-  try {
-    const response = await API.get(`companies/${id}/`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching company ${id}:`, error);
-    throw error;
-  }
-};
-
-// Timeline Events
-export const getTimelineEvents = async (params) => {
-  try {
-    const response = await API.get("timeline/", { params });
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching timeline events:", error);
     throw error;
   }
 };

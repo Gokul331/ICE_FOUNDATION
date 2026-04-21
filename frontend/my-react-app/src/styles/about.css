@@ -33,7 +33,7 @@
 
 /* Hero Section */
 .hero {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 50%, var(--secondary) 100%);
+ 
   padding: clamp(3rem, 8vw, 4.5rem) clamp(1.5rem, 5vw, 2.5rem);
   text-align: center;
   position: relative;

@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from './Navbar';
-import { suggestColleges } from '../services/api';
+import { suggestColleges, getCourses } from '../services/api';
 import '../styles/collegesuggestion.css';
 
 function CollegeSuggestion() {
@@ -9,19 +9,59 @@ function CollegeSuggestion() {
   const [formData, setFormData] = useState({
     cutoffMark: '',
     communityCategory: '',
-    preferredBranch: '',
+    preferredCourse: '',
     preferredDistrict: ''
   });
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Autocomplete state
+  const [courses, setCourses] = useState([]);
+  const [filteredCourses, setFilteredCourses] = useState([]);
+  const [showCourseDropdown, setShowCourseDropdown] = useState(false);
+  const [courseSearchTerm, setCourseSearchTerm] = useState('');
+  const [loadingCourses, setLoadingCourses] = useState(false);
+  const courseInputRef = useRef(null);
+  const courseDropdownRef = useRef(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
+    fetchCourses();
   }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (courseInputRef.current && !courseInputRef.current.contains(event.target) &&
+          courseDropdownRef.current && !courseDropdownRef.current.contains(event.target)) {
+        setShowCourseDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const fetchCourses = async () => {
+    setLoadingCourses(true);
+    try {
+      const response = await getCourses();
+      // Safely access the data array
+      const coursesData = response?.data || [];
+      setCourses(coursesData);
+      setFilteredCourses(coursesData);
+    } catch (err) {
+      console.error('Error fetching courses:', err);
+      setError('Failed to load courses. Please refresh the page.');
+      setCourses([]);
+      setFilteredCourses([]);
+    } finally {
+      setLoadingCourses(false);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('user');
@@ -37,6 +77,43 @@ function CollegeSuggestion() {
     }));
   };
 
+  const handleCourseSearch = (e) => {
+    const searchValue = e.target.value;
+    setCourseSearchTerm(searchValue);
+    setFormData(prev => ({
+      ...prev,
+      preferredCourse: searchValue
+    }));
+    
+    // Ensure courses is an array before filtering
+    const coursesArray = Array.isArray(courses) ? courses : [];
+    
+    if (searchValue.trim() === '') {
+      setFilteredCourses(coursesArray);
+      setShowCourseDropdown(true);
+    } else {
+      const filtered = coursesArray.filter(course =>
+        course && (
+          (course.course_name && course.course_name.toLowerCase().includes(searchValue.toLowerCase())) ||
+          (course.course_code && course.course_code.toLowerCase().includes(searchValue.toLowerCase()))
+        )
+      );
+      setFilteredCourses(filtered);
+      setShowCourseDropdown(true);
+    }
+  };
+
+  const selectCourse = (course) => {
+    if (course && course.course_name) {
+      setFormData(prev => ({
+        ...prev,
+        preferredCourse: course.course_name
+      }));
+      setCourseSearchTerm(course.course_name);
+      setShowCourseDropdown(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -46,15 +123,16 @@ function CollegeSuggestion() {
       const params = {
         cutoff_mark: formData.cutoffMark,
         community: formData.communityCategory.toLowerCase(),
-        preferred_stream: formData.preferredBranch,
+        preferred_course: formData.preferredCourse,
         preferred_district: formData.preferredDistrict
       };
 
       const response = await suggestColleges(params);
-      setSuggestions(response.data);
+      setSuggestions(response?.data || []);
     } catch (err) {
       console.error('Error fetching suggestions:', err);
       setError('Failed to fetch college suggestions. Please try again.');
+      setSuggestions([]);
     } finally {
       setLoading(false);
     }
@@ -110,7 +188,7 @@ function CollegeSuggestion() {
             <div className="panel-icon">🎓</div>
             <div>
               <h2 className="panel-title">Find the best colleges for you</h2>
-              <p className="panel-note">Choose your cutoff, community, branch, and district to generate personalized college suggestions.</p>
+              <p className="panel-note">Choose your cutoff, community, course, and district to generate personalized college suggestions.</p>
             </div>
           </div>
 
@@ -153,21 +231,46 @@ function CollegeSuggestion() {
               </div>
 
               <div className="form-field">
-                <label className="form-label">Preferred Branch</label>
-                <select
-                  name="preferredBranch"
-                  value={formData.preferredBranch}
-                  onChange={handleInputChange}
-                  className="form-input"
-                >
-                  <option value="">All</option>
-                  <option value="engineering">Engineering</option>
-                  <option value="management">Management</option>
-                  <option value="science">Science</option>
-                  <option value="arts">Arts</option>
-                  <option value="medical">Medical</option>
-                  <option value="law">Law</option>
-                </select>
+                <label className="form-label">Preferred Course</label>
+                <div className="autocomplete-container" ref={courseInputRef}>
+                  <input
+                    type="text"
+                    value={courseSearchTerm}
+                    onChange={handleCourseSearch}
+                    onFocus={() => setShowCourseDropdown(true)}
+                    className="form-input"
+                    placeholder="Type to search for a course..."
+                    autoComplete="off"
+                  />
+                  {loadingCourses && (
+                    <div className="autocomplete-loading">Loading courses...</div>
+                  )}
+                  {showCourseDropdown && Array.isArray(filteredCourses) && filteredCourses.length > 0 && !loadingCourses && (
+                    <div className="autocomplete-dropdown" ref={courseDropdownRef}>
+                      {filteredCourses.map((course, index) => (
+                        <div
+                          key={course?.course_id || index}
+                          className="autocomplete-item"
+                          onClick={() => selectCourse(course)}
+                        >
+                          <div className="course-name">{course?.course_name || 'Unknown Course'}</div>
+                          {course?.course_code && (
+                            <div className="course-code">{course.course_code}</div>
+                          )}
+                          {course?.duration && (
+                            <div className="course-duration">{course.duration}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {showCourseDropdown && Array.isArray(filteredCourses) && filteredCourses.length === 0 && courseSearchTerm && !loadingCourses && (
+                    <div className="autocomplete-no-results">
+                      No courses found matching "{courseSearchTerm}"
+                    </div>
+                  )}
+                </div>
+                <small className="form-hint">Start typing to search for courses</small>
               </div>
 
               <div className="form-field">
@@ -213,50 +316,50 @@ function CollegeSuggestion() {
           </div>
         )}
 
-        {suggestions.length > 0 && !loading && (
+        {Array.isArray(suggestions) && suggestions.length > 0 && !loading && (
           <div className="suggestions-container">
             <h2 className="suggestions-title">
               Recommended Colleges ({suggestions.length})
             </h2>
-            {suggestions.map(college => {
-              const colors = getCollegeColors(college.college_name);
+            {suggestions.map((college, index) => {
+              const colors = getCollegeColors(college?.college_name);
               return (
-                <div key={college.college_id} className="suggestion-card" style={{ borderLeftColor: colors.fg }}>
+                <div key={college?.college_id || index} className="suggestion-card" style={{ borderLeftColor: colors.fg }}>
                   <div className="suggestion-header">
                     <div className="suggestion-logo" style={{ background: colors.fg }}>
-                      {getLogoLetters(college.college_name)}
+                      {getLogoLetters(college?.college_name)}
                     </div>
                     <div className="suggestion-info">
-                      <div className="suggestion-name">{college.college_name}</div>
-                      <div className="suggestion-meta">{college.location_city}, {college.location_state}</div>
+                      <div className="suggestion-name">{college?.college_name || 'Unknown College'}</div>
+                      <div className="suggestion-meta">{college?.location_city || 'N/A'}, {college?.location_state || 'N/A'}</div>
                     </div>
-                    <Link to={`/colleges/${college.college_id}`} className="suggestion-link" style={{ color: colors.fg }}>
+                    <Link to={`/colleges/${college?.college_id}`} className="suggestion-link" style={{ color: colors.fg }}>
                       View Details →
                     </Link>
                   </div>
-                  {college.description && (
+                  {college?.description && (
                     <div className="suggestion-desc">{college.description.substring(0, 150)}...</div>
                   )}
                   <div className="suggestion-details">
-                    <span className="detail-item">📍 {college.location_city}</span>
-                    {college.type && (
+                    <span className="detail-item">📍 {college?.location_city || 'N/A'}</span>
+                    {college?.type && (
                       <span className="detail-item" style={{ textTransform: 'capitalize' }}>
                         🏛️ {college.type.replace('_', ' ')}
                       </span>
                     )}
-                    {college.scholarship_available && (
+                    {college?.scholarship_available && (
                       <span className="detail-item scholarship-badge">💰 Scholarship Available</span>
                     )}
-                    {college.naac_grade && (
+                    {college?.naac_grade && (
                       <span className="detail-item">⭐ NAAC: {college.naac_grade}</span>
                     )}
-                    {college.placement_percentage && (
+                    {college?.placement_percentage && (
                       <span className="detail-item">📊 Placement: {college.placement_percentage}%</span>
                     )}
-                    {college.nirf_rank && (
+                    {college?.nirf_rank && (
                       <span className="detail-item">🏆 NIRF Rank: #{college.nirf_rank}</span>
                     )}
-                    {college.hostel_available && (
+                    {college?.hostel_available && (
                       <span className="detail-item">🏠 Hostel Available</span>
                     )}
                   </div>
@@ -266,7 +369,7 @@ function CollegeSuggestion() {
           </div>
         )}
 
-        {suggestions.length === 0 && !loading && formData.cutoffMark && (
+        {(Array.isArray(suggestions) && suggestions.length === 0 && !loading && formData.cutoffMark) && (
           <div className="no-results">
             <div>No colleges found matching your criteria. Try adjusting your preferences.</div>
           </div>

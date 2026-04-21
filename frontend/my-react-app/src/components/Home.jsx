@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { getColleges } from '../services/api';
-import '../styles/home.css';
-import Navbar from './Navbar';
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { getColleges, getCollegeCourses } from "../services/api";
+import "../styles/home.css";
+import Navbar from "./Navbar";
 
 function Home() {
   const [colleges, setColleges] = useState([]);
@@ -10,36 +10,50 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch colleges - SINGLE useEffect
   useEffect(() => {
-    const fetchColleges = async () => {
+    const fetchCollegesAndCourses = async () => {
       try {
         setLoading(true);
-        const data = await getColleges();
-        // Handle both array and object responses
-        const collegesArray = Array.isArray(data) ? data : (data.results || []);
-        setColleges(collegesArray);
+        const collegesData = await getColleges();
+        const collegesArray = Array.isArray(collegesData)
+          ? collegesData
+          : collegesData.results || [];
+
+        const collegesWithCourses = await Promise.all(
+          collegesArray.map(async (college) => {
+            try {
+              const courses = await getCollegeCourses(college.college_id);
+              return {
+                ...college,
+                courses: Array.isArray(courses) ? courses : [],
+              };
+            } catch (err) {
+              return { ...college, courses: [] };
+            }
+          }),
+        );
+
+        setColleges(collegesWithCourses);
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching colleges:', err);
         setError("Failed to load colleges");
         setColleges([]);
         setLoading(false);
       }
     };
-    fetchColleges();
+
+    fetchCollegesAndCourses();
   }, []);
 
-  // Get user from localStorage
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
+    const storedUser = localStorage.getItem("user");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
+    localStorage.removeItem("user");
     setUser(null);
   };
 
@@ -47,196 +61,430 @@ function Home() {
     <div className="home-container">
       <Navbar user={user} onLogout={handleLogout} />
 
-      {/* HERO SECTION */}
-      <section className="hero">
-        <div className="hero-bg"></div>
-        <div className="hero-grid"></div>
-        <div className="hero-content">
-          <div className="hero-badge">
-            <span className="badge-dot"></span>
-            Your dream college is closer than you think.
+      {/* HERO SECTION - Split Layout */}
+      <section className="hero-split">
+        <div className="hero-split-left">
+          <div className="hero-badge-dark">
+            <span className="badge-pulse"></span>
+            Partnership with 100+ colleges across Tamilnadu
           </div>
-          <h1>
-            Your Bridge from School to <em>Success.</em>
+          <h1 className="hero-title">
+            <span className="line-1">Discover</span>
+            <span className="line-2">Your Perfect</span>
+            <span className="line-3">Future College</span>
           </h1>
-          <p className="hero-sub">
-            Expert consulting for 12th-grade students to find the perfect college, course, and scholarship — tailored just for you.
+          <p className="hero-desc">
+            AI-powered college recommendations, scholarship discovery, and
+            expert guidance — all in one place. Your dream institution awaits.
           </p>
-          <div className="hero-actions">
+          <div className="hero-buttons">
             {user ? (
-              <Link to="/colleges" className="btn-primary">
-                Go to Colleges
+              <Link to="/college-suggestion" className="btn-dark">
+                Get Personalized Suggestions
               </Link>
             ) : (
-              <Link to="/register" className="btn-primary">
-                Get Started
+              <Link to="/register" className="btn-dark">
+                Start Your Journey
               </Link>
             )}
-            <Link to="/colleges" className="btn-secondary">
-              Explore Colleges →
+            <Link to="/colleges" className="btn-outline">
+              <span>Explore Colleges</span>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
             </Link>
           </div>
-          <div className="hero-stats">
-            <div className="stat">
-              <div className="stat-num">100<span>+</span></div>
-              <div className="stat-label">Partner Colleges</div>
+          <div className="hero-trust">
+            <div className="trust-item">
+              <span className="trust-num">100+</span>
+              <span className="trust-label">Colleges</span>
             </div>
-            <div className="stat">
-              <div className="stat-num">5<span>k</span> - 40<span>k</span></div>
-              <div className="stat-label">Scholarships Available</div>
+            <div className="trust-divider"></div>
+            <div className="trust-item">
+              <span className="trust-num">5k - 40k</span>
+              <span className="trust-label">Scholarships</span>
+            </div>
+            <div className="trust-divider"></div>
+            <div className="trust-item">
+              <span className="trust-num">95%</span>
+              <span className="trust-label">Success Rate</span>
+            </div>
+          </div>
+        </div>
+        <div className="hero-split-right">
+          <div className="hero-visual-wrapper">
+            {/* 3D Roadmap */}
+            <div className="hero-roadmap">
+              <div className="roadmap-header">
+                <span className="roadmap-title">Your Path</span>
+              </div>
+
+              <div className="roadmap-track">
+                <div className="roadmap-line"></div>
+
+                <div className="roadmap-step">
+                  <div className="step-marker">
+                    <span className="step-num">01</span>
+                  </div>
+                  <div className="step-content">
+                    <div className="step-icon">📝</div>
+                    <div className="step-info">
+                      <h4>Create Profile</h4>
+                      <p>Tell us about your interests</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="roadmap-step">
+                  <div className="step-marker">
+                    <span className="step-num">02</span>
+                  </div>
+                  <div className="step-content">
+                    <div className="step-icon">🎯</div>
+                    <div className="step-info">
+                      <h4>Get Matched</h4>
+                      <p>AI finds best colleges</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="roadmap-step">
+                  <div className="step-marker">
+                    <span className="step-num">03</span>
+                  </div>
+                  <div className="step-content">
+                    <div className="step-icon">✅</div>
+                    <div className="step-info">
+                      <h4>Apply & Secure</h4>
+                      <p>One-click applications</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="roadmap-destination">
+                  <span>🎓</span>
+                  <span>Dream College</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Floating Visual Cards */}
+            <div className="hero-visual">
+              <div className="visual-card card-1">
+                <div className="vc-icon">🎓</div>
+                <div className="vc-text">Top Ranked</div>
+              </div>
+              <div className="visual-card card-2">
+                <div className="vc-icon">💰</div>
+                <div className="vc-text">Scholarships</div>
+              </div>
+              <div className="visual-card card-3">
+                <div className="vc-icon">📚</div>
+                <div className="vc-text">Courses</div>
+              </div>
+              <div className="visual-card card-4">
+                <div className="vc-icon">🏆</div>
+                <div className="vc-text">Expert Guide</div>
+              </div>
+              <div className="visual-bg-circle"></div>
+              <div className="visual-bg-dots"></div>
             </div>
           </div>
         </div>
       </section>
 
+      {/* MARQUEE SECTION */}
+      <section className="marquee-section">
+        <div className="marquee-track">
+          <span>Engineering</span>
+          <span className="dot">•</span>
+          <span>Medical</span>
+          <span className="dot">•</span>
+          <span>Nursing</span>
+          <span className="dot">•</span>
+          <span>Allied Health Science</span>
+          <span className="dot">•</span>
+          <span>Arts & Science</span>
+          <span className="dot">•</span>
+          <span>Polytechnic</span>
+          <span className="dot">•</span>
+          <span>Law</span>
+          <span className="dot">•</span>
+          <span>Engineering</span>
+          <span className="dot">•</span>
+          <span>Medical</span>
+          <span className="dot">•</span>
+          <span>Nursing</span>
+          <span className="dot">•</span>
+          <span>Allied Health Science</span>
+          <span className="dot">•</span>
+          <span>Arts & Science</span>
+          <span className="dot">•</span>
+          <span>Polytechnic</span>
+          <span className="dot">•</span>
+          <span>Law</span>
+          <span className="dot">•</span>
+        </div>
+      </section>
+
       {/* COLLEGES SECTION */}
-      <section className="colleges">
-        <div className="colleges-container">
-          <div className="section-header">
-            <div className="section-tag">Featured Colleges</div>
-            <h2>Find Your Perfect Institution</h2>
-            <p>Explore top-ranked colleges across India.</p>
+      <section className="colleges-alt">
+        <div className="colleges-alt-container">
+          <div className="section-header-alt">
+            <div className="section-label">Featured</div>
+            <h2>Top Colleges For You</h2>
+            <p>
+              Explore India's premier institutions hand-picked based on your
+              profile.
+            </p>
           </div>
 
           {loading && <div className="loading">Loading colleges...</div>}
           {error && <div className="error">{error}</div>}
 
-          {!loading && !error && Array.isArray(colleges) && colleges.length > 0 && (
-            <div className="colleges-grid">
-              {colleges.slice(0, 15).map((college) => (
-                <div key={college.college_id} className="college-card">
-                  <div className="card-top">
-                    <div className="card-logo-wrapper">
-                      {college.logo_url ? (
-                        <img
-                          src={college.logo_url}
-                          alt={college.college_name}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.parentElement.querySelector('.logo-fallback').style.display = 'flex';
-                          }}
-                        />
-                      ) : null}
-                      <div 
-                        className="logo-fallback" 
-                        style={{ display: college.logo_url ? 'none' : 'flex' }}
-                      >
-                        {college.college_name ? college.college_name.slice(0, 2).toUpperCase() : 'CO'}
+          {!loading &&
+            !error &&
+            Array.isArray(colleges) &&
+            colleges.length > 0 && (
+              <div className="colleges-list">
+                {colleges.slice(0, 8).map((college, index) => (
+                  <Link
+                    key={college.college_id}
+                    to={`/colleges/${college.college_id}`}
+                    className="college-item"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <div className="college-item-left">
+                      <div className="college-item-logo">
+                        {college.logo_url ? (
+                          <img
+                            src={college.logo_url}
+                            alt={college.college_name}
+                          />
+                        ) : (
+                          <span>
+                            {college.college_name?.slice(0, 2).toUpperCase() ||
+                              "CO"}
+                          </span>
+                        )}
                       </div>
-                    </div>
-                    <div className="card-info">
-                      <div className="card-name">{college.college_name || 'College Name'}</div>
-                      <div className="card-location">
-                        {college.location_city || 'City'}, {college.location_state || 'State'}
-                      </div>
-                    </div>
-                  </div>
-
-                  <p className="card-desc">
-                    {college.address ? 
-                      (college.address.length > 120 ? `${college.address.substring(0, 120)}...` : college.address) 
-                      : 'No description available'}
-                  </p>
-
-                  <div className="course-list">
-                    <span className="course-label">Popular Courses:</span>
-                    {college.courses && Array.isArray(college.courses) && college.courses.length > 0 ? (
-                      college.courses.slice(0, 3).map((course, idx) => (
-                        <div key={idx} className="course-chip"
-                          style={{ fontSize: '12px', padding: '4px 10px', background: '#F0F4F8', borderRadius: '16px', marginRight: '6px', marginBottom: '6px', display: 'inline-block' }}
-                        >
-                          {course.name || course.course_name}
+                      <div className="college-item-info">
+                        <h4>{college.college_name || "College Name"}</h4>
+                        <p>
+                          {college.location_city || "City"},{" "}
+                          {college.location_state || "State"}
+                        </p>
+                        <div className="college-label">Popular courses :</div>
+                        <div className="college-item-courses">
+                          {college.courses
+                            ?.slice(0, 2)
+                            .map((c, i) => (
+                              <span key={i}>{c.course_name || c.name}</span>
+                            )) || <span>Multiple courses available</span>}
                         </div>
-                      ))
-                    ) : (
-                      <span className="no-courses" style={{ fontSize: '12px', color: '#666' }}>
-                        Courses information coming soon
-                      </span>
-                    )}
-                  </div>
+                      </div>
+                    </div>
+                    <div className="college-item-right">
+                      <span className="college-item-arrow">→</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
 
-                  <div className="card-footer">
-                    {college.median_salary && (
-                      <span className="scholarship-tag" style={{ background: '#1D9E75', color: '#fff' }}>
-                        💰 Avg: ₹{(college.median_salary / 100000).toFixed(1)}L
-                      </span>
-                    )}
-                    {college.hostel_available && (
-                      <span className="scholarship-tag" style={{ background: '#5BB8E0', color: '#fff' }}>
-                        🏠 Hostel
-                      </span>
-                    )}
-                    {college.placement_percentage && (
-                      <span className="scholarship-tag" style={{ background: '#FF9800', color: '#fff' }}>
-                        📊 {college.placement_percentage}% Placed
-                      </span>
-                    )}
-                    <Link to={`/colleges/${college.college_id}`} className="card-arrow">
-                      →
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          {!loading &&
+            !error &&
+            (!Array.isArray(colleges) || colleges.length === 0) && (
+              <div className="no-colleges">No colleges found</div>
+            )}
 
-          {!loading && !error && (!Array.isArray(colleges) || colleges.length === 0) && (
-            <div className="no-colleges" style={{ textAlign: 'center', padding: '40px' }}>
-              No colleges found
-            </div>
-          )}
-
-          <div className="view-all-container">
-            <Link to="/colleges" className="btn-primary view-all-btn">
-              View All Colleges →
+          <div className="view-all-wrap">
+            <Link to="/colleges" className="btn-dark-outline">
+              View All Colleges
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
-      <section className="how">
-        <div className="how-inner">
-          <div className="section-header">
-            <div className="section-tag">How It Works</div>
-            <h2>Three Steps to Your Dream College</h2>
-          </div>
-          <div className="steps">
-            <div className="step">
-              <div className="step-num">01</div>
-              <h3>Create Profile</h3>
-              <p>Tell us your interests and marks.</p>
+      {/* BENTO GRID FEATURES */}
+      <section className="bento-section">
+        <div className="bento-container">
+          <div className="section-label">Why Choose Us</div>
+          <h2 className="section-title">Everything You Need in One Platform</h2>
+
+          <div className="bento-grid">
+            <div className="bento-card bento-large">
+              <div className="flex gap-2 items-center">
+                <div className="bento-icon">📈</div>
+                <h3>Cutoff Prediction & College Suggestion</h3>
+              </div>
+              <p>
+                Using historical cutoff data and trend analysis, our AI predicts
+                your chances of admission at top colleges based on your entrance
+                exam scores and category. Get realistic expectations and backup
+                options instantly.
+              </p>
+              <ul className="feature-list">
+                <li>
+                  🎯 Personalized college suggestions based on your profile
+                </li>
+                <li>
+                  📊 Real-time cutoff predictions for JEE, NEET, TNEA, and more
+                </li>
+                <li>💡 Data-driven insights to optimize your applications</li>
+                <li>
+                  📈 Track cutoff trends from previous years for informed
+                  decisions
+                </li>
+              </ul>
+              <div className="bento-visual">
+                <Link to="/college-suggestion" className="btn-dark-outline">
+                  Find Your Match →
+                </Link>
+              </div>
             </div>
-            <div className="step">
-              <div className="step-num">02</div>
-              <h3>Get Guidance</h3>
-              <p>Expert counselling for best colleges.</p>
+            <div className="bento-card">
+              <div className="flex gap-2 items-center">
+                <div className="bento-icon ">💎</div>
+                <h3>Scholarship Finder</h3>
+              </div>
+              <p>
+                Discover scholarships up to 40 lakhs with our comprehensive
+                database.
+              </p>
             </div>
-            <div className="step">
-              <div className="step-num">03</div>
-              <h3>Secure Admission</h3>
-              <p>We handle applications & scholarships.</p>
+
+            <div className="bento-card">
+              <div className="flex gap-2 items-center">
+                <div className="bento-icon">📊</div>
+                <h3>Rankings & Reviews</h3>
+              </div>
+
+              <p>
+                Real student reviews and official rankings to make informed
+                decisions.
+              </p>
+            </div>
+
+            <div className="bento-card">
+              <div className="flex gap-2 items-center">
+                <div className="bento-icon">🎯</div>
+                <h3>Expert Counseling</h3>
+              </div>
+
+              <p>
+                Get guidance from education experts with decades of experience.
+              </p>
+            </div>
+
+            <div className="bento-card">
+              <div className="flex gap-2 items-center">
+                <div className="bento-icon">⚡</div>
+                <h3>Quick Apply</h3>
+              </div>
+              <p>
+                Apply to multiple colleges with a single application form. Save
+                time and effort with our streamlined process.
+                <br />
+                <span>(JEE Entrance)</span>
+              </p>
+
+              <div className="quick-apply-logos">
+                <span>IIT</span>
+                <span>IIM</span>
+                <span>NIT</span>
+                <span>AIIMS</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
-
-      {/* CTA */}
-      <div className="cta-banner">
-        <h2>Ready to Find Your Path?</h2>
-        <p>Join thousands of students today.</p>
-        <Link to="/register" className="cta-btn">
-          Start Your Journey
-        </Link>
-      </div>
-
-      {/* FOOTER */}
-      <footer>
-        <div className="footer-logo">
-          <span>ICE</span> Foundation
+      {/* STATS SECTION */}
+      <section className="stats-section">
+        <div className="stats-container">
+          <div className="stat-card">
+            <span className="stat-number">100+</span>
+            <span className="stat-text">Partner Colleges</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-number">₹5k - 40k</span>
+            <span className="stat-text">Scholarship Amount</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-number">24/7</span>
+            <span className="stat-text">Support Available</span>
+          </div>
         </div>
-        <div className="footer-copy">
-          © 2025 ICE Foundation.
+      </section>
+
+      {/* CTA SECTION */}
+      <section className="cta-alt">
+        <div className="cta-alt-bg"></div>
+        <div className="cta-alt-content">
+          <h2>Ready to Transform Your Future?</h2>
+          <p>
+            Join thousands of students who found their dream colleges through
+            ICE Foundation.
+          </p>
+          <div className="cta-alt-buttons">
+            <Link to="/register" className="btn-white">
+              Get Started Free
+            </Link>
+            <Link to="/contact" className="btn-white-outline">
+              Talk to Expert
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER - DARK DESIGN */}
+      <footer className="footer-dark">
+        <div className="footer-dark-content">
+          <div className="footer-dark-main">
+            <div className="footer-dark-brand">
+              <div className="footer-dark-logo">
+                <span className="footer-logo-main">ICE</span>
+                <span className="footer-logo-sub">Foundation</span>
+              </div>
+              <p className="footer-tagline">
+                Smart College Prediction.
+                <br />
+                Expert Guidance. Seamless Admissions.
+              </p>
+            </div>
+
+            <div className="footer-dark-links">
+              <div className="footer-dark-col">
+                <h4>Company</h4>
+                <Link to="/about">About</Link>
+                <Link to="/colleges">Colleges</Link>
+                <Link to="/contact">Contact</Link>
+              </div>
+              <div className="footer-dark-col">
+                <h4>Legal</h4>
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+                <a href="#">Cookie Policy</a>
+              </div>
+            </div>
+          </div>
+
+          <div className="footer-dark-bottom">
+            <span>© 2025 ICE Foundation. All rights reserved.</span>
+          </div>
         </div>
       </footer>
     </div>
