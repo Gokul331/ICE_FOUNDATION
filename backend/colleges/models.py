@@ -292,28 +292,50 @@ class Course(models.Model):
         ordering = ['college__college_name', 'course_code']
         unique_together = ['college', 'course_code']
 
-# ==================== FEES MODEL ====================
 class Fees(models.Model):
     PAYMENT_FREQUENCY_CHOICES = [
         ('yearly', 'Yearly'),
         ('semester', 'Semester'),
         ('quarterly', 'Quarterly'),
     ]
+    
+    HOSTEL_ROOM_TYPE_CHOICES = [
+        (1, 'Normal Room + Common Bathroom'),
+        (2, 'Normal Room + Attached Bathroom'),
+        (3, 'AC Room + Common Bathroom'),
+        (4, 'AC Room + Attached Bathroom'),
+    ]
 
     fee_id = models.AutoField(primary_key=True)
     college = models.ForeignKey(College, on_delete=models.CASCADE, related_name='fees')
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, blank=True, related_name='fees', help_text="NULL = common for all courses")
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, blank=True, related_name='fees')
     academic_year = models.CharField(max_length=9)
     
+    # Tuition Fee
     tuition_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    hostel_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    mess_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    transport_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    admission_fee_one_time = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
+    # Hostel Fees - Store as JSON for multiple room types
+    hostel_fees = models.JSONField(default=dict, blank=True, help_text="Hostel fees for different room types")
+    # Example format:
+    # {
+    #     "1": {"fee": 45000, "available_seats": 100},  # Normal + Common
+    #     "2": {"fee": 55000, "available_seats": 80},   # Normal + Attached
+    #     "3": {"fee": 75000, "available_seats": 50},   # AC + Common
+    #     "4": {"fee": 90000, "available_seats": 40}    # AC + Attached
+    # }
+    
+    # Transport Fee Range
+    transport_fee_min = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    transport_fee_max = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    
+    # One-time fees
+    admission_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    
+    # Payment settings
     payment_frequency = models.CharField(max_length=20, choices=PAYMENT_FREQUENCY_CHOICES, default='yearly')
-    scholarship_available = models.BooleanField(default=False)
-    scholarship_details = models.TextField(null=True, blank=True, help_text="Criteria and amount")
+    
+    # Additional notes
+    fee_notes = models.TextField(null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -325,14 +347,46 @@ class Fees(models.Model):
         ordering = ['-academic_year', 'college__college_name']
     
     @property
-    def total_fee(self):
-        return self.tuition_fee + self.hostel_fee + self.mess_fee + self.transport_fee + self.admission_fee_one_time
+    def hostel_room_display(self):
+        """Get display name for hostel room type"""
+        return dict(self.HOSTEL_ROOM_TYPE_CHOICES)
+    
+    def get_hostel_fee(self, room_type):
+        """Get hostel fee for specific room type"""
+        return self.hostel_fees.get(str(room_type), {}).get('fee', 0)
+    
+    def get_all_hostel_options(self):
+        """Get all hostel options with fees"""
+        options = []
+        for room_type, display_name in self.HOSTEL_ROOM_TYPE_CHOICES:
+            fee_data = self.hostel_fees.get(str(room_type), {})
+            options.append({
+                'room_type': room_type,
+                'room_type_display': display_name,
+                'hostel_fee': float(fee_data.get('fee', 0)),
+                'available_seats': fee_data.get('available_seats', 0)
+            })
+        return options
+    
+    def get_fee_summary(self):
+        """Get fee summary for API response"""
+        return {
+            'fee_id': self.fee_id,
+            'academic_year': self.academic_year,
+            'tuition_fee': float(self.tuition_fee),
+            'admission_fee': float(self.admission_fee),
+            'hostel_options': self.get_all_hostel_options(),
+            'transport_fee_min': float(self.transport_fee_min),
+            'transport_fee_max': float(self.transport_fee_max),
+            'payment_frequency': self.payment_frequency,
+            'fee_notes': self.fee_notes,
+        }
     
     def __str__(self):
         course_name = self.course.course_name if self.course else "All Courses"
         return f"{self.college.college_name} - {course_name} ({self.academic_year})"
 
-
+        
 # ==================== USER PROFILE MODEL ====================
 class UserProfile(models.Model):
     GENDER_CHOICES = [

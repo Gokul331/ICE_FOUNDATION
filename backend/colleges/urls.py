@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (
-    get_colleges, get_college_detail,
-    get_courses, get_course_detail, suggest_colleges,
+    get_college_fees, get_colleges, get_college_detail, get_course_fees,
+    get_courses, get_course_detail, get_fee_detail, get_fee_statistics, suggest_colleges,
     user_profiles, user_profile_detail,
     timeline_events, timeline_event_detail,
     get_college_courses  # Add this import
@@ -21,6 +21,12 @@ urlpatterns = [
     path('courses/<int:course_id>/', get_course_detail, name='get_course_detail'),
     path('colleges/suggest/', suggest_colleges, name='suggest_colleges'),
 
+    path('api/colleges/<int:college_id>/fees/', get_college_fees, name='college-fees'),
+    path('api/courses/<int:course_id>/fees/', get_course_fees, name='course-fees'),
+    path('api/fees/<int:fee_id>/', get_fee_detail, name='fee-detail'),
+   
+    path('api/fees/statistics/',    get_fee_statistics, name='fee-statistics'),
+    
     # Auth endpoints
     path('register/', views.RegisterView.as_view(), name='register'),
     path('login/', views.LoginView.as_view(), name='login'),

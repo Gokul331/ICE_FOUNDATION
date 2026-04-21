@@ -2,13 +2,14 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
-from django.db.models import Q
+from django.db.models import Q, F, Sum, Avg, Min, Max
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from .models import College, Course, UserProfile, TimelineEvent
+from .models import College, Course, UserProfile, TimelineEvent, Fees
 from .serializers import (
     CollegeSerializer, CollegeListSerializer, CourseSerializer,
-    UserProfileSerializer, TimelineEventSerializer, RegisterSerializer, LoginSerializer
+    UserProfileSerializer, TimelineEventSerializer, RegisterSerializer, LoginSerializer,
+    FeesSerializer, FeesListSerializer
 )
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout 
@@ -82,7 +83,6 @@ def get_college_courses(request, college_id):
             return Response({'error': 'College not found'}, status=404)
         
         # Get courses for this college
-        # Assuming Course model has a college_id foreign key
         courses = Course.objects.filter(college_id=college_id)
         
         # Use the CourseSerializer to serialize the data
@@ -91,6 +91,72 @@ def get_college_courses(request, college_id):
         
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+def get_college_fees(request, college_id):
+    """Get all fee structures for a specific college"""
+    try:
+        # Check if college exists
+        college = College.objects.filter(college_id=college_id).first()
+        if not college:
+            return Response({'error': 'College not found'}, status=404)
+        
+        # Get fees for this college
+        fees = Fees.objects.filter(college=college)
+        
+        # Get query parameters for filtering
+        course_id = request.GET.get('course_id')
+        academic_year = request.GET.get('academic_year')
+        hostel_room_type = request.GET.get('hostel_room_type')
+        
+        if course_id:
+            fees = fees.filter(course_id=course_id)
+        if academic_year:
+            fees = fees.filter(academic_year=academic_year)
+        if hostel_room_type:
+            fees = fees.filter(hostel_room_type=hostel_room_type)
+        
+        serializer = FeesSerializer(fees, many=True)
+        return Response(serializer.data, status=200)
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+def get_course_fees(request, course_id):
+    """Get fee structure for a specific course"""
+    try:
+        # Check if course exists
+        course = Course.objects.filter(course_id=course_id).first()
+        if not course:
+            return Response({'error': 'Course not found'}, status=404)
+        
+        # Get fees for this course
+        fees = Fees.objects.filter(course=course)
+        
+        # Get query parameters
+        academic_year = request.GET.get('academic_year')
+        if academic_year:
+            fees = fees.filter(academic_year=academic_year)
+        
+        serializer = FeesSerializer(fees, many=True)
+        return Response(serializer.data, status=200)
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+def get_fee_detail(request, fee_id):
+    """Get a single fee record by ID"""
+    try:
+        fee = Fees.objects.get(fee_id=fee_id)
+        serializer = FeesSerializer(fee)
+        return Response(serializer.data)
+    except Fees.DoesNotExist:
+        return Response({'error': 'Fee record not found'}, status=404)
 
 
 @api_view(['GET'])
@@ -103,12 +169,12 @@ def get_courses(request):
     if college_id:
         courses = courses.filter(college_id=college_id)
 
-    # ✅ Add filter by course code
+    # Add filter by course code
     course_code = request.GET.get('course_code')
     if course_code:
         courses = courses.filter(course_code=course_code)
 
-    # ✅ Add filter by course name
+    # Add filter by course name
     course_name = request.GET.get('course_name')
     if course_name:
         courses = courses.filter(course_name__icontains=course_name)
@@ -140,6 +206,7 @@ def get_courses(request):
 
     serializer = CourseSerializer(courses, many=True)
     return Response(serializer.data)
+
 
 @api_view(['GET'])
 def get_course_detail(request, course_id):
@@ -186,6 +253,77 @@ def suggest_colleges(request):
 
     serializer = CollegeListSerializer(colleges, many=True)
     return Response(serializer.data)
+
+
+@api_view(['GET'])
+def get_fee_comparison(request):
+    """Compare fees across multiple colleges/courses"""
+    college_ids = request.GET.getlist('college_ids')
+    course_id = request.GET.get('course_id')
+    academic_year = request.GET.get('academic_year', '2024-2025')
+    
+    if not college_ids:
+        return Response({'error': 'college_ids parameter is required'}, status=400)
+    
+    comparison_data = []
+    
+    for college_id in college_ids:
+        try:
+            college = College.objects.get(college_id=college_id)
+            
+            # Get fees for this college and course
+            fees_query = Fees.objects.filter(college=college, academic_year=academic_year)
+            if course_id:
+                fees_query = fees_query.filter(course_id=course_id)
+            else:
+                fees_query = fees_query.filter(course__isnull=True)  # Default fees
+            
+            fees = fees_query.first()
+            
+            if fees:
+                comparison_data.append({
+                    'college_id': college.college_id,
+                    'college_name': college.college_name,
+                    'tuition_fee': float(fees.tuition_fee),
+                    'hostel_fee': float(fees.hostel_fee),
+                    'admission_fee': float(fees.admission_fee),
+                    'transport_fee_min': float(fees.transport_fee_min),
+                    'transport_fee_max': float(fees.transport_fee_max),
+                    'total_fee_min': float(fees.total_fee_with_transport_min),
+                    'total_fee_max': float(fees.total_fee_with_transport_max),
+                    'hostel_options': [
+                        {
+                            'room_type': room_type,
+                            'fee': float(fee_data.get('fee', 0)) if isinstance(fees.hostel_fees, dict) else 0
+                        }
+                        for room_type, fee_data in (fees.hostel_fees.items() if isinstance(fees.hostel_fees, dict) else {})
+                    ] if hasattr(fees, 'hostel_fees') else []
+                })
+        except College.DoesNotExist:
+            continue
+    
+    return Response(comparison_data)
+
+
+@api_view(['GET'])
+def get_fee_statistics(request):
+    """Get fee statistics across all colleges"""
+    academic_year = request.GET.get('academic_year', '2024-2025')
+    
+    fees = Fees.objects.filter(academic_year=academic_year)
+    
+    stats = {
+        'average_tuition_fee': fees.aggregate(Avg('tuition_fee'))['tuition_fee__avg'],
+        'min_tuition_fee': fees.aggregate(Min('tuition_fee'))['tuition_fee__min'],
+        'max_tuition_fee': fees.aggregate(Max('tuition_fee'))['tuition_fee__max'],
+        'average_hostel_fee': fees.aggregate(Avg('hostel_fee'))['hostel_fee__avg'],
+        'min_hostel_fee': fees.aggregate(Min('hostel_fee'))['hostel_fee__min'],
+        'max_hostel_fee': fees.aggregate(Max('hostel_fee'))['hostel_fee__max'],
+        'total_fees_records': fees.count(),
+        'academic_year': academic_year
+    }
+    
+    return Response(stats)
 
 
 @api_view(['GET', 'POST'])
