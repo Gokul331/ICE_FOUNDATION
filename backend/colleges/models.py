@@ -386,7 +386,40 @@ class Fees(models.Model):
         course_name = self.course.course_name if self.course else "All Courses"
         return f"{self.college.college_name} - {course_name} ({self.academic_year})"
 
-        
+     # Add these properties to the Fees model
+    @property
+    def total_fee(self):
+        """Calculate total fee without transport (tuition + admission)"""
+        return (self.tuition_fee or 0) + (self.admission_fee or 0)
+    @property
+    def total_fee_with_transport_min(self):
+
+        """Calculate total fee with minimum transport fee"""
+        return self.total_fee + (self.transport_fee_min or 0)
+    @property
+    def total_fee_with_transport_max(self):
+
+        """Calculate total fee with maximum transport fee"""
+        return self.total_fee + (self.transport_fee_max or 0)
+    @property
+    def transport_fee_range(self):
+
+        """Get transport fee range as string"""
+        if self.transport_fee_min == self.transport_fee_max:
+            if self.transport_fee_min == 0:
+                return "Not Available"
+
+            return f"₹ {self.transport_fee_min:,.2f}"
+        return f"₹ {self.transport_fee_min:,.2f} - ₹ {self.transport_fee_max:,.2f}"
+    @property
+    def hostel_room_display(self):
+        """Get display name for hostel room type (deprecated - for backward compatibility)"""
+        return "Use hostel_fees JSON field for multiple room types"
+
+
+    def get_payment_frequency_display(self):
+        """Get display name for payment frequency"""
+        return dict(self.PAYMENT_FREQUENCY_CHOICES).get(self.payment_frequency, self.payment_frequency)   
 # ==================== USER PROFILE MODEL ====================
 class UserProfile(models.Model):
     GENDER_CHOICES = [

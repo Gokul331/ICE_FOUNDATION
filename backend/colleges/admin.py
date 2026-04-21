@@ -35,7 +35,7 @@ class CollegeStateListFilter(admin.SimpleListFilter):
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ('course_name', 'college', 'degree_name', 'specialization', 'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
+    list_display = ('course_name', 'course_code', 'college', 'degree_name', 'specialization', 'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
     search_fields = ('course_name', 'course_code', 'specialization', 'college__college_name')
     list_filter = (CollegeStateListFilter, 'degree_type', 'degree_name', 'is_active', 'college__type', 'college__affiliation')
     readonly_fields = ('created_at', 'updated_at')
@@ -46,18 +46,14 @@ class CourseAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('college')
 
 
-# ==================== FEES ADMIN (FIXED) ====================
+# ==================== FEES ADMIN (UPDATED FOR JSON FIELD) ====================
 @admin.register(Fees)
 class FeesAdmin(admin.ModelAdmin):
     list_display = ('college', 'course', 'academic_year', 'tuition_fee_display', 
-                    'hostel_fee_display', 'transport_fee_range_display', 
-                    'total_fee_display', 'payment_frequency', 'created_at')
+                    'hostel_fees_summary', 'transport_fee_range_display', 
+                    'payment_frequency', 'created_at')
     search_fields = ('college__college_name', 'college__short_name', 'course__course_name', 'academic_year')
-    
-    # FIX: Remove 'hostel_room_type' from list_filter if it doesn't exist yet
-    # Only include fields that definitely exist in the database
     list_filter = ('academic_year', 'payment_frequency', 'college__location_state', 'college__type')
-    
     readonly_fields = ('created_at', 'updated_at', 'total_fee_calculated')
     
     fieldsets = (
@@ -68,9 +64,27 @@ class FeesAdmin(admin.ModelAdmin):
             'fields': ('tuition_fee', 'admission_fee'),
             'description': 'Basic fees required for admission'
         }),
-        ('Hostel Accommodation', {
-            'fields': ('hostel_room_type', 'hostel_fee'),
-            'description': 'Hostel fees including mess charges (select room type from choices)',
+        ('Hostel Accommodation (JSON Format)', {
+            'fields': ('hostel_fees',),
+            'description': '''
+                <div style="background: #f8fafc; padding: 12px; border-radius: 6px;">
+                    <strong>📘 Hostel Fees Format:</strong><br>
+                    Enter hostel fees as JSON with room type keys:<br><br>
+                    <code>
+                    {
+                        "1": {"fee": 45000, "available_seats": 100},
+                        "2": {"fee": 55000, "available_seats": 80},
+                        "3": {"fee": 75000, "available_seats": 50},
+                        "4": {"fee": 90000, "available_seats": 40}
+                    }
+                    </code><br><br>
+                    <strong>Room Types:</strong><br>
+                    1 = Normal Room + Common Bathroom<br>
+                    2 = Normal Room + Attached Bathroom<br>
+                    3 = AC Room + Common Bathroom<br>
+                    4 = AC Room + Attached Bathroom
+                </div>
+            ''',
             'classes': ('wide',)
         }),
         ('Transport Facility', {
@@ -91,45 +105,35 @@ class FeesAdmin(admin.ModelAdmin):
         return f"₹ {obj.tuition_fee:,.2f}"
     tuition_fee_display.short_description = 'Tuition Fee'
     
-    def hostel_fee_display(self, obj):
-        if hasattr(obj, 'hostel_fee') and obj.hostel_fee and obj.hostel_fee > 0:
-            room_display = self.get_hostel_room_display(obj)
-            return f"₹ {obj.hostel_fee:,.2f} ({room_display})"
-        return "Not Applicable"
-    hostel_fee_display.short_description = 'Hostel Fee (incl. Mess)'
-    
-    def get_hostel_room_display(self, obj):
-        """Safe method to get hostel room display"""
-        if hasattr(obj, 'get_hostel_room_display'):
-            return obj.get_hostel_room_display()
-        room_types = {
-            1: 'Normal + Common Bathroom',
-            2: 'Normal + Attached Bathroom',
-            3: 'AC + Common Bathroom',
-            4: 'AC + Attached Bathroom'
+    def hostel_fees_summary(self, obj):
+        """Display hostel fees summary in admin list view"""
+        if not obj.hostel_fees:
+            return "Not Available"
+        
+        room_names = {
+            '1': 'Normal + Common',
+            '2': 'Normal + Attached',
+            '3': 'AC + Common',
+            '4': 'AC + Attached'
         }
-        return room_types.get(obj.hostel_room_type, 'Not Selected')
+        
+        summary = []
+        for room_type, data in obj.hostel_fees.items():
+            fee = data.get('fee', 0)
+            if fee > 0:
+                room_name = room_names.get(room_type, f'Room {room_type}')
+                summary.append(f"{room_name}: ₹{fee:,.0f}")
+        
+        return ", ".join(summary) if summary else "Not Available"
+    hostel_fees_summary.short_description = 'Hostel Fees'
     
     def transport_fee_range_display(self, obj):
-        if hasattr(obj, 'transport_fee_min') and hasattr(obj, 'transport_fee_max'):
-            if obj.transport_fee_min == obj.transport_fee_max:
-                if obj.transport_fee_min == 0:
-                    return "Not Available"
-                return f"₹ {obj.transport_fee_min:,.2f}"
-            return f"₹ {obj.transport_fee_min:,.2f} - ₹ {obj.transport_fee_max:,.2f}"
-        return "Not Available"
+        if obj.transport_fee_min == obj.transport_fee_max:
+            if obj.transport_fee_min == 0:
+                return "Not Available"
+            return f"₹ {obj.transport_fee_min:,.2f}"
+        return f"₹ {obj.transport_fee_min:,.2f} - ₹ {obj.transport_fee_max:,.2f}"
     transport_fee_range_display.short_description = 'Transport Fee Range'
-    
-    def total_fee_display(self, obj):
-        """Display total fee with transport range"""
-        if hasattr(obj, 'total_fee_with_transport_min'):
-            if obj.transport_fee_min == obj.transport_fee_max:
-                if obj.transport_fee_min == 0:
-                    return f"₹ {obj.total_fee:,.2f}"
-                return f"₹ {obj.total_fee_with_transport_min:,.2f}"
-            return f"₹ {obj.total_fee_with_transport_min:,.2f} - ₹ {obj.total_fee_with_transport_max:,.2f}"
-        return f"₹ {obj.total_fee:,.2f}"
-    total_fee_display.short_description = 'Total Fee (with Transport)'
     
     def total_fee_calculated(self, obj):
         """Display detailed fee breakdown in admin panel"""
@@ -137,26 +141,43 @@ class FeesAdmin(admin.ModelAdmin):
         html += '<strong style="font-size: 14px;">📊 Fee Breakdown</strong><br/><br/>'
         html += '• <strong>Tuition Fee:</strong> ₹ {:,.2f}<br/>'.format(obj.tuition_fee)
         html += '• <strong>Admission Fee:</strong> ₹ {:,.2f}<br/>'.format(obj.admission_fee)
-        if hasattr(obj, 'hostel_fee') and obj.hostel_fee:
-            room_display = self.get_hostel_room_display(obj)
-            html += '• <strong>Hostel Fee ({}):</strong> ₹ {:,.2f}<br/>'.format(room_display, obj.hostel_fee)
+        
+        # Hostel fees breakdown
+        if obj.hostel_fees:
+            room_names = {
+                1: 'Normal + Common Bathroom',
+                2: 'Normal + Attached Bathroom',
+                3: 'AC + Common Bathroom',
+                4: 'AC + Attached Bathroom'
+            }
+            html += '<br/><strong>🏠 Hostel Options:</strong><br/>'
+            for room_type, data in obj.hostel_fees.items():
+                fee = data.get('fee', 0)
+                seats = data.get('available_seats', 0)
+                room_name = room_names.get(int(room_type), f'Room {room_type}')
+                html += '&nbsp;&nbsp;• {}: ₹ {:,.2f}'.format(room_name, fee)
+                if seats:
+                    html += ' ({} seats)'.format(seats)
+                html += '<br/>'
         else:
-            html += '• <strong>Hostel Fee:</strong> Not Applicable<br/>'
+            html += '• <strong>Hostel Fee:</strong> Not Available<br/>'
         
-        if hasattr(obj, 'transport_fee_min') and hasattr(obj, 'transport_fee_max'):
-            if obj.transport_fee_min == obj.transport_fee_max:
-                transport_text = f"₹ {obj.transport_fee_min:,.2f}" if obj.transport_fee_min > 0 else "Not Available"
-            else:
-                transport_text = f"₹ {obj.transport_fee_min:,.2f} - ₹ {obj.transport_fee_max:,.2f}"
-            html += '• <strong>Transport Fee:</strong> {}<br/>'.format(transport_text)
+        # Transport fees
+        if obj.transport_fee_min == obj.transport_fee_max:
+            transport_text = f"₹ {obj.transport_fee_min:,.2f}" if obj.transport_fee_min > 0 else "Not Available"
+        else:
+            transport_text = f"₹ {obj.transport_fee_min:,.2f} - ₹ {obj.transport_fee_max:,.2f}"
+        html += '<br/>• <strong>Transport Fee:</strong> {}<br/>'.format(transport_text)
         
+        # Total calculation
+        base_total = obj.tuition_fee + obj.admission_fee
         html += '<hr style="margin: 10px 0; border-color: #e2e8f0;">'
-        html += '<strong>💰 Total Amount:</strong><br/>'
-        html += '• Without Transport: ₹ {:,.2f}<br/>'.format(obj.total_fee)
+        html += '<strong>💰 Total Amount (without hostel):</strong> ₹ {:,.2f}<br/>'.format(base_total)
         
-        if hasattr(obj, 'transport_fee_min') and obj.transport_fee_min > 0:
-            html += '• With Min Transport: ₹ {:,.2f}<br/>'.format(obj.total_fee_with_transport_min)
-            html += '• With Max Transport: ₹ {:,.2f}<br/>'.format(obj.total_fee_with_transport_max)
+        if obj.transport_fee_min > 0:
+            html += '<strong>💰 Total with Min Transport:</strong> ₹ {:,.2f}<br/>'.format(base_total + obj.transport_fee_min)
+            if obj.transport_fee_max != obj.transport_fee_min:
+                html += '<strong>💰 Total with Max Transport:</strong> ₹ {:,.2f}<br/>'.format(base_total + obj.transport_fee_max)
         
         html += '</div>'
         return html
@@ -164,10 +185,6 @@ class FeesAdmin(admin.ModelAdmin):
     total_fee_calculated.allow_tags = True
     
     def save_model(self, request, obj, form, change):
-        # Auto-set hostel_room_type to None if hostel_fee is 0 or empty
-        if not obj.hostel_fee or obj.hostel_fee == 0:
-            obj.hostel_room_type = None
-        
         # Ensure transport_fee_max is not less than transport_fee_min
         if obj.transport_fee_max < obj.transport_fee_min:
             obj.transport_fee_max = obj.transport_fee_min
@@ -177,6 +194,10 @@ class FeesAdmin(admin.ModelAdmin):
             obj.transport_fee_min = 0
         if obj.transport_fee_max is None:
             obj.transport_fee_max = 0
+        
+        # Ensure hostel_fees is a dict
+        if obj.hostel_fees is None:
+            obj.hostel_fees = {}
         
         super().save_model(request, obj, form, change)
     
