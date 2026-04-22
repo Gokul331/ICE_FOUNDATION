@@ -787,7 +787,9 @@
   font-weight: 900;
 }
 
-/* Responsive Design */
+/* ==================== RESPONSIVE DESIGN ==================== */
+
+/* Tablet Landscape (1024px - 769px) */
 @media (max-width: 1024px) {
   .info-grid {
     grid-template-columns: 1fr;
@@ -797,8 +799,14 @@
     padding: 10px 20px;
     font-size: 14px;
   }
+  
+  /* Hide action panel on tablet landscape */
+  .info-card-action {
+    display: none;
+  }
 }
 
+/* Tablet Portrait (768px - 481px) */
 @media (max-width: 768px) {
   .college-hero {
     padding: 32px 20px;
@@ -865,8 +873,14 @@
   .action-stat-value {
     font-size: 28px;
   }
+  
+  /* Hide action panel on tablet portrait */
+  .info-card-action {
+    display: none;
+  }
 }
 
+/* Mobile Landscape (480px - 321px) */
 @media (max-width: 480px) {
   .stats-grid {
     grid-template-columns: 1fr;
@@ -919,6 +933,25 @@
     padding: 6px 12px;
     font-size: 12px;
   }
+  
+  /* Hide action panel on mobile */
+  .info-card-action {
+    display: none;
+  }
+}
+
+/* Small Mobile (320px and below) */
+@media (max-width: 320px) {
+  .info-card-action {
+    display: none;
+  }
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .info-card-action {
+    display: none;
+  }
 }
 
 /* Scrollbar Styling */
@@ -957,7 +990,8 @@
   .action-btn,
   .back-btn,
   .apply-now-btn,
-  .tabs-container {
+  .tabs-container,
+  .info-card-action {
     display: none;
   }
   
@@ -966,5 +1000,256 @@
     break-inside: avoid;
     box-shadow: none;
     border: 1px solid #ddd;
+  }
+}
+
+/* Overview Grid Layout */
+.overview-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 32px;
+  align-items: start;
+}
+
+.overview-left {
+  min-width: 0; /* Prevents overflow */
+}
+
+.overview-right {
+  position: sticky;
+  top: 100px;
+}
+
+/* Badges Container */
+.badges-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+/* Stats Info Grid */
+.stats-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-info-card {
+  background: #fafafa;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e5e5e5;
+  transition: all 0.3s ease;
+}
+
+.stat-info-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--gray-300);
+}
+
+.stat-info-label {
+  font-size: 12px;
+  color: #737373;
+  margin-bottom: 4px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-info-value {
+  font-size: 24px;
+  font-weight: 900;
+  color: #000000;
+}
+
+/* College Description */
+.college-description {
+  font-size: 15px;
+  color: #404040;
+  line-height: 1.8;
+  margin-bottom: 20px;
+}
+
+/* Address Section */
+.address-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 2px solid #e5e5e5;
+}
+
+.address-label {
+  font-size: 12px;
+  color: #737373;
+  margin-bottom: 6px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.address-value {
+  font-size: 14px;
+  color: #262626;
+  font-weight: 500;
+}
+
+/* Contact Section */
+.contact-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 2px solid #e5e5e5;
+}
+
+.contact-section h4 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.contact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.contact-item svg {
+  flex-shrink: 0;
+  color: #000000;
+  opacity: 0.7;
+}
+
+.contact-item span {
+  color: #404040;
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.contact-link {
+  color: #000000;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.contact-link:hover {
+  text-decoration: underline;
+}
+
+/* Action Panel Items */
+.action-item {
+  margin-bottom: 28px;
+}
+
+.action-label {
+  font-size: 12px;
+  color: #737373;
+  margin-bottom: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.action-footer {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.action-link {
+  color: #000000;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all 0.3s ease;
+}
+
+.action-link:hover {
+  text-decoration: underline;
+}
+
+/* ==================== RESPONSIVE ==================== */
+
+/* Tablet and Mobile */
+@media (max-width: 1024px) {
+  .overview-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  
+  .overview-right {
+    position: relative;
+    top: 0;
+  }
+  
+  /* Hide action panel on tablet and mobile */
+  .info-card-action {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-info-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .stat-info-value {
+    font-size: 20px;
+  }
+  
+  .badges-container {
+    gap: 8px;
+  }
+  
+  .contact-item {
+    gap: 10px;
+  }
+  
+  .contact-item svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .contact-item span,
+  .contact-link {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-info-card {
+    padding: 12px;
+  }
+  
+  .stat-info-value {
+    font-size: 18px;
+  }
+  
+  .college-description {
+    font-size: 14px;
+  }
+  
+  .address-value {
+    font-size: 13px;
+  }
+  
+  .contact-item {
+    gap: 8px;
+  }
+  
+  .contact-item svg {
+    width: 16px;
+    height: 16px;
   }
 }
