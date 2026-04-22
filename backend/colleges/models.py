@@ -420,6 +420,7 @@ class Fees(models.Model):
     def get_payment_frequency_display(self):
         """Get display name for payment frequency"""
         return dict(self.PAYMENT_FREQUENCY_CHOICES).get(self.payment_frequency, self.payment_frequency)   
+
 # ==================== USER PROFILE MODEL ====================
 class UserProfile(models.Model):
     GENDER_CHOICES = [
