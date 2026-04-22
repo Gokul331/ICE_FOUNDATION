@@ -15,7 +15,7 @@ function CollegeSuggestion() {
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
+
   // Autocomplete state
   const [courses, setCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
@@ -24,6 +24,48 @@ function CollegeSuggestion() {
   const [loadingCourses, setLoadingCourses] = useState(false);
   const courseInputRef = useRef(null);
   const courseDropdownRef = useRef(null);
+
+  // All districts of Tamil Nadu
+  const tamilNaduDistricts = [
+    "Ariyalur",
+    "Chengalpattu",
+    "Chennai",
+    "Coimbatore",
+    "Cuddalore",
+    "Dharmapuri",
+    "Dindigul",
+    "Erode",
+    "Kallakurichi",
+    "Kancheepuram",
+    "Kanyakumari",
+    "Karur",
+    "Krishnagiri",
+    "Madurai",
+    "Mayiladuthurai",
+    "Nagapattinam",
+    "Kanniyakumari",
+    "Namakkal",
+    "Perambalur",
+    "Pudukkottai",
+    "Ramanathapuram",
+    "Ranipet",
+    "Salem",
+    "Sivaganga",
+    "Tenkasi",
+    "Thanjavur",
+    "Theni",
+    "Thoothukkudi",
+    "Tiruchirappalli",
+    "Tirunelveli",
+    "Tirupathur",
+    "Tiruppur",
+    "Tiruvallur",
+    "Tiruvannamalai",
+    "Tiruvarur",
+    "Vellore",
+    "Viluppuram",
+    "Virudhunagar"
+  ];
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -49,7 +91,6 @@ function CollegeSuggestion() {
     setLoadingCourses(true);
     try {
       const response = await getCourses();
-      // Safely access the data array
       const coursesData = response?.data || [];
       setCourses(coursesData);
       setFilteredCourses(coursesData);
@@ -84,10 +125,9 @@ function CollegeSuggestion() {
       ...prev,
       preferredCourse: searchValue
     }));
-    
-    // Ensure courses is an array before filtering
+
     const coursesArray = Array.isArray(courses) ? courses : [];
-    
+
     if (searchValue.trim() === '') {
       setFilteredCourses(coursesArray);
       setShowCourseDropdown(true);
@@ -152,15 +192,15 @@ function CollegeSuggestion() {
       .toUpperCase();
   };
 
-  // Get college colors based on name hash
+  // Get college colors - Black & White theme
   const getCollegeColors = (name) => {
-    if (!name) return { bg: "#EAF7FD", fg: "#3AAAD4" };
+    if (!name) return { bg: "#f5f5f5", fg: "#000000" };
     const colors = [
-      { bg: "#EAF7FD", fg: "#3AAAD4" },
-      { bg: "#FFF0EA", fg: "#C85A30" },
-      { bg: "#EAF0FD", fg: "#3A5AD4" },
-      { bg: "#EDF7ED", fg: "#2A8A2A" },
-      { bg: "#FDF5EA", fg: "#C8A530" }
+      { bg: "#f5f5f5", fg: "#000000" },
+      { bg: "#fafafa", fg: "#1a1a1a" },
+      { bg: "#f0f0f0", fg: "#000000" },
+      { bg: "#f5f5f5", fg: "#111111" },
+      { bg: "#fafafa", fg: "#222222" }
     ];
     const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[hash % colors.length];
@@ -170,12 +210,18 @@ function CollegeSuggestion() {
     <div className="suggestion-page">
       <Navbar user={user} onLogout={handleLogout} />
 
+      {/* Hero Section */}
       <div className="hero">
         <div className="hero-ring ring-1"></div>
         <div className="hero-ring ring-2"></div>
         <div className="page-header">
-          <div className="panel-icon">✨</div>
-          <h1 className="panel-title">College Suggestion</h1>
+          <span className="panel-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+              <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+            </svg>
+          </span>
+          <h1 className="page-title">College Suggestion</h1>
           <p className="page-subtitle">
             Enter your cutoff mark and preferences to discover colleges you are eligible for.
           </p>
@@ -185,7 +231,13 @@ function CollegeSuggestion() {
       <div className="suggestion-container">
         <section className="suggestion-panel">
           <div className="panel-top">
-            <div className="panel-icon">🎓</div>
+            <span className="panel-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            </span>
             <div>
               <h2 className="panel-title">Find the best colleges for you</h2>
               <p className="panel-note">Choose your cutoff, community, course, and district to generate personalized college suggestions.</p>
@@ -281,18 +333,14 @@ function CollegeSuggestion() {
                   onChange={handleInputChange}
                   className="form-input"
                 >
-                  <option value="">All</option>
-                  <option value="Chennai">Chennai</option>
-                  <option value="Coimbatore">Coimbatore</option>
-                  <option value="Madurai">Madurai</option>
-                  <option value="Tiruchirappalli">Tiruchirappalli</option>
-                  <option value="Salem">Salem</option>
-                  <option value="Tirunelveli">Tirunelveli</option>
-                  <option value="Tiruppur">Tiruppur</option>
-                  <option value="Vellore">Vellore</option>
-                  <option value="Erode">Erode</option>
-                  <option value="Thoothukudi">Thoothukudi</option>
+                  <option value="">All Districts</option>
+                  {tamilNaduDistricts.map((district, index) => (
+                    <option key={index} value={district}>
+                      {district}
+                    </option>
+                  ))}
                 </select>
+                <small className="form-hint">Select a specific district or leave as "All Districts"</small>
               </div>
             </div>
 
@@ -306,7 +354,7 @@ function CollegeSuggestion() {
 
         {loading && (
           <div className="loading">
-            <div>Analyzing your preferences...</div>
+            Analyzing your preferences...
           </div>
         )}
 
@@ -324,43 +372,43 @@ function CollegeSuggestion() {
             {suggestions.map((college, index) => {
               const colors = getCollegeColors(college?.college_name);
               return (
-                <div key={college?.college_id || index} className="suggestion-card" style={{ borderLeftColor: colors.fg }}>
+                <div key={college?.college_id || index} className="suggestion-card" style={{ borderLeftColor: '#000000' }}>
                   <div className="suggestion-header">
-                    <div className="suggestion-logo" style={{ background: colors.fg }}>
+                    <div className="suggestion-logo">
                       {getLogoLetters(college?.college_name)}
                     </div>
                     <div className="suggestion-info">
                       <div className="suggestion-name">{college?.college_name || 'Unknown College'}</div>
                       <div className="suggestion-meta">{college?.location_city || 'N/A'}, {college?.location_state || 'N/A'}</div>
                     </div>
-                    <Link to={`/colleges/${college?.college_id}`} className="suggestion-link" style={{ color: colors.fg }}>
-                      View Details →
+                    <Link to={`/colleges/${college?.college_id}`} className="suggestion-link">
+                      View Details
                     </Link>
                   </div>
                   {college?.description && (
                     <div className="suggestion-desc">{college.description.substring(0, 150)}...</div>
                   )}
                   <div className="suggestion-details">
-                    <span className="detail-item">📍 {college?.location_city || 'N/A'}</span>
+                    <span className="detail-item">{college?.location_city || 'N/A'}</span>
                     {college?.type && (
-                      <span className="detail-item" style={{ textTransform: 'capitalize' }}>
-                        🏛️ {college.type.replace('_', ' ')}
+                      <span className="detail-item">
+                        {college.type.replace('_', ' ')}
                       </span>
                     )}
                     {college?.scholarship_available && (
-                      <span className="detail-item scholarship-badge">💰 Scholarship Available</span>
+                      <span className="detail-item scholarship-badge">Scholarship Available</span>
                     )}
                     {college?.naac_grade && (
-                      <span className="detail-item">⭐ NAAC: {college.naac_grade}</span>
+                      <span className="detail-item">NAAC: {college.naac_grade}</span>
                     )}
                     {college?.placement_percentage && (
-                      <span className="detail-item">📊 Placement: {college.placement_percentage}%</span>
+                      <span className="detail-item">Placement: {college.placement_percentage}%</span>
                     )}
                     {college?.nirf_rank && (
-                      <span className="detail-item">🏆 NIRF Rank: #{college.nirf_rank}</span>
+                      <span className="detail-item">NIRF Rank: #{college.nirf_rank}</span>
                     )}
                     {college?.hostel_available && (
-                      <span className="detail-item">🏠 Hostel Available</span>
+                      <span className="detail-item">Hostel Available</span>
                     )}
                   </div>
                 </div>
@@ -371,7 +419,7 @@ function CollegeSuggestion() {
 
         {(Array.isArray(suggestions) && suggestions.length === 0 && !loading && formData.cutoffMark) && (
           <div className="no-results">
-            <div>No colleges found matching your criteria. Try adjusting your preferences.</div>
+            No colleges found matching your criteria. Try adjusting your preferences.
           </div>
         )}
       </div>

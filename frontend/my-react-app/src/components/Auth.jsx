@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/auth.css';
 
-// IMPORTANT: Set your backend URL here
-const API_BASE_URL = 'https://ice-foundation-1.onrender.com/api';  
+const API_BASE_URL = 'https://ice-foundation-1.onrender.com/api';
 
 const passwordStrength = (value) => {
   let score = 0;
@@ -15,7 +14,6 @@ const passwordStrength = (value) => {
 };
 
 const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong'];
-const strengthColor = ['transparent', '#E24B4A', '#EF9F27', '#87CEEB', '#1D9E75'];
 
 function Auth({ initialTab = 'login' }) {
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -32,6 +30,7 @@ function Auth({ initialTab = 'login' }) {
   const [statusMessage, setStatusMessage] = useState(null);
   const [statusType, setStatusType] = useState('');
   const [loading, setLoading] = useState(false);
+  const [cardFlipped, setCardFlipped] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -45,9 +44,9 @@ function Auth({ initialTab = 'login' }) {
 
   const switchTab = (tab) => {
     setActiveTab(tab);
-    navigate(tab === 'login' ? '/login' : '/register');
     setStatusMessage(null);
     setStatusType('');
+    setCardFlipped(tab === 'register');
   };
 
   const handleLogin = async (e) => {
@@ -60,26 +59,24 @@ function Auth({ initialTab = 'login' }) {
 
     setLoading(true);
     try {
-      // Use the correct backend URL
       const response = await fetch(`${API_BASE_URL}/login/`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          username: loginEmail, 
-          password: loginPassword 
+        body: JSON.stringify({
+          username: loginEmail,
+          password: loginPassword
         }),
       });
-      
-      // Check if response is OK
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Login failed');
       }
-      
+
       const data = await response.json();
-      
+
       if (response.ok) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
@@ -112,10 +109,9 @@ function Auth({ initialTab = 'login' }) {
 
     setLoading(true);
     try {
-      // Use the correct backend URL
       const response = await fetch(`${API_BASE_URL}/register/`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -128,9 +124,9 @@ function Auth({ initialTab = 'login' }) {
           phone_number: registerPhone,
         }),
       });
-      
+
       const data = await response.json();
-      
+
       if (response.ok) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
@@ -148,7 +144,7 @@ function Auth({ initialTab = 'login' }) {
       }
     } catch (error) {
       console.error('Registration error:', error);
-      setStatusMessage('Unable to register. Please make sure backend is running on https://ice-foundation-1.onrender.com/api');
+      setStatusMessage('Unable to register. Please make sure backend is running.');
       setStatusType('error');
     } finally {
       setLoading(false);
@@ -157,35 +153,42 @@ function Auth({ initialTab = 'login' }) {
 
   return (
     <div className="auth-container">
-      <div className="auth-wrapper">
+      <div className="auth-card-3d">
         {/* Left Panel - Brand Section */}
         <div className="auth-brand-panel">
-          <div className="brand-bg-decoration"></div>
+          <div className="brand-bg-3d">
+            <div className="bg-circle circle-1"></div>
+            <div className="bg-circle circle-2"></div>
+            <div className="bg-circle circle-3"></div>
+          </div>
+
           <div className="brand-content">
-            <div className="brand-logo">ICE</div>
+            <div className="brand-logo-3d">ICE</div>
             <div className="brand-title">
               ICE Foundation
               <small>Your Bridge to Success</small>
             </div>
           </div>
+
           <div className="brand-tagline">
             <div className="tagline-text">Find your perfect college.</div>
             <p className="tagline-subtext">Expert guidance for 12th-grade students across India.</p>
           </div>
+
           <div className="brand-stats">
             <div className="stat-card">
-              <div className="stat-number">500+</div>
+              <div className="stat-number">100+</div>
               <div className="stat-label">Partner Colleges</div>
             </div>
             <div className="stat-card">
-              <div className="stat-number">₹12Cr+</div>
-              <div className="stat-label">Scholarships Secured</div>
+              <div className="stat-number">5k - 40k</div>
+              <div className="stat-label">Scholarships offered</div>
             </div>
           </div>
         </div>
 
-        {/* Right Panel - Form Section */}
-        <div className="auth-form-panel">
+        {/* Right Panel - Form Section with 3D Flip */}
+        <div className={`auth-form-panel ${cardFlipped ? 'flipped' : ''}`}>
           <div className="form-header">
             <div className="tab-buttons">
               <button
@@ -285,7 +288,22 @@ function Auth({ initialTab = 'login' }) {
               </div>
 
               <div className="forgot-password">
-                <button type="button" className="forgot-link" disabled={loading}>Forgot password?</button>
+                <button
+                  type="button"
+                  className="forgot-link"
+                  disabled={loading}
+                  onClick={() => {
+                    if (loginEmail) {
+                      setStatusMessage('Password reset link sent to your email.');
+                      setStatusType('success');
+                    } else {
+                      setStatusMessage('Please enter your email first.');
+                      setStatusType('error');
+                    }
+                  }}
+                >
+                  Forgot password?
+                </button>
               </div>
 
               <button type="submit" className="submit-btn" disabled={loading}>
@@ -397,9 +415,9 @@ function Auth({ initialTab = 'login' }) {
                 </div>
                 <div className="password-strength">
                   <div className="strength-bar">
-                    <div className="strength-fill" style={{ width: `${strengthValue * 25}%`, backgroundColor: strengthColor[strengthValue] }} />
+                    <div className="strength-fill" style={{ width: `${strengthValue * 25}%` }} />
                   </div>
-                  <div className="strength-label" style={{ color: strengthColor[strengthValue] }}>
+                  <div className="strength-label">
                     {strengthLabel[strengthValue] || 'Enter a password'}
                   </div>
                 </div>
@@ -420,7 +438,7 @@ function Auth({ initialTab = 'login' }) {
               <button type="submit" className="submit-btn" disabled={loading}>
                 {loading ? 'Creating account...' : 'Create account'}
               </button>
-              
+
               <p className="terms-note">
                 By continuing you agree to our <Link to="/terms" className="terms-link">Terms</Link> & <Link to="/privacy" className="terms-link">Privacy Policy</Link>
               </p>

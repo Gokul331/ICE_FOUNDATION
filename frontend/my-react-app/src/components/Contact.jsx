@@ -23,7 +23,7 @@ const Contact = () => {
       document.querySelectorAll('#subject-grid .subj-chip').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     };
-    
+
     window.doSubmit = function(btn) {
       btn.querySelector('.btn-label').style.display = 'none';
       document.getElementById('form-spinner').style.display = 'block';
@@ -33,7 +33,7 @@ const Contact = () => {
         document.getElementById('success-view').style.display = 'block';
       }, 1800);
     };
-    
+
     window.resetForm = function() {
       document.getElementById('form-view').style.display = '';
       document.getElementById('success-view').style.display = 'none';
@@ -42,7 +42,7 @@ const Contact = () => {
       document.getElementById('form-spinner').style.display = 'none';
       btn.classList.remove('loading');
     };
-    
+
     window.toggleFaq = function(el) {
       const ans = el.nextElementSibling;
       const isOpen = ans.classList.contains('open');
@@ -59,10 +59,10 @@ const Contact = () => {
     <div className="contact-page">
       <Navbar user={user} onLogout={handleLogout} />
 
-      {/* Hero Section */}
+      {/* Hero Section - 3D Animated */}
       <div className="contact-hero">
-        <div className="hero-ring" style={{ width: '360px', height: '360px', top: '-120px', right: '-80px' }}></div>
-        <div className="hero-ring" style={{ width: '200px', height: '200px', bottom: '-70px', left: '-50px' }}></div>
+        <div className="hero-ring" style={{ width: '400px', height: '400px', top: '-150px', right: '-150px' }}></div>
+        <div className="hero-ring" style={{ width: '280px', height: '280px', bottom: '-100px', left: '-80px' }}></div>
         <div className="hero-badge">
           <span className="badge-dot"></span>
           Send your college plan questions
@@ -83,7 +83,7 @@ const Contact = () => {
             <div>
               <div className="info-label">Phone</div>
               <div className="info-val">+91 8778635855</div>
-              <div className="info-sub">Mon – Sat, 9 AM – 6 PM</div>
+              <div className="info-sub">Mon - Sat, 9 AM - 6 PM</div>
             </div>
           </div>
           <div className="info-item">
@@ -109,7 +109,7 @@ const Contact = () => {
             <div>
               <div className="info-label">Office</div>
               <div className="info-val">Puduchatram, Namakkal</div>
-              <div className="info-sub">Tamil Nadu — 637 018</div>
+              <div className="info-sub">Tamil Nadu - 637 018</div>
             </div>
           </div>
         </div>
@@ -239,17 +239,17 @@ const Contact = () => {
           <div className="map-card">
             <div className="map-visual">
               <div className="map-grid"></div>
-              <svg style={{ position: 'absolute', inset: '0', width: '100%', height: '100%', opacity: '.18' }} viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg">
-                <line x1="0" y1="60" x2="300" y2="60" stroke="#3AAAD4" strokeWidth="6"/>
-                <line x1="0" y1="120" x2="300" y2="120" stroke="#3AAAD4" strokeWidth="3"/>
-                <line x1="80" y1="0" x2="80" y2="180" stroke="#3AAAD4" strokeWidth="4"/>
-                <line x1="180" y1="0" x2="180" y2="180" stroke="#3AAAD4" strokeWidth="4"/>
-                <line x1="130" y1="60" x2="130" y2="180" stroke="#3AAAD4" strokeWidth="2"/>
-                <line x1="0" y1="90" x2="80" y2="90" stroke="#3AAAD4" strokeWidth="2"/>
-                <rect x="20" y="68" width="40" height="22" rx="3" fill="#3AAAD4" opacity=".5"/>
-                <rect x="90" y="30" width="30" height="18" rx="3" fill="#3AAAD4" opacity=".4"/>
-                <rect x="195" y="68" width="50" height="30" rx="3" fill="#3AAAD4" opacity=".3"/>
-                <rect x="100" y="95" width="60" height="15" rx="3" fill="#3AAAD4" opacity=".35"/>
+              <svg style={{ position: 'absolute', inset: '0', width: '100%', height: '100%', opacity: '.12' }} viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg">
+                <line x1="0" y1="60" x2="300" y2="60" stroke="#000000" strokeWidth="6"/>
+                <line x1="0" y1="120" x2="300" y2="120" stroke="#000000" strokeWidth="3"/>
+                <line x1="80" y1="0" x2="80" y2="180" stroke="#000000" strokeWidth="4"/>
+                <line x1="180" y1="0" x2="180" y2="180" stroke="#000000" strokeWidth="4"/>
+                <line x1="130" y1="60" x2="130" y2="180" stroke="#000000" strokeWidth="2"/>
+                <line x1="0" y1="90" x2="80" y2="90" stroke="#000000" strokeWidth="2"/>
+                <rect x="20" y="68" width="40" height="22" rx="3" fill="#000000" opacity=".5"/>
+                <rect x="90" y="30" width="30" height="18" rx="3" fill="#000000" opacity=".4"/>
+                <rect x="195" y="68" width="50" height="30" rx="3" fill="#000000" opacity=".3"/>
+                <rect x="100" y="95" width="60" height="15" rx="3" fill="#000000" opacity=".35"/>
               </svg>
               <div className="map-pin">
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -261,7 +261,7 @@ const Contact = () => {
             </div>
             <div className="map-footer">
               <div className="map-addr">Puduchatram<br />Namakkal, Tamil Nadu 637018</div>
-              <button className="map-btn">Get directions →</button>
+              <button className="map-btn">Get directions</button>
             </div>
           </div>
 
@@ -274,27 +274,27 @@ const Contact = () => {
             <div className="hours-sub">Walk-ins welcome during open hours</div>
             <div className="hours-row">
               <span className="day">Monday<span className="today-badge">Today</span></span>
-              <span className="time">9:00 AM – 6:00 PM</span>
+              <span className="time">9:00 AM - 6:00 PM</span>
             </div>
             <div className="hours-row">
               <span className="day">Tuesday</span>
-              <span className="time">9:00 AM – 6:00 PM</span>
+              <span className="time">9:00 AM - 6:00 PM</span>
             </div>
             <div className="hours-row">
               <span className="day">Wednesday</span>
-              <span className="time">9:00 AM – 6:00 PM</span>
+              <span className="time">9:00 AM - 6:00 PM</span>
             </div>
             <div className="hours-row">
               <span className="day">Thursday</span>
-              <span className="time">9:00 AM – 6:00 PM</span>
+              <span className="time">9:00 AM - 6:00 PM</span>
             </div>
             <div className="hours-row">
               <span className="day">Friday</span>
-              <span className="time">9:00 AM – 6:00 PM</span>
+              <span className="time">9:00 AM - 6:00 PM</span>
             </div>
             <div className="hours-row">
               <span className="day">Saturday</span>
-              <span className="time">10:00 AM – 3:00 PM</span>
+              <span className="time">10:00 AM - 3:00 PM</span>
             </div>
             <div className="hours-row">
               <span className="day">Sunday</span>
@@ -307,45 +307,46 @@ const Contact = () => {
             <div className="social-title">Connect with us</div>
             <div className="social-links">
               <div className="social-link">
-                <div className="s-icon" style={{ background: '#E8F0FE' }}>
-                  <svg viewBox="0 0 24 24" fill="#1877F2">
+                <div className="s-icon">
+                  <svg viewBox="0 0 24 24" fill="#000000">
                     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                   </svg>
                 </div>
                 <div>
+                  <div className="s-name">Facebook</div>
                   <div className="s-handle">@icefoundation.in</div>
                 </div>
-                
               </div>
               <div className="social-link">
-                <div className="s-icon" style={{ background: '#E8F5FD' }}>
-                  <svg viewBox="0 0 24 24" fill="#1DA1F2">
+                <div className="s-icon">
+                  <svg viewBox="0 0 24 24" fill="#000000">
                     <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
                   </svg>
                 </div>
-                
-                  <div className="s-handle">@icefoundation</div>  
-  
+                <div>
+                  <div className="s-name">Twitter</div>
+                  <div className="s-handle">@icefoundation</div>
+                </div>
               </div>
               <div className="social-link">
-                <div className="s-icon" style={{ background: '#FFF0F0' }}>
+                <div className="s-icon">
                   <svg viewBox="0 0 24 24">
                     <defs>
                       <linearGradient id="ig" x1="0%" y1="100%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#f09433"/>
-                        <stop offset="25%" stopColor="#e6683c"/>
-                        <stop offset="50%" stopColor="#dc2743"/>
-                        <stop offset="75%" stopColor="#cc2366"/>
-                        <stop offset="100%" stopColor="#bc1888"/>
+                        <stop offset="0%" stopColor="#333"/>
+                        <stop offset="25%" stopColor="#333"/>
+                        <stop offset="50%" stopColor="#333"/>
+                        <stop offset="75%" stopColor="#333"/>
+                        <stop offset="100%" stopColor="#333"/>
                       </linearGradient>
                     </defs>
                     <path fill="url(#ig)" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
                   </svg>
                 </div>
                 <div>
+                  <div className="s-name">Instagram</div>
                   <div className="s-handle">@icefoundation</div>
                 </div>
-                
               </div>
             </div>
           </div>
@@ -396,7 +397,7 @@ const Contact = () => {
       {/* Footer */}
       <footer>
         <div className="ft-logo"><span>ICE</span> Foundation</div>
-        <div className="ft-copy">© 2025 ICE Foundation. Supporting future-ready students across India.</div>
+        <div className="ft-copy">2025 ICE Foundation. Supporting future-ready students across India.</div>
       </footer>
     </div>
   );
