@@ -43,6 +43,15 @@ urlpatterns = [
     # User Profiles
     path('user-profiles/', user_profiles, name='user_profiles'),
     path('user-profiles/<int:profile_id>/', user_profile_detail, name='user_profile_detail'),
+    # Profile Update URLs
+     # Profile update URLs
+    path('profile/me/', views.get_current_user_profile, name='current_user_profile'),
+    path('profile/update/', views.update_profile, name='update_profile'),
+    path('profile/create-update/', views.create_or_update_profile, name='create_update_profile'),
+    path('profile/update/<int:profile_id>/', views.update_profile_by_id, name='update_profile_by_id'),
+    
+    # Password Change URL
+    path('change-password/', views.change_password, name='change_password'),
 
     # Timeline Events
     path('timeline/', timeline_events, name='timeline_events'),

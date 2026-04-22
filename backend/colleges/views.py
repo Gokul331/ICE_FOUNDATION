@@ -362,6 +362,386 @@ def user_profile_detail(request, profile_id):
         profile.delete()
         return Response(status=204)
 
+# ==================== USER PROFILE VIEWS ====================
+
+@api_view(['GET', 'PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def get_current_user_profile(request):
+    """Get or update the current authenticated user's profile"""
+    try:
+        # Get or create user profile
+        profile, created = UserProfile.objects.get_or_create(
+            user=request.user,
+            defaults={
+                'first_name': request.user.first_name or '',
+                'email': request.user.email,
+                'phone_number': '0000000000',  # Temporary, user must update
+                'address': '',
+                'city': '',
+                'pincode': '000000'
+            }
+        )
+        
+        if request.method == 'GET':
+            # Get user data
+            user_data = {
+                'id': request.user.id,
+                'username': request.user.username,
+                'email': request.user.email,
+                'first_name': request.user.first_name,
+                'last_name': request.user.last_name,
+                'date_joined': request.user.date_joined,
+                'is_staff': request.user.is_staff,
+            }
+            
+            # Get profile data
+            profile_serializer = UserProfileSerializer(profile)
+            profile_data = profile_serializer.data
+            
+            # Combine both
+            combined_data = {**user_data, **profile_data}
+            
+            return Response(combined_data)
+        
+        elif request.method in ['PUT', 'PATCH']:
+            # Update User model fields
+            user_update = False
+            
+            if 'email' in request.data and request.data['email'] != request.user.email:
+                # Check if email is already taken
+                if User.objects.filter(email=request.data['email']).exclude(id=request.user.id).exists():
+                    return Response(
+                        {'error': 'Email already exists'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                request.user.email = request.data['email']
+                user_update = True
+            
+            if user_update:
+                request.user.save()
+            
+            # Update profile fields
+            # Map profile fields
+            profile_fields = [
+                'first_name', 'last_name', 'date_of_birth', 'gender',
+                'phone_number', 'whatsapp_number', 'address', 'city', 
+                'state', 'pincode'
+            ]
+            
+            for field in profile_fields:
+                if field in request.data:
+                    setattr(profile, field, request.data[field])
+            
+            # Also update User model's first_name and last_name if provided
+            if 'first_name' in request.data:
+                request.user.first_name = request.data['first_name']
+                request.user.save()
+            if 'last_name' in request.data:
+                request.user.last_name = request.data['last_name']
+                request.user.save()
+            
+            try:
+                profile.save()
+                
+                # Return updated data
+                user_data = {
+                    'id': request.user.id,
+                    'username': request.user.username,
+                    'email': request.user.email,
+                    'first_name': request.user.first_name,
+                    'last_name': request.user.last_name,
+                    'date_joined': request.user.date_joined,
+                    'is_staff': request.user.is_staff,
+                }
+                
+                profile_serializer = UserProfileSerializer(profile)
+                response_data = {**user_data, **profile_serializer.data}
+                
+                return Response({
+                    'message': 'Profile updated successfully',
+                    'user': response_data
+                })
+                
+            except ValidationError as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    """Update the current user's profile"""
+    try:
+        # Get user profile
+        try:
+            profile = UserProfile.objects.get(user=request.user)
+        except UserProfile.DoesNotExist:
+            return Response(
+                {'error': 'Profile not found. Please complete your registration.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Update User model fields
+        if 'email' in request.data and request.data['email'] != request.user.email:
+            if User.objects.filter(email=request.data['email']).exclude(id=request.user.id).exists():
+                return Response(
+                    {'error': 'Email already exists'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            request.user.email = request.data['email']
+        
+        if 'first_name' in request.data:
+            request.user.first_name = request.data['first_name']
+        if 'last_name' in request.data:
+            request.user.last_name = request.data['last_name']
+        
+        request.user.save()
+        
+        # Update profile fields
+        profile_fields = [
+            'first_name', 'last_name', 'date_of_birth', 'gender',
+            'phone_number', 'whatsapp_number', 'address', 'city', 
+            'state', 'pincode'
+        ]
+        
+        for field in profile_fields:
+            if field in request.data:
+                setattr(profile, field, request.data[field])
+        
+        profile.save()
+        
+        # Prepare response
+        user_data = {
+            'id': request.user.id,
+            'username': request.user.username,
+            'email': request.user.email,
+            'first_name': request.user.first_name,
+            'last_name': request.user.last_name,
+        }
+        
+        profile_serializer = UserProfileSerializer(profile)
+        
+        return Response({
+            'message': 'Profile updated successfully',
+            'user': {**user_data, **profile_serializer.data}
+        }, status=status.HTTP_200_OK)
+    
+    except UserProfile.DoesNotExist:
+        return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
+    except ValidationError as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def update_profile_by_id(request, profile_id):
+    """Update a user profile by ID (admin only or own profile)"""
+    try:
+        # Get the profile
+        profile = UserProfile.objects.get(id=profile_id)
+        
+        # Check permission - users can only update their own profile unless admin
+        if profile.user != request.user and not request.user.is_staff:
+            return Response(
+                {'error': 'Permission denied. You can only update your own profile.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Update User model fields if user is updating their own profile
+        if profile.user == request.user:
+            if 'email' in request.data and request.data['email'] != profile.user.email:
+                if User.objects.filter(email=request.data['email']).exclude(id=profile.user.id).exists():
+                    return Response(
+                        {'error': 'Email already exists'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                profile.user.email = request.data['email']
+            
+            if 'first_name' in request.data:
+                profile.user.first_name = request.data['first_name']
+            if 'last_name' in request.data:
+                profile.user.last_name = request.data['last_name']
+            
+            profile.user.save()
+        
+        # Update profile fields
+        profile_fields = [
+            'first_name', 'last_name', 'date_of_birth', 'gender',
+            'phone_number', 'whatsapp_number', 'address', 'city', 
+            'state', 'pincode'
+        ]
+        
+        for field in profile_fields:
+            if field in request.data:
+                setattr(profile, field, request.data[field])
+        
+        profile.save()
+        
+        # Prepare response
+        user_data = {
+            'id': profile.user.id,
+            'username': profile.user.username,
+            'email': profile.user.email,
+            'first_name': profile.user.first_name,
+            'last_name': profile.user.last_name,
+        }
+        
+        profile_serializer = UserProfileSerializer(profile)
+        
+        return Response({
+            'message': 'Profile updated successfully',
+            'user': {**user_data, **profile_serializer.data}
+        }, status=status.HTTP_200_OK)
+    
+    except UserProfile.DoesNotExist:
+        return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
+    except ValidationError as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    """Change user's password"""
+    try:
+        # Get current password and new password from request
+        current_password = request.data.get('current_password')
+        new_password = request.data.get('new_password')
+        confirm_password = request.data.get('confirm_password')
+        
+        # Validate input
+        if not current_password:
+            return Response(
+                {'error': 'Current password is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not new_password:
+            return Response(
+                {'error': 'New password is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if new_password != confirm_password:
+            return Response(
+                {'error': 'New passwords do not match'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if current password is correct
+        if not request.user.check_password(current_password):
+            return Response(
+                {'error': 'Current password is incorrect'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate new password strength
+        if len(new_password) < 8:
+            return Response(
+                {'error': 'Password must be at least 8 characters long'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if new password is different from current
+        if current_password == new_password:
+            return Response(
+                {'error': 'New password must be different from current password'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Set new password
+        request.user.set_password(new_password)
+        request.user.save()
+        
+        # Update session to prevent logout
+        update_session_auth_hash(request, request.user)
+        
+        # Generate new token (invalidate old token and create new one)
+        Token.objects.filter(user=request.user).delete()
+        new_token = Token.objects.create(user=request.user)
+        
+        return Response({
+            'message': 'Password changed successfully',
+            'token': new_token.key
+        }, status=status.HTTP_200_OK)
+    
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_or_update_profile(request):
+    """Create or update the current user's profile"""
+    try:
+        # Get or create profile
+        profile, created = UserProfile.objects.get_or_create(
+            user=request.user,
+            defaults={
+                'first_name': request.user.first_name or '',
+                'email': request.user.email,
+                'phone_number': request.data.get('phone_number', '0000000000'),
+                'address': request.data.get('address', ''),
+                'city': request.data.get('city', ''),
+                'pincode': request.data.get('pincode', '000000')
+            }
+        )
+        
+        # Update User model
+        if 'email' in request.data and request.data['email'] != request.user.email:
+            if User.objects.filter(email=request.data['email']).exclude(id=request.user.id).exists():
+                return Response(
+                    {'error': 'Email already exists'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            request.user.email = request.data['email']
+        
+        if 'first_name' in request.data:
+            request.user.first_name = request.data['first_name']
+        if 'last_name' in request.data:
+            request.user.last_name = request.data['last_name']
+        
+        request.user.save()
+        
+        # Update profile fields
+        profile_fields = [
+            'first_name', 'last_name', 'date_of_birth', 'gender',
+            'phone_number', 'whatsapp_number', 'address', 'city', 
+            'state', 'pincode'
+        ]
+        
+        for field in profile_fields:
+            if field in request.data:
+                setattr(profile, field, request.data[field])
+        
+        profile.save()
+        
+        # Prepare response
+        user_data = {
+            'id': request.user.id,
+            'username': request.user.username,
+            'email': request.user.email,
+            'first_name': request.user.first_name,
+            'last_name': request.user.last_name,
+        }
+        
+        profile_serializer = UserProfileSerializer(profile)
+        
+        return Response({
+            'message': 'Profile created/updated successfully',
+            'user': {**user_data, **profile_serializer.data}
+        }, status=status.HTTP_200_OK)
+    
+    except ValidationError as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET', 'POST'])
 def timeline_events(request):
