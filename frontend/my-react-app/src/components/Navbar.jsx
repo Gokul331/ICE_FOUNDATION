@@ -95,7 +95,7 @@ function Navbar() {
         <Link to="/" className="logo-area nav-link" onClick={closeMobileMenu}>
           <img src="/favicon.png" alt="ICE Foundation" className="logo-name" />
           <div className="logo-text-wrapper">
-            <span className="logo-text"><span>ICE</span> Foundation</span>
+            <span className="logo-text"><span className='logo-text-main'>ICE</span> Foundation</span>
             <span className="logo-subtext">Inspire Connect Empower</span>
           </div>
         </Link>

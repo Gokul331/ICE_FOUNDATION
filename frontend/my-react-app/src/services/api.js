@@ -264,3 +264,146 @@ export const updateProfile = async (id, data) => {
     throw error;
   }
 };
+
+// ==================== PROFILE UPDATE & PASSWORD CHANGE (Requires Auth) ====================
+
+export const getCurrentUserProfile = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await API.get("/profile/me/", {
+      headers: { Authorization: `Token ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching current user profile:", error);
+    throw error;
+  }
+};
+
+export const updateCurrentUserProfile = async (profileData) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await API.put("/profile/update/", profileData, {
+      headers: { Authorization: `Token ${token}` }
+    });
+    
+    // Update localStorage with new user data
+    if (response.data.user) {
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    throw error;
+  }
+};
+
+export const patchCurrentUserProfile = async (profileData) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await API.patch("/profile/update/", profileData, {
+      headers: { Authorization: `Token ${token}` }
+    });
+    
+    // Update localStorage with new user data
+    if (response.data.user) {
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error patching profile:", error);
+    throw error;
+  }
+};
+
+export const createOrUpdateProfile = async (profileData) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await API.post("/profile/create-update/", profileData, {
+      headers: { Authorization: `Token ${token}` }
+    });
+    
+    // Update localStorage with new user data
+    if (response.data.user) {
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error creating/updating profile:", error);
+    throw error;
+  }
+};
+
+export const updateProfileById = async (profileId, profileData) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await API.patch(`/profile/update/${profileId}/`, profileData, {
+      headers: { Authorization: `Token ${token}` }
+    });
+    
+    // Only update localStorage if it's the current user's profile
+    if (response.data.user) {
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      if (currentUser.id === response.data.user.id) {
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating profile ${profileId}:`, error);
+    throw error;
+  }
+};
+
+export const changePassword = async (passwordData) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await API.post("/change-password/", passwordData, {
+      headers: { Authorization: `Token ${token}` }
+    });
+    
+    // Update token in localStorage if a new one is returned
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error changing password:", error);
+    throw error;
+  }
+};
+
+// ==================== HELPER FUNCTIONS ====================
+
+// Helper function to get user data from localStorage
+export const getStoredUser = () => {
+  const user = localStorage.getItem('user');
+  return user ? JSON.parse(user) : null;
+};
+
+// Helper function to check if user is authenticated
+export const isAuthenticated = () => {
+  return !!localStorage.getItem('token');
+};
+
+// Helper function to check if user is staff
+export const isStaff = () => {
+  const user = getStoredUser();
+  return user?.is_staff || false;
+};
+
+// Helper function to get auth token
+export const getAuthToken = () => {
+  return localStorage.getItem('token');
+};
+
+// Helper function to clear auth data
+export const clearAuthData = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+};

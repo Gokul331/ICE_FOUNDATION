@@ -62,14 +62,24 @@ nav {
 .logo-text {
   font-size: 18px;
   font-weight: 800;
-  color: skyblue;
+  color: rgb(255, 255, 255);
   letter-spacing: -0.5px;
 }
 
-.logo-text span {
-  color: var(--gray-500);
+.logo-text-main {
+  color: white;
 }
 
+.logo-area:hover .logo-text-main{
+  color: rgb(122, 197, 226);
+}
+
+.logo-area .logo-text {
+  color: rgb(122, 197, 226);
+}
+.logo-area:hover .logo-text {
+  color: rgb(0, 0, 0);
+}
 .logo-subtext {
   font-size: 10px;
   color: var(--gray-500);
@@ -652,6 +662,7 @@ nav {
 
   .logo-text {
     font-size: 16px;
+    color : white
   }
 
   .logo-subtext {
@@ -1110,7 +1121,7 @@ nav {
   }
 
   .logo-text {
-    color: var(--black);
+    color: var(--gray-400);
   }
 
   .logo-subtext {
