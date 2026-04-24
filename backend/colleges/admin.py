@@ -33,23 +33,54 @@ class CollegeStateListFilter(admin.SimpleListFilter):
             return queryset.filter(college__location_state=self.value())
         return queryset
 
+
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ('course_name', 'course_code', 'college', 'degree_name', 'specialization', 'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
+    list_display = ('course_name', 'course_code', 'college', 'degree_name', 'tuition_fee_display', 'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
     search_fields = ('course_name', 'course_code', 'specialization', 'college__college_name')
     list_filter = (CollegeStateListFilter, 'degree_type', 'degree_name', 'is_active', 'college__type', 'college__affiliation')
     readonly_fields = ('created_at', 'updated_at')
-    list_editable = ('cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
+    list_editable = ('tuition_fee', 'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
     list_per_page = 25
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('college', 'course_code', 'course_name', 'degree_type', 'degree_name', 'duration_years')
+        }),
+        ('Fee Information', {
+            'fields': ('tuition_fee',),
+            'description': 'Annual tuition fee for this course'
+        }),
+        ('Seats & Cutoff Marks', {
+            'fields': ('intake_seats', 'cutoff_oc', 'cutoff_bc', 'cutoff_bcm', 'cutoff_mbc', 
+                      'cutoff_sc', 'cutoff_sca', 'cutoff_st'),
+            'classes': ('wide',)
+        }),
+        ('Scholarship Information', {
+            'fields': ('scholarship_amount', 'scholarship_criteria'),
+            'classes': ('collapse',)
+        }),
+        ('Status', {
+            'fields': ('is_active',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def tuition_fee_display(self, obj):
+        return f"₹ {obj.tuition_fee:,.2f}/year" if obj.tuition_fee else "Not Set"
+    tuition_fee_display.short_description = 'Tuition Fee'
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('college')
 
 
-# ==================== FEES ADMIN (UPDATED FOR JSON FIELD) ====================
+# ==================== FEES ADMIN (UPDATED - tuition_fee removed) ====================
 @admin.register(Fees)
 class FeesAdmin(admin.ModelAdmin):
-    list_display = ('college', 'course', 'academic_year', 'tuition_fee_display', 
+    list_display = ('college', 'course', 'academic_year', 'admission_fee_display', 
                     'hostel_fees_summary', 'transport_fee_range_display', 
                     'payment_frequency', 'created_at')
     search_fields = ('college__college_name', 'college__short_name', 'course__course_name', 'academic_year')
@@ -61,8 +92,8 @@ class FeesAdmin(admin.ModelAdmin):
             'fields': ('college', 'course', 'academic_year')
         }),
         ('Basic Fee Components', {
-            'fields': ('tuition_fee', 'admission_fee'),
-            'description': 'Basic fees required for admission'
+            'fields': ('admission_fee',),
+            'description': '<div style="background: #e8f5e9; padding: 8px 12px; border-radius: 6px; margin-bottom: 10px;">📘 <strong>Note:</strong> Tuition fee is now managed in the Course model. This allows each course to have a base tuition fee that applies across all academic years.</div>'
         }),
         ('Hostel Accommodation (JSON Format)', {
             'fields': ('hostel_fees',),
@@ -89,7 +120,7 @@ class FeesAdmin(admin.ModelAdmin):
         }),
         ('Transport Facility', {
             'fields': ('transport_fee_min', 'transport_fee_max'),
-            'description': 'Transport fee range based on distance (min to max) - Example: 3000 to 8000'
+            'description': 'Transport fee range based on distance (min to max) - Example: 5000 to 30000'
         }),
         ('Payment Settings', {
             'fields': ('payment_frequency', 'fee_notes'),
@@ -101,9 +132,9 @@ class FeesAdmin(admin.ModelAdmin):
         })
     )
     
-    def tuition_fee_display(self, obj):
-        return f"₹ {obj.tuition_fee:,.2f}"
-    tuition_fee_display.short_description = 'Tuition Fee'
+    def admission_fee_display(self, obj):
+        return f"₹ {obj.admission_fee:,.2f}" if obj.admission_fee else "Not Set"
+    admission_fee_display.short_description = 'Admission Fee'
     
     def hostel_fees_summary(self, obj):
         """Display hostel fees summary in admin list view"""
@@ -111,10 +142,10 @@ class FeesAdmin(admin.ModelAdmin):
             return "Not Available"
         
         room_names = {
-            '1': 'Normal + Common',
-            '2': 'Normal + Attached',
-            '3': 'AC + Common',
-            '4': 'AC + Attached'
+            '1': 'Normal+Common',
+            '2': 'Normal+Attached',
+            '3': 'AC+Common',
+            '4': 'AC+Attached'
         }
         
         summary = []
@@ -136,10 +167,12 @@ class FeesAdmin(admin.ModelAdmin):
     transport_fee_range_display.short_description = 'Transport Fee Range'
     
     def total_fee_calculated(self, obj):
-        """Display detailed fee breakdown in admin panel"""
+        """Display detailed fee breakdown in admin panel using tuition_fee from Course model"""
+        tuition = obj.course.tuition_fee if obj.course else 0
+        
         html = '<div style="background: #f8fafc; padding: 12px; border-radius: 6px; border-left: 3px solid #3AAAD4;">'
         html += '<strong style="font-size: 14px;">📊 Fee Breakdown</strong><br/><br/>'
-        html += '• <strong>Tuition Fee:</strong> ₹ {:,.2f}<br/>'.format(obj.tuition_fee)
+        html += '• <strong>Tuition Fee (from Course):</strong> ₹ {:,.2f}<small style="color: #666;">/year</small><br/>'.format(tuition)
         html += '• <strong>Admission Fee:</strong> ₹ {:,.2f}<br/>'.format(obj.admission_fee)
         
         # Hostel fees breakdown
@@ -170,9 +203,9 @@ class FeesAdmin(admin.ModelAdmin):
         html += '<br/>• <strong>Transport Fee:</strong> {}<br/>'.format(transport_text)
         
         # Total calculation
-        base_total = obj.tuition_fee + obj.admission_fee
+        base_total = tuition + obj.admission_fee
         html += '<hr style="margin: 10px 0; border-color: #e2e8f0;">'
-        html += '<strong>💰 Total Amount (without hostel):</strong> ₹ {:,.2f}<br/>'.format(base_total)
+        html += '<strong>💰 Total Amount (without hostel):</strong> ₹ {:,.2f}<small style="color: #666;">/year</small><br/>'.format(base_total)
         
         if obj.transport_fee_min > 0:
             html += '<strong>💰 Total with Min Transport:</strong> ₹ {:,.2f}<br/>'.format(base_total + obj.transport_fee_min)
@@ -244,7 +277,7 @@ class TeamMemberAdmin(admin.ModelAdmin):
 class TimelineEventAdmin(admin.ModelAdmin):
     list_display = ('title', 'event_type', 'college', 'start_date', 'is_active')
     search_fields = ('title', 'description')
-    list_filter = ('event_type', 'is_active')
+    list_filter = ('event_type', 'is_active', 'college')
     date_hierarchy = 'start_date'
     readonly_fields = ('created_at', 'updated_at')
     

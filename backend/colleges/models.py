@@ -14,7 +14,6 @@ class College(models.Model):
     AFFILIATION_CHOICES = [
         ('anna_university', 'Anna University'),
         ('anna_university_affiliated', 'Anna University Affiliated'),
-        ('autonomous', 'Autonomous'),
         ('deemed_university', 'Deemed University'),
     ]
 
@@ -63,101 +62,30 @@ class Course(models.Model):
 
     # Course Code Choices (only the code)
     COURSE_CODE_CHOICES = [
-        ('AD', 'AD'),
-        ('AE', 'AE'),
-        ('AG', 'AG'),
-        ('AI', 'AI'),
-        ('AM', 'AM'),
-        ('AO', 'AO'),
-        ('AP', 'AP'),
-        ('AR', 'AR'),
-        ('AS', 'AS'),
-        ('AU', 'AU'),
-        ('BD', 'BD'),
-        ('BM', 'BM'),
-        ('BR', 'BR'),
-        ('BS', 'BS'),
-        ('BT', 'BT'),
-        ('BY', 'BY'),
-        ('CA', 'CA'),
-        ('CB', 'CB'),
-        ('CC', 'CC'),
-        ('CE', 'CE'),
-        ('CH', 'CH'),
-        ('CL', 'CL'),
-        ('CM', 'CM'),
-        ('CN', 'CN'),
-        ('CO', 'CO'),
-        ('CP', 'CP'),
-        ('CR', 'CR'),
-        ('CS', 'CS'),
-        ('CT', 'CT'),
-        ('CW', 'CW'),
-        ('CY', 'CY'),
-        ('EC', 'EC'),
-        ('EE', 'EE'),
-        ('EI', 'EI'),
-        ('EM', 'EM'),
-        ('EN', 'EN'),
-        ('ES', 'ES'),
-        ('ET', 'ET'),
-        ('EX', 'EX'),
-        ('EY', 'EY'),
-        ('FD', 'FD'),
-        ('FS', 'FS'),
-        ('FT', 'FT'),
-        ('FY', 'FY'),
-        ('GI', 'GI'),
-        ('HT', 'HT'),
-        ('IB', 'IB'),
-        ('IC', 'IC'),
-        ('IE', 'IE'),
-        ('IG', 'IG'),
-        ('IM', 'IM'),
-        ('IN', 'IN'),
-        ('IS', 'IS'),
-        ('IT', 'IT'),
-        ('IY', 'IY'),
-        ('LE', 'LE'),
-        ('MA', 'MA'),
-        ('MC', 'MC'),
-        ('MD', 'MD'),
-        ('ME', 'ME'),
-        ('MF', 'MF'),
-        ('MG', 'MG'),
-        ('MH', 'MH'),
-        ('MI', 'MI'),
-        ('MN', 'MN'),
-        ('MO', 'MO'),
-        ('MR', 'MR'),
-        ('MS', 'MS'),
-        ('MT', 'MT'),
-        ('MU', 'MU'),
-        ('MY', 'MY'),
-        ('MZ', 'MZ'),
-        ('NS', 'NS'),
-        ('PA', 'PA'),
-        ('PC', 'PC'),
-        ('PD', 'PD'),
-        ('PE', 'PE'),
-        ('PH', 'PH'),
-        ('PL', 'PL'),
-        ('PM', 'PM'),
-        ('PN', 'PN'),
-        ('PP', 'PP'),
-        ('PR', 'PR'),
-        ('PS', 'PS'),
-        ('PT', 'PT'),
-        ('RA', 'RA'),
-        ('RM', 'RM'),
-        ('RP', 'RP'),
-        ('SB', 'SB'),
-        ('TC', 'TC'),
-        ('TS', 'TS'),
-        ('TT', 'TT'),
-        ('TX', 'TX'),
-        ('XC', 'XC'),
-        ('XM', 'XM'),
+        ('AD', 'AD'), ('AE', 'AE'), ('AG', 'AG'), ('AI', 'AI'),
+        ('AM', 'AM'), ('AO', 'AO'), ('AP', 'AP'), ('AR', 'AR'),
+        ('AS', 'AS'), ('AU', 'AU'), ('BD', 'BD'), ('BM', 'BM'),
+        ('BR', 'BR'), ('BS', 'BS'), ('BT', 'BT'), ('BY', 'BY'),
+        ('CA', 'CA'), ('CB', 'CB'), ('CC', 'CC'), ('CE', 'CE'),
+        ('CH', 'CH'), ('CL', 'CL'), ('CM', 'CM'), ('CN', 'CN'),
+        ('CO', 'CO'), ('CP', 'CP'), ('CR', 'CR'), ('CS', 'CS'),
+        ('CT', 'CT'), ('CW', 'CW'), ('CY', 'CY'), ('EC', 'EC'),
+        ('EE', 'EE'), ('EI', 'EI'), ('EM', 'EM'), ('EN', 'EN'),
+        ('ES', 'ES'), ('ET', 'ET'), ('EX', 'EX'), ('EY', 'EY'),
+        ('FD', 'FD'), ('FS', 'FS'), ('FT', 'FT'), ('FY', 'FY'),
+        ('GI', 'GI'), ('HT', 'HT'), ('IB', 'IB'), ('IC', 'IC'),
+        ('IE', 'IE'), ('IG', 'IG'), ('IM', 'IM'), ('IN', 'IN'),
+        ('IS', 'IS'), ('IT', 'IT'), ('IY', 'IY'), ('LE', 'LE'),
+        ('MA', 'MA'), ('MC', 'MC'), ('MD', 'MD'), ('ME', 'ME'),
+        ('MF', 'MF'), ('MG', 'MG'), ('MH', 'MH'), ('MI', 'MI'),
+        ('MN', 'MN'), ('MO', 'MO'), ('MR', 'MR'), ('MS', 'MS'),
+        ('MT', 'MT'), ('MU', 'MU'), ('MY', 'MY'), ('MZ', 'MZ'),
+        ('NS', 'NS'), ('PA', 'PA'), ('PC', 'PC'), ('PD', 'PD'),
+        ('PE', 'PE'), ('PH', 'PH'), ('PL', 'PL'), ('PM', 'PM'),
+        ('PN', 'PN'), ('PP', 'PP'), ('PR', 'PR'), ('PS', 'PS'),
+        ('PT', 'PT'), ('RA', 'RA'), ('RM', 'RM'), ('RP', 'RP'),
+        ('SB', 'SB'), ('SC', 'SC'), ('TC', 'TC'), ('TS', 'TS'), 
+        ('TT', 'TT'), ('TX', 'TX'), ('XC', 'XC'), ('XM', 'XM'), 
     ]
 
     # Course Name Choices (full names)
@@ -256,6 +184,7 @@ class Course(models.Model):
         ('Textile Technology', 'Textile Technology'),
         ('Civil Engineering (Tamil Medium)', 'Civil Engineering (Tamil Medium)'),
         ('Mechanical Engineering (Tamil Medium)', 'Mechanical Engineering (Tamil Medium)'),
+        ('Computer Science and Engineering (Cyber Security)', 'Computer Science and Engineering (Cyber Security)'),
     ]
 
     course_id = models.AutoField(primary_key=True)
@@ -267,8 +196,11 @@ class Course(models.Model):
     degree_type = models.CharField(max_length=20, choices=DEGREE_TYPE_CHOICES)
     degree_name = models.CharField(max_length=50)
     duration_years = models.DecimalField(max_digits=3, decimal_places=1)
-    specialization = models.CharField(max_length=100, null=True, blank=True)
+    
     intake_seats = models.IntegerField(null=True, blank=True)
+    
+    # Tuition Fee - MOVED FROM FEES MODEL
+    tuition_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Annual tuition fee for this course")
     
     cutoff_oc = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     cutoff_bc = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
@@ -291,7 +223,7 @@ class Course(models.Model):
     class Meta:
         ordering = ['college__college_name', 'course_code']
         unique_together = ['college', 'course_code']
-
+        
 class Fees(models.Model):
     PAYMENT_FREQUENCY_CHOICES = [
         ('yearly', 'Yearly'),
@@ -307,12 +239,11 @@ class Fees(models.Model):
     ]
 
     fee_id = models.AutoField(primary_key=True)
-    college = models.ForeignKey(College, on_delete=models.CASCADE, related_name='fees')
+    college = models.ForeignKey('College', on_delete=models.CASCADE, related_name='fees')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, blank=True, related_name='fees')
     academic_year = models.CharField(max_length=9)
     
-    # Tuition Fee
-    tuition_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    # Tuition Fee - REMOVED (now in Course model)
     
     # Hostel Fees - Store as JSON for multiple room types
     hostel_fees = models.JSONField(default=dict, blank=True, help_text="Hostel fees for different room types")
@@ -373,7 +304,6 @@ class Fees(models.Model):
         return {
             'fee_id': self.fee_id,
             'academic_year': self.academic_year,
-            'tuition_fee': float(self.tuition_fee),
             'admission_fee': float(self.admission_fee),
             'hostel_options': self.get_all_hostel_options(),
             'transport_fee_min': float(self.transport_fee_min),
@@ -386,41 +316,34 @@ class Fees(models.Model):
         course_name = self.course.course_name if self.course else "All Courses"
         return f"{self.college.college_name} - {course_name} ({self.academic_year})"
 
-     # Add these properties to the Fees model
     @property
     def total_fee(self):
-        """Calculate total fee without transport (tuition + admission)"""
-        return (self.tuition_fee or 0) + (self.admission_fee or 0)
+        """Calculate total fee without transport (uses tuition_fee from Course model)"""
+        tuition = self.course.tuition_fee if self.course else 0
+        return (tuition or 0) + (self.admission_fee or 0)
+    
     @property
     def total_fee_with_transport_min(self):
-
         """Calculate total fee with minimum transport fee"""
         return self.total_fee + (self.transport_fee_min or 0)
+    
     @property
     def total_fee_with_transport_max(self):
-
         """Calculate total fee with maximum transport fee"""
         return self.total_fee + (self.transport_fee_max or 0)
+    
     @property
     def transport_fee_range(self):
-
         """Get transport fee range as string"""
         if self.transport_fee_min == self.transport_fee_max:
             if self.transport_fee_min == 0:
                 return "Not Available"
-
             return f"₹ {self.transport_fee_min:,.2f}"
         return f"₹ {self.transport_fee_min:,.2f} - ₹ {self.transport_fee_max:,.2f}"
-    @property
-    def hostel_room_display(self):
-        """Get display name for hostel room type (deprecated - for backward compatibility)"""
-        return "Use hostel_fees JSON field for multiple room types"
-
 
     def get_payment_frequency_display(self):
         """Get display name for payment frequency"""
-        return dict(self.PAYMENT_FREQUENCY_CHOICES).get(self.payment_frequency, self.payment_frequency)   
-
+        return dict(self.PAYMENT_FREQUENCY_CHOICES).get(self.payment_frequency, self.payment_frequency)
 # ==================== USER PROFILE MODEL ====================
 class UserProfile(models.Model):
     GENDER_CHOICES = [

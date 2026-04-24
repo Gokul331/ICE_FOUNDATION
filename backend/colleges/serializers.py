@@ -15,8 +15,8 @@ class CollegeListSerializer(serializers.ModelSerializer):
         model = College
         fields = ['college_id', 'college_name', 'short_name', 'counselling_code', 
                   'location_city', 'location_state', 'type', 'affiliation',
-                  'scholarship_available', 'placement_percentage', 
-                  'naac_grade', 'nirf_rank', 'logo_url', 'hostel_available']
+                  'placement_percentage', 'naac_grade', 'nirf_rank', 'logo_url', 
+                  'hostel_available']
 
 
 class CollegeWithCoursesSerializer(serializers.ModelSerializer):
@@ -51,7 +51,7 @@ class CourseSerializer(serializers.ModelSerializer):
         return obj.get_degree_type_display()
 
 
-# ==================== FEES SERIALIZER ====================
+# ==================== FEES SERIALIZER (UPDATED - tuition_fee removed) ====================
 class FeesSerializer(serializers.ModelSerializer):
     # Display fields for better readability
     payment_frequency_display = serializers.SerializerMethodField()
@@ -60,7 +60,10 @@ class FeesSerializer(serializers.ModelSerializer):
     total_fee_with_transport_max = serializers.ReadOnlyField()
     transport_fee_range = serializers.ReadOnlyField()
     
-    # Hostel options as structured data (replaces hostel_room_type and hostel_fee)
+    # Get tuition fee from the related course
+    tuition_fee = serializers.SerializerMethodField()
+    
+    # Hostel options as structured data
     hostel_options = serializers.SerializerMethodField()
     
     # Nested fields for better API response
@@ -76,7 +79,7 @@ class FeesSerializer(serializers.ModelSerializer):
             'course',
             'course_name',
             'academic_year',
-            'tuition_fee',
+            'tuition_fee',  # Now comes from Course model via SerializerMethodField
             'hostel_fees',
             'hostel_options',
             'transport_fee_min',
@@ -97,6 +100,12 @@ class FeesSerializer(serializers.ModelSerializer):
     def get_payment_frequency_display(self, obj):
         return obj.get_payment_frequency_display()
     
+    def get_tuition_fee(self, obj):
+        """Get tuition fee from the related course model"""
+        if obj.course:
+            return float(obj.course.tuition_fee) if obj.course.tuition_fee else 0
+        return 0
+    
     def get_hostel_options(self, obj):
         """Get all hostel options with fees from the JSON field"""
         return obj.get_all_hostel_options()
@@ -106,6 +115,7 @@ class FeesListSerializer(serializers.ModelSerializer):
     """Simplified serializer for list views"""
     college_name = serializers.ReadOnlyField(source='college.college_name')
     course_name = serializers.ReadOnlyField(source='course.course_name', default=None)
+    tuition_fee = serializers.SerializerMethodField()
     total_fee = serializers.ReadOnlyField()
     transport_fee_range = serializers.ReadOnlyField()
     payment_frequency_display = serializers.SerializerMethodField()
@@ -119,7 +129,7 @@ class FeesListSerializer(serializers.ModelSerializer):
             'college_name',
             'course_name',
             'academic_year',
-            'tuition_fee',
+            'tuition_fee',  # Now from Course model
             'hostel_fee_range',
             'transport_fee_range',
             'total_fee',
@@ -129,6 +139,12 @@ class FeesListSerializer(serializers.ModelSerializer):
     
     def get_payment_frequency_display(self, obj):
         return obj.get_payment_frequency_display()
+    
+    def get_tuition_fee(self, obj):
+        """Get tuition fee from the related course model"""
+        if obj.course:
+            return float(obj.course.tuition_fee) if obj.course.tuition_fee else 0
+        return 0
     
     def get_hostel_fee_range(self, obj):
         """Get hostel fee range from JSON data"""
@@ -180,8 +196,8 @@ class FeeRangeSerializer(serializers.Serializer):
     min_fee = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     max_fee = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     academic_year = serializers.CharField(required=False)
-    # Changed from hostel_room_type to hostel_room_type_id to match your model
     hostel_room_type_id = serializers.IntegerField(required=False, help_text="1-4 for different room types")
+
 
 # ==================== EXISTING SERIALIZERS ====================
 class UserProfileSerializer(serializers.ModelSerializer):

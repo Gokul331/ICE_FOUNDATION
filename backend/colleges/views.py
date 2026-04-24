@@ -93,6 +93,7 @@ def get_college_courses(request, college_id):
     except Exception as e:
         return Response({'error': str(e)}, status=500)
 
+
 @api_view(['GET'])
 def get_college_fees(request, college_id):
     """Get all fee structures for a specific college"""
@@ -201,6 +202,7 @@ def get_hostel_options(request, college_id):
 
 
 # Optional: Add a filtered fee endpoint
+
 @api_view(['GET'])
 def get_filtered_fees(request):
     """Get fees with advanced filtering including hostel room type"""
@@ -246,6 +248,8 @@ def get_filtered_fees(request):
     except Exception as e:
         print(f"Error in get_filtered_fees: {str(e)}")
         return Response({'error': str(e)}, status=500)
+
+
 @api_view(['GET'])
 def get_courses(request):
     """Get all courses with optional filtering"""
@@ -294,7 +298,6 @@ def get_courses(request):
     serializer = CourseSerializer(courses, many=True)
     return Response(serializer.data)
 
-
 @api_view(['GET'])
 def get_course_detail(request, course_id):
     """Get a single course by ID"""
@@ -341,6 +344,7 @@ def suggest_colleges(request):
     serializer = CollegeListSerializer(colleges, many=True)
     return Response(serializer.data)
 
+
 @api_view(['GET'])
 def get_fee_comparison(request):
     """Compare fees across multiple colleges/courses"""
@@ -367,6 +371,11 @@ def get_fee_comparison(request):
             fees = fees_query.first()
             
             if fees:
+                # Get tuition fee from the related course
+                tuition_fee = 0
+                if fees.course:
+                    tuition_fee = float(fees.course.tuition_fee) if fees.course.tuition_fee else 0
+                
                 # Get hostel options from JSON field
                 hostel_options = []
                 if fees.hostel_fees:
@@ -378,16 +387,19 @@ def get_fee_comparison(request):
                             'available_seats': fee_data.get('available_seats', 0)
                         })
                 
+                # Calculate total fee using tuition from course
+                total_fee = tuition_fee + float(fees.admission_fee or 0)
+                
                 comparison_data.append({
                     'college_id': college.college_id,
                     'college_name': college.college_name,
-                    'tuition_fee': float(fees.tuition_fee),
+                    'tuition_fee': tuition_fee,
                     'admission_fee': float(fees.admission_fee),
                     'transport_fee_min': float(fees.transport_fee_min),
                     'transport_fee_max': float(fees.transport_fee_max),
                     'hostel_options': hostel_options,
-                    'total_fee_min': float(fees.total_fee_with_transport_min),
-                    'total_fee_max': float(fees.total_fee_with_transport_max),
+                    'total_fee_min': total_fee + float(fees.transport_fee_min or 0),
+                    'total_fee_max': total_fee + float(fees.transport_fee_max or 0),
                     'academic_year': fees.academic_year
                 })
         except College.DoesNotExist:
@@ -398,12 +410,19 @@ def get_fee_comparison(request):
     
     return Response(comparison_data)
 
+
 @api_view(['GET'])
 def get_fee_statistics(request):
     """Get fee statistics across all colleges"""
     academic_year = request.GET.get('academic_year', '2024-2025')
     
     fees = Fees.objects.filter(academic_year=academic_year)
+    
+    # Calculate tuition fee statistics from related courses
+    tuition_fees = []
+    for fee in fees:
+        if fee.course and fee.course.tuition_fee:
+            tuition_fees.append(float(fee.course.tuition_fee))
     
     # Calculate average hostel fee from JSON data
     all_hostel_fees = []
@@ -418,9 +437,9 @@ def get_fee_statistics(request):
     max_hostel_fee = max(all_hostel_fees) if all_hostel_fees else 0
     
     stats = {
-        'average_tuition_fee': fees.aggregate(Avg('tuition_fee'))['tuition_fee__avg'] or 0,
-        'min_tuition_fee': fees.aggregate(Min('tuition_fee'))['tuition_fee__min'] or 0,
-        'max_tuition_fee': fees.aggregate(Max('tuition_fee'))['tuition_fee__max'] or 0,
+        'average_tuition_fee': sum(tuition_fees) / len(tuition_fees) if tuition_fees else 0,
+        'min_tuition_fee': min(tuition_fees) if tuition_fees else 0,
+        'max_tuition_fee': max(tuition_fees) if tuition_fees else 0,
         'average_hostel_fee': avg_hostel_fee,
         'min_hostel_fee': min_hostel_fee,
         'max_hostel_fee': max_hostel_fee,
