@@ -252,7 +252,7 @@ def get_filtered_fees(request):
 
 @api_view(['GET'])
 def get_courses(request):
-    """Get all courses with optional filtering"""
+    """Get all courses with optional filtering including quota fees"""
     courses = Course.objects.all()
 
     # Filter by college
@@ -260,12 +260,12 @@ def get_courses(request):
     if college_id:
         courses = courses.filter(college_id=college_id)
 
-    # Add filter by course code
+    # Filter by course code
     course_code = request.GET.get('course_code')
     if course_code:
         courses = courses.filter(course_code=course_code)
 
-    # Add filter by course name
+    # Filter by course name
     course_name = request.GET.get('course_name')
     if course_name:
         courses = courses.filter(course_name__icontains=course_name)
@@ -274,6 +274,27 @@ def get_courses(request):
     stream = request.GET.get('stream')
     if stream:
         courses = courses.filter(specialization__icontains=stream)
+    
+    # Filter by fee range for a specific quota
+    min_fee = request.GET.get('min_fee')
+    max_fee = request.GET.get('max_fee')
+    quota_type = request.GET.get('quota_type', 'management')  # 'management' or 'government'
+    
+    if min_fee and max_fee:
+        if quota_type == 'management':
+            courses = courses.filter(tuition_fee_management__gte=min_fee, tuition_fee_management__lte=max_fee)
+        else:
+            courses = courses.filter(tuition_fee_government__gte=min_fee, tuition_fee_government__lte=max_fee)
+    elif min_fee:
+        if quota_type == 'management':
+            courses = courses.filter(tuition_fee_management__gte=min_fee)
+        else:
+            courses = courses.filter(tuition_fee_government__gte=min_fee)
+    elif max_fee:
+        if quota_type == 'management':
+            courses = courses.filter(tuition_fee_management__lte=max_fee)
+        else:
+            courses = courses.filter(tuition_fee_government__lte=max_fee)
 
     # Filter by min cutoff (for a community)
     cutoff = request.GET.get('cutoff')
@@ -297,7 +318,6 @@ def get_courses(request):
 
     serializer = CourseSerializer(courses, many=True)
     return Response(serializer.data)
-
 @api_view(['GET'])
 def get_course_detail(request, course_id):
     """Get a single course by ID"""
@@ -347,10 +367,11 @@ def suggest_colleges(request):
 
 @api_view(['GET'])
 def get_fee_comparison(request):
-    """Compare fees across multiple colleges/courses"""
+    """Compare fees across multiple colleges/courses with quota support"""
     college_ids = request.GET.getlist('college_ids')
     course_id = request.GET.get('course_id')
     academic_year = request.GET.get('academic_year', '2024-2025')
+    quota_type = request.GET.get('quota_type', 'management')  # 'management' or 'government'
     
     if not college_ids:
         return Response({'error': 'college_ids parameter is required'}, status=400)
@@ -370,11 +391,12 @@ def get_fee_comparison(request):
             
             fees = fees_query.first()
             
-            if fees:
-                # Get tuition fee from the related course
-                tuition_fee = 0
-                if fees.course:
-                    tuition_fee = float(fees.course.tuition_fee) if fees.course.tuition_fee else 0
+            if fees and fees.course:
+                # Get tuition fee based on quota type
+                if quota_type == 'management':
+                    tuition_fee = float(fees.course.tuition_fee_management) if fees.course.tuition_fee_management else 0
+                else:  # government
+                    tuition_fee = float(fees.course.tuition_fee_government) if fees.course.tuition_fee_government else 0
                 
                 # Get hostel options from JSON field
                 hostel_options = []
@@ -393,6 +415,7 @@ def get_fee_comparison(request):
                 comparison_data.append({
                     'college_id': college.college_id,
                     'college_name': college.college_name,
+                    'quota_type': quota_type,
                     'tuition_fee': tuition_fee,
                     'admission_fee': float(fees.admission_fee),
                     'transport_fee_min': float(fees.transport_fee_min),
@@ -402,6 +425,22 @@ def get_fee_comparison(request):
                     'total_fee_max': total_fee + float(fees.transport_fee_max or 0),
                     'academic_year': fees.academic_year
                 })
+            elif fees and not fees.course:
+                # Handle case where fee exists but no course (default fees)
+                comparison_data.append({
+                    'college_id': college.college_id,
+                    'college_name': college.college_name,
+                    'quota_type': quota_type,
+                    'tuition_fee': 0,
+                    'admission_fee': float(fees.admission_fee),
+                    'transport_fee_min': float(fees.transport_fee_min),
+                    'transport_fee_max': float(fees.transport_fee_max),
+                    'hostel_options': [],
+                    'total_fee_min': float(fees.admission_fee or 0),
+                    'total_fee_max': float(fees.admission_fee or 0),
+                    'academic_year': fees.academic_year,
+                    'note': 'No specific course found'
+                })
         except College.DoesNotExist:
             continue
         except Exception as e:
@@ -410,19 +449,24 @@ def get_fee_comparison(request):
     
     return Response(comparison_data)
 
-
 @api_view(['GET'])
 def get_fee_statistics(request):
-    """Get fee statistics across all colleges"""
+    """Get fee statistics across all colleges with quota support"""
     academic_year = request.GET.get('academic_year', '2024-2025')
+    quota_type = request.GET.get('quota_type', 'management')  # 'management' or 'government'
     
     fees = Fees.objects.filter(academic_year=academic_year)
     
-    # Calculate tuition fee statistics from related courses
+    # Calculate tuition fee statistics from related courses based on quota type
     tuition_fees = []
     for fee in fees:
-        if fee.course and fee.course.tuition_fee:
-            tuition_fees.append(float(fee.course.tuition_fee))
+        if fee.course:
+            if quota_type == 'management':
+                if fee.course.tuition_fee_management:
+                    tuition_fees.append(float(fee.course.tuition_fee_management))
+            else:  # government
+                if fee.course.tuition_fee_government:
+                    tuition_fees.append(float(fee.course.tuition_fee_government))
     
     # Calculate average hostel fee from JSON data
     all_hostel_fees = []
@@ -437,6 +481,7 @@ def get_fee_statistics(request):
     max_hostel_fee = max(all_hostel_fees) if all_hostel_fees else 0
     
     stats = {
+        'quota_type': quota_type,
         'average_tuition_fee': sum(tuition_fees) / len(tuition_fees) if tuition_fees else 0,
         'min_tuition_fee': min(tuition_fees) if tuition_fees else 0,
         'max_tuition_fee': max(tuition_fees) if tuition_fees else 0,
@@ -448,7 +493,6 @@ def get_fee_statistics(request):
     }
     
     return Response(stats)
-
 @api_view(['GET', 'POST'])
 def user_profiles(request):
     """GET: List all user profiles, POST: Create a user profile"""

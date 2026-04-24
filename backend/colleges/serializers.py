@@ -37,6 +37,10 @@ class CourseSerializer(serializers.ModelSerializer):
     course_name_display = serializers.SerializerMethodField()
     degree_type_display = serializers.SerializerMethodField()
     
+    # Add formatted fee fields for Management and Government quotas
+    tuition_fee_management_formatted = serializers.SerializerMethodField()
+    tuition_fee_government_formatted = serializers.SerializerMethodField()
+    
     class Meta:
         model = Course
         fields = '__all__'
@@ -49,9 +53,21 @@ class CourseSerializer(serializers.ModelSerializer):
     
     def get_degree_type_display(self, obj):
         return obj.get_degree_type_display()
+    
+    def get_tuition_fee_management_formatted(self, obj):
+        """Get formatted management quota fee"""
+        if obj.tuition_fee_management:
+            return f"₹{obj.tuition_fee_management:,.2f}/year"
+        return None
+    
+    def get_tuition_fee_government_formatted(self, obj):
+        """Get formatted government quota fee"""
+        if obj.tuition_fee_government:
+            return f"₹{obj.tuition_fee_government:,.2f}/year"
+        return None
 
 
-# ==================== FEES SERIALIZER (UPDATED - tuition_fee removed) ====================
+# ==================== FEES SERIALIZER (UPDATED - with quota support) ====================
 class FeesSerializer(serializers.ModelSerializer):
     # Display fields for better readability
     payment_frequency_display = serializers.SerializerMethodField()
@@ -60,8 +76,10 @@ class FeesSerializer(serializers.ModelSerializer):
     total_fee_with_transport_max = serializers.ReadOnlyField()
     transport_fee_range = serializers.ReadOnlyField()
     
-    # Get tuition fee from the related course
-    tuition_fee = serializers.SerializerMethodField()
+    # Get tuition fees from the related course (with quota support)
+    tuition_fee_management = serializers.SerializerMethodField()
+    tuition_fee_government = serializers.SerializerMethodField()
+    tuition_fee = serializers.SerializerMethodField()  # Legacy support
     
     # Hostel options as structured data
     hostel_options = serializers.SerializerMethodField()
@@ -79,7 +97,9 @@ class FeesSerializer(serializers.ModelSerializer):
             'course',
             'course_name',
             'academic_year',
-            'tuition_fee',  # Now comes from Course model via SerializerMethodField
+            'tuition_fee_management',   # Management quota fee
+            'tuition_fee_government',   # Government quota fee
+            'tuition_fee',              # Legacy field (uses management fee for backward compatibility)
             'hostel_fees',
             'hostel_options',
             'transport_fee_min',
@@ -100,11 +120,21 @@ class FeesSerializer(serializers.ModelSerializer):
     def get_payment_frequency_display(self, obj):
         return obj.get_payment_frequency_display()
     
-    def get_tuition_fee(self, obj):
-        """Get tuition fee from the related course model"""
+    def get_tuition_fee_management(self, obj):
+        """Get management quota tuition fee from the related course model"""
         if obj.course:
-            return float(obj.course.tuition_fee) if obj.course.tuition_fee else 0
+            return float(obj.course.tuition_fee_management) if obj.course.tuition_fee_management else 0
         return 0
+    
+    def get_tuition_fee_government(self, obj):
+        """Get government quota tuition fee from the related course model"""
+        if obj.course:
+            return float(obj.course.tuition_fee_government) if obj.course.tuition_fee_government else 0
+        return 0
+    
+    def get_tuition_fee(self, obj):
+        """Legacy: Get tuition fee (defaults to management quota for backward compatibility)"""
+        return self.get_tuition_fee_management(obj)
     
     def get_hostel_options(self, obj):
         """Get all hostel options with fees from the JSON field"""
@@ -115,7 +145,9 @@ class FeesListSerializer(serializers.ModelSerializer):
     """Simplified serializer for list views"""
     college_name = serializers.ReadOnlyField(source='college.college_name')
     course_name = serializers.ReadOnlyField(source='course.course_name', default=None)
-    tuition_fee = serializers.SerializerMethodField()
+    tuition_fee_management = serializers.SerializerMethodField()
+    tuition_fee_government = serializers.SerializerMethodField()
+    tuition_fee = serializers.SerializerMethodField()  # Legacy support
     total_fee = serializers.ReadOnlyField()
     transport_fee_range = serializers.ReadOnlyField()
     payment_frequency_display = serializers.SerializerMethodField()
@@ -129,7 +161,9 @@ class FeesListSerializer(serializers.ModelSerializer):
             'college_name',
             'course_name',
             'academic_year',
-            'tuition_fee',  # Now from Course model
+            'tuition_fee_management',
+            'tuition_fee_government',
+            'tuition_fee',  # Legacy
             'hostel_fee_range',
             'transport_fee_range',
             'total_fee',
@@ -140,11 +174,21 @@ class FeesListSerializer(serializers.ModelSerializer):
     def get_payment_frequency_display(self, obj):
         return obj.get_payment_frequency_display()
     
-    def get_tuition_fee(self, obj):
-        """Get tuition fee from the related course model"""
+    def get_tuition_fee_management(self, obj):
+        """Get management quota tuition fee from the related course model"""
         if obj.course:
-            return float(obj.course.tuition_fee) if obj.course.tuition_fee else 0
+            return float(obj.course.tuition_fee_management) if obj.course.tuition_fee_management else 0
         return 0
+    
+    def get_tuition_fee_government(self, obj):
+        """Get government quota tuition fee from the related course model"""
+        if obj.course:
+            return float(obj.course.tuition_fee_government) if obj.course.tuition_fee_government else 0
+        return 0
+    
+    def get_tuition_fee(self, obj):
+        """Legacy: Get tuition fee (defaults to management quota for backward compatibility)"""
+        return self.get_tuition_fee_management(obj)
     
     def get_hostel_fee_range(self, obj):
         """Get hostel fee range from JSON data"""
@@ -196,6 +240,7 @@ class FeeRangeSerializer(serializers.Serializer):
     min_fee = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     max_fee = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     academic_year = serializers.CharField(required=False)
+    quota_type = serializers.ChoiceField(choices=['management', 'government'], required=False, help_text="Quota type: management or government")
     hostel_room_type_id = serializers.IntegerField(required=False, help_text="1-4 for different room types")
 
 

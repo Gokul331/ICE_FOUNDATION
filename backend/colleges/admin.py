@@ -35,13 +35,14 @@ class CollegeStateListFilter(admin.SimpleListFilter):
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    # Change 'tuition_fee_display' to 'tuition_fee'
-    list_display = ('course_name', 'course_code', 'college', 'degree_name', 'tuition_fee', 'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
+    list_display = ('course_name', 'course_code', 'college', 'degree_name', 
+                    'tuition_fee_management', 'tuition_fee_government', 
+                    'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
     search_fields = ('course_name', 'course_code', 'specialization', 'college__college_name')
     list_filter = (CollegeStateListFilter, 'degree_type', 'degree_name', 'is_active', 'college__type', 'college__affiliation')
     readonly_fields = ('created_at', 'updated_at')
-    # Now tuition_fee is in both list_display and list_editable
-    list_editable = ('tuition_fee', 'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
+    # The actual fields for editing (not the display methods)
+    list_editable = ('tuition_fee_management', 'tuition_fee_government', 'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
     list_per_page = 25
     
     fieldsets = (
@@ -49,8 +50,14 @@ class CourseAdmin(admin.ModelAdmin):
             'fields': ('college', 'course_code', 'course_name', 'degree_type', 'degree_name', 'duration_years')
         }),
         ('Fee Information', {
-            'fields': ('tuition_fee',),
-            'description': 'Annual tuition fee for this course'
+            'fields': ('tuition_fee_management', 'tuition_fee_government'),
+            'description': '''
+                <div style="background: #e8f5e9; padding: 8px 12px; border-radius: 6px;">
+                    <strong>📘 Fee Structure:</strong><br>
+                    • <strong>Management Quota Fee:</strong> Annual fee for students admitted through management quota<br>
+                    • <strong>Government Quota Fee:</strong> Annual fee for students admitted through government counselling
+                </div>
+            '''
         }),
         ('Seats & Cutoff Marks', {
             'fields': ('intake_seats', 'cutoff_oc', 'cutoff_bc', 'cutoff_bcm', 'cutoff_mbc', 
@@ -70,13 +77,20 @@ class CourseAdmin(admin.ModelAdmin):
         })
     )
     
-    def tuition_fee_display(self, obj):
-        return f"₹ {obj.tuition_fee:,.2f}/year" if obj.tuition_fee else "Not Set"
-    tuition_fee_display.short_description = 'Tuition Fee'
+    # Display method for Management Quota Fee
+    def tuition_fee_management_display(self, obj):
+        return f"₹ {obj.tuition_fee_management:,.2f}/year" if obj.tuition_fee_management else "Not Set"
+    tuition_fee_management_display.short_description = 'Management Quota'
+    tuition_fee_management_display.admin_order_field = 'tuition_fee_management'
+    
+    # Display method for Government Quota Fee
+    def tuition_fee_government_display(self, obj):
+        return f"₹ {obj.tuition_fee_government:,.2f}/year" if obj.tuition_fee_government else "Not Set"
+    tuition_fee_government_display.short_description = 'Govt/Management'
+    tuition_fee_government_display.admin_order_field = 'tuition_fee_government'
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('college')
-
 
 # ==================== FEES ADMIN (UPDATED - tuition_fee removed) ====================
 @admin.register(Fees)

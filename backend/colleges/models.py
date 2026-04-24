@@ -200,7 +200,8 @@ class Course(models.Model):
     intake_seats = models.IntegerField(null=True, blank=True)
     
     # Tuition Fee - MOVED FROM FEES MODEL
-    tuition_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Annual tuition fee for this course")
+    tuition_fee_management = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Annual tuition fee for this course")
+    tuition_fee_government = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Annual tuition fee for government quota")
     
     cutoff_oc = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     cutoff_bc = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
