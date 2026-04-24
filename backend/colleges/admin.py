@@ -33,13 +33,14 @@ class CollegeStateListFilter(admin.SimpleListFilter):
             return queryset.filter(college__location_state=self.value())
         return queryset
 
-
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ('course_name', 'course_code', 'college', 'degree_name', 'tuition_fee_display', 'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
+    # Change 'tuition_fee_display' to 'tuition_fee'
+    list_display = ('course_name', 'course_code', 'college', 'degree_name', 'tuition_fee', 'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
     search_fields = ('course_name', 'course_code', 'specialization', 'college__college_name')
     list_filter = (CollegeStateListFilter, 'degree_type', 'degree_name', 'is_active', 'college__type', 'college__affiliation')
     readonly_fields = ('created_at', 'updated_at')
+    # Now tuition_fee is in both list_display and list_editable
     list_editable = ('tuition_fee', 'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
     list_per_page = 25
     
