@@ -19,6 +19,8 @@ function CollegeDetail() {
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [activeFeeTab, setActiveFeeTab] = useState({});
+  const [expandedFees, setExpandedFees] = useState({});
 
   useEffect(() => {
     const fetchCollegeData = async () => {
@@ -593,7 +595,7 @@ function CollegeDetail() {
                     </div>
                   </div>
 
-                  {/* Detailed Fee Breakdown */}
+                  {/* Detailed Fee Breakdown - Accordion Style */}
                   {fees && fees.length > 0 && (
                     <div className="fee-breakdown-container">
                       <h3 className="fee-breakdown-title">Fee Breakdown</h3>
@@ -601,143 +603,405 @@ function CollegeDetail() {
                         const course = courses.find(
                           (c) => c.course_id === fee.course,
                         );
+                        const courseId = course?.course_id || index;
+                        const isExpanded = expandedFees[courseId] || false;
+
                         return (
-                          <div key={index} className="fee-card">
-                            <div className="fee-card-header">
-                              <div className="fee-course-name">
-                                {course?.course_name ||
-                                  fee.course_name ||
-                                  "Course"}
-                                {fee.academic_year && (
-                                  <span className="fee-badge">
-                                    {fee.academic_year}
-                                  </span>
-                                )}
+                          <div key={index} className="fee-accordion-item">
+                            {/* Accordion Header */}
+                            <div
+                              className="fee-accordion-header"
+                              onClick={() =>
+                                setExpandedFees({
+                                  ...expandedFees,
+                                  [courseId]: !isExpanded,
+                                })
+                              }
+                            >
+                              <div className="fee-accordion-title">
+                                <div className="fee-course-name">
+                                  {course?.course_name ||
+                                    fee.course_name ||
+                                    "Course"}
+                                  {fee.academic_year && (
+                                    <span className="fee-badge">
+                                      {fee.academic_year}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="fee-accordion-icon">
+                                  {isExpanded ? "−" : "+"}
+                                </div>
                               </div>
+
+                              {/* Quick Stats Summary when collapsed */}
+                              {!isExpanded && (
+                                <div className="fee-quick-stats">
+                                  {fee.tuition_fee && (
+                                    <div className="quick-stat">
+                                      <span className="quick-stat-label">
+                                        Tuition
+                                      </span>
+                                      <span className="quick-stat-value">
+                                        {formatCurrency(
+                                          parseFloat(fee.tuition_fee),
+                                        )}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {fee.hostel_options &&
+                                    fee.hostel_options.length > 0 && (
+                                      <div className="quick-stat">
+                                        <span className="quick-stat-label">
+                                          Hostel
+                                        </span>
+                                        <span className="quick-stat-value">
+                                          From ₹
+                                          {Math.min(
+                                            ...fee.hostel_options.map(
+                                              (o) => o.hostel_fee,
+                                            ),
+                                          ).toLocaleString()}
+                                        </span>
+                                      </div>
+                                    )}
+                                  {fee.total_fee && (
+                                    <div className="quick-stat">
+                                      <span className="quick-stat-label">
+                                        Total
+                                      </span>
+                                      <span className="quick-stat-value">
+                                        {formatCurrency(
+                                          parseFloat(fee.total_fee),
+                                        )}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
 
-                            <div className="fee-card-body">
-                              <div className="fee-grid">
-                                {/* Tuition Fee */}
-                                {fee.tuition_fee && (
-                                  <div className="fee-item">
-                                    <div className="fee-item-label">
-                                      TUITION FEE
-                                    </div>
-                                    <div className="fee-item-value">
-                                      {formatCurrency(
-                                        parseFloat(fee.tuition_fee),
-                                      )}
-                                      <small>/year</small>
-                                    </div>
-                                  </div>
-                                )}
+                            {/* Accordion Content (Expanded) */}
+                            {isExpanded && (
+                              <div className="fee-accordion-content">
+                                {/* Menu Tabs inside accordion */}
+                                <div className="fee-tabs-container">
+                                  <button
+                                    className={`fee-tab-btn ${activeFeeTab[courseId] === "tuition" ? "active" : ""}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveFeeTab({
+                                        ...activeFeeTab,
+                                        [courseId]: "tuition",
+                                      });
+                                    }}
+                                  >
+                                    <span className="fee-tab-icon">💰</span>
+                                    Tuition Fee
+                                  </button>
 
-                                {/* Admission Fee */}
-                                {fee.admission_fee && (
-                                  <div className="fee-item">
-                                    <div className="fee-item-label">
-                                      ADMISSION FEE
-                                    </div>
-                                    <div className="fee-item-value">
-                                      {formatCurrency(
-                                        parseFloat(fee.admission_fee),
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
+                                  {fee.hostel_options &&
+                                    fee.hostel_options.length > 0 && (
+                                      <button
+                                        className={`fee-tab-btn ${activeFeeTab[courseId] === "hostel" ? "active" : ""}`}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setActiveFeeTab({
+                                            ...activeFeeTab,
+                                            [courseId]: "hostel",
+                                          });
+                                        }}
+                                      >
+                                        <span className="fee-tab-icon">🏠</span>
+                                        Hostel Options
+                                      </button>
+                                    )}
 
-                                {/* Hostel Options */}
-                                {fee.hostel_options &&
-                                  fee.hostel_options.length > 0 && (
-                                    <div className="hostel-section">
-                                      <div className="hostel-title">
-                                        Hostel Accommodation
-                                      </div>
-                                      <div className="hostel-options-grid">
-                                        {fee.hostel_options.map(
-                                          (option, idx) => (
-                                            <div
-                                              key={idx}
-                                              className="hostel-option-card"
-                                            >
-                                              <div className="hostel-room-type">
-                                                {option.room_type_display}
-                                                <span className="hostel-room-badge">
-                                                  Room Type {option.room_type}
-                                                </span>
-                                              </div>
-                                              <div className="hostel-fee-amount">
-                                                ₹
-                                                {option.hostel_fee.toLocaleString()}
-                                                <small>/year</small>
-                                              </div>
-                                              {option.available_seats && (
-                                                <div className="hostel-seats">
-                                                  {option.available_seats} seats
-                                                  available
-                                                </div>
+                                  {(fee.transport_fee_min ||
+                                    fee.transport_fee_max) && (
+                                    <button
+                                      className={`fee-tab-btn ${activeFeeTab[courseId] === "transport" ? "active" : ""}`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveFeeTab({
+                                          ...activeFeeTab,
+                                          [courseId]: "transport",
+                                        });
+                                      }}
+                                    >
+                                      <span className="fee-tab-icon">🚌</span>
+                                      Transport
+                                    </button>
+                                  )}
+
+                                  <button
+                                    className={`fee-tab-btn ${activeFeeTab[courseId] === "summary" ? "active" : ""}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveFeeTab({
+                                        ...activeFeeTab,
+                                        [courseId]: "summary",
+                                      });
+                                    }}
+                                  >
+                                    <span className="fee-tab-icon">📊</span>
+                                    Summary
+                                  </button>
+                                </div>
+
+                                <div className="fee-card-body">
+                                  {/* Tuition & Admission Tab */}
+                                  {(activeFeeTab[courseId] === "tuition" ||
+                                    !activeFeeTab[courseId]) && (
+                                    <div className="fee-tab-content">
+                                      <div className="fee-grid">
+                                        {fee.tuition_fee && (
+                                          <div className="fee-item">
+                                            <div className="fee-item-label">
+                                              TUITION FEE
+                                            </div>
+                                            <div className="fee-item-value">
+                                              {formatCurrency(
+                                                parseFloat(fee.tuition_fee),
+                                              )}
+                                              <small>/year</small>
+                                            </div>
+                                            <div className="fee-item-desc">
+                                              Annual tuition fee
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {fee.admission_fee && (
+                                          <div className="fee-item">
+                                            <div className="fee-item-label">
+                                              ADMISSION FEE
+                                            </div>
+                                            <div className="fee-item-value">
+                                              {formatCurrency(
+                                                parseFloat(fee.admission_fee),
                                               )}
                                             </div>
-                                          ),
+                                            <div className="fee-item-desc">
+                                              One-time payment
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {fee.payment_frequency && (
+                                          <div className="fee-item">
+                                            <div className="fee-item-label">
+                                              PAYMENT FREQUENCY
+                                            </div>
+                                            <div className="fee-item-value">
+                                              {fee.payment_frequency_display ||
+                                                fee.payment_frequency}
+                                            </div>
+                                            <div className="fee-item-desc">
+                                              Payment schedule
+                                            </div>
+                                          </div>
                                         )}
                                       </div>
                                     </div>
                                   )}
 
-                                {/* Transport Fee */}
-                                {fee.transport_fee_min &&
-                                  fee.transport_fee_max && (
-                                    <div className="transport-section">
-                                      <div className="fee-item-label">
-                                        TRANSPORT FEE
+                                  {/* Hostel Options Tab */}
+                                  {activeFeeTab[courseId] === "hostel" &&
+                                    fee.hostel_options &&
+                                    fee.hostel_options.length > 0 && (
+                                      <div className="fee-tab-content">
+                                        <div className="hostel-options-grid">
+                                          {fee.hostel_options.map(
+                                            (option, idx) => (
+                                              <div
+                                                key={idx}
+                                                className="hostel-option-card"
+                                              >
+                                                <div className="hostel-room-type">
+                                                  {option.room_type_display}
+                                                  <span className="hostel-room-badge">
+                                                    Type {option.room_type}
+                                                  </span>
+                                                </div>
+                                                <div className="hostel-fee-amount">
+                                                  ₹
+                                                  {option.hostel_fee.toLocaleString()}
+                                                  <small>/year</small>
+                                                </div>
+                                                {option.available_seats && (
+                                                  <div className="hostel-seats">
+                                                    🪑 {option.available_seats}{" "}
+                                                    seats available
+                                                  </div>
+                                                )}
+                                              </div>
+                                            ),
+                                          )}
+                                        </div>
+                                        <div className="fee-note-info">
+                                          <small>
+                                            💡 Hostel fees are separate from
+                                            tuition fees
+                                          </small>
+                                        </div>
                                       </div>
-                                      <div className="transport-range">
-                                        <span className="transport-min">
-                                          {formatCurrency(
-                                            parseFloat(fee.transport_fee_min),
-                                          )}
-                                        </span>
-                                        <span className="transport-separator">
-                                          —
-                                        </span>
-                                        <span className="transport-max">
-                                          {formatCurrency(
-                                            parseFloat(fee.transport_fee_max),
-                                          )}
-                                        </span>
-                                        <small>/year</small>
+                                    )}
+
+                                  {/* Transport Tab */}
+                                  {activeFeeTab[courseId] === "transport" && (
+                                    <div className="fee-tab-content">
+                                      <div className="transport-details">
+                                        <div className="transport-info-card">
+                                          <div className="transport-range-display">
+                                            <div className="transport-min-card">
+                                              <div className="transport-label">
+                                                Minimum Transport Fee
+                                              </div>
+                                              <div className="transport-amount">
+                                                {fee.transport_fee_min
+                                                  ? formatCurrency(
+                                                      parseFloat(
+                                                        fee.transport_fee_min,
+                                                      ),
+                                                    )
+                                                  : "Not specified"}
+                                                <small>/year</small>
+                                              </div>
+                                            </div>
+                                            <div className="transport-arrow">
+                                              →
+                                            </div>
+                                            <div className="transport-max-card">
+                                              <div className="transport-label">
+                                                Maximum Transport Fee
+                                              </div>
+                                              <div className="transport-amount">
+                                                {fee.transport_fee_max
+                                                  ? formatCurrency(
+                                                      parseFloat(
+                                                        fee.transport_fee_max,
+                                                      ),
+                                                    )
+                                                  : "Not specified"}
+                                                <small>/year</small>
+                                              </div>
+                                            </div>
+                                          </div>
+                                          <div className="transport-note">
+                                            🚍 Transport fee varies based on
+                                            distance and route
+                                          </div>
+                                        </div>
                                       </div>
                                     </div>
                                   )}
 
-                                {/* Total Fee */}
-                                {fee.total_fee && (
-                                  <div className="total-fee-section">
-                                    <div className="total-fee-label">
-                                      TOTAL FEE (Excluding Hostel)
-                                    </div>
-                                    <div className="total-fee-amount">
-                                      {formatCurrency(
-                                        parseFloat(fee.total_fee),
-                                      )}
-                                    </div>
-                                    <div className="total-fee-note">
-                                      *Excludes hostel & transport charges
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
+                                  {/* Summary Tab */}
+                                  {activeFeeTab[courseId] === "summary" && (
+                                    <div className="fee-tab-content">
+                                      <div className="summary-grid">
+                                        <div className="summary-item">
+                                          <div className="summary-label">
+                                            Tuition Fee
+                                          </div>
+                                          <div className="summary-amount">
+                                            {fee.tuition_fee
+                                              ? formatCurrency(
+                                                  parseFloat(fee.tuition_fee),
+                                                )
+                                              : "N/A"}
+                                            <small>/year</small>
+                                          </div>
+                                        </div>
 
-                              {/* Fee Notes */}
-                              {fee.fee_notes && (
-                                <div className="fee-notes">
-                                  <div className="fee-notes-text">
-                                    {fee.fee_notes}
-                                  </div>
+                                        {fee.admission_fee && (
+                                          <div className="summary-item">
+                                            <div className="summary-label">
+                                              Admission Fee (One-time)
+                                            </div>
+                                            <div className="summary-amount">
+                                              {formatCurrency(
+                                                parseFloat(fee.admission_fee),
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {fee.hostel_options &&
+                                          fee.hostel_options.length > 0 && (
+                                            <div className="summary-item">
+                                              <div className="summary-label">
+                                                Hostel Fee Range
+                                              </div>
+                                              <div className="summary-amount">
+                                                {(() => {
+                                                  const hostelFees =
+                                                    fee.hostel_options.map(
+                                                      (opt) => opt.hostel_fee,
+                                                    );
+                                                  const minHostel = Math.min(
+                                                    ...hostelFees,
+                                                  );
+                                                  const maxHostel = Math.max(
+                                                    ...hostelFees,
+                                                  );
+                                                  return `₹${minHostel.toLocaleString()} - ₹${maxHostel.toLocaleString()}`;
+                                                })()}
+                                                <small>/year</small>
+                                              </div>
+                                            </div>
+                                          )}
+
+                                        {fee.transport_fee_min &&
+                                          fee.transport_fee_max && (
+                                            <div className="summary-item">
+                                              <div className="summary-label">
+                                                Transport Fee Range
+                                              </div>
+                                              <div className="summary-amount">
+                                                {formatCurrency(
+                                                  parseFloat(
+                                                    fee.transport_fee_min,
+                                                  ),
+                                                )}{" "}
+                                                -{" "}
+                                                {formatCurrency(
+                                                  parseFloat(
+                                                    fee.transport_fee_max,
+                                                  ),
+                                                )}
+                                                <small>/year</small>
+                                              </div>
+                                            </div>
+                                          )}
+
+                                        {fee.total_fee && (
+                                          <div className="summary-item total-summary">
+                                            <div className="summary-label">
+                                              Total (Excluding Hostel)
+                                            </div>
+                                            <div className="summary-amount total-amount">
+                                              {formatCurrency(
+                                                parseFloat(fee.total_fee),
+                                              )}
+                                              <small>/year</small>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      <div className="summary-disclaimer">
+                                        <small>
+                                          ⚠️ Hostel and transport fees are
+                                          additional and vary based on selection
+                                        </small>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}

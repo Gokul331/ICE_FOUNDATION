@@ -1787,4 +1787,668 @@
   .total-fee-amount {
     color: #000000;
   }
+}/* ==================== ACCORDION STYLES ==================== */
+
+.fee-accordion-item {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.fee-accordion-item:hover {
+  box-shadow: var(--shadow-md);
+  border-color: #000000;
+}
+
+/* Accordion Header */
+.fee-accordion-header {
+  cursor: pointer;
+  padding: 24px 28px;
+  background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+  transition: all 0.3s ease;
+  user-select: none;
+}
+
+.fee-accordion-header:hover {
+  background: linear-gradient(135deg, #f5f5f5 0%, #fafafa 100%);
+}
+
+.fee-accordion-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.fee-accordion-icon {
+  font-size: 32px;
+  font-weight: 700;
+  color: #000000;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.fee-accordion-header:hover .fee-accordion-icon {
+  transform: scale(1.1);
+  background: #000000;
+  color: #ffffff;
+}
+
+/* Quick Stats */
+.fee-quick-stats {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+  border-top: 1px solid #e5e5e5;
+}
+
+.quick-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quick-stat-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #737373;
+}
+
+.quick-stat-value {
+  font-size: 18px;
+  font-weight: 900;
+  color: #000000;
+}
+
+/* Accordion Content */
+.fee-accordion-content {
+  animation: accordionSlideDown 0.3s ease-out;
+  border-top: 1px solid #e5e5e5;
+}
+
+@keyframes accordionSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Accordion */
+@media (max-width: 768px) {
+  .fee-accordion-header {
+    padding: 16px 20px;
+  }
+  
+  .fee-accordion-title {
+    margin-bottom: 12px;
+  }
+  
+  .fee-accordion-icon {
+    font-size: 24px;
+    width: 32px;
+    height: 32px;
+  }
+  
+  .fee-quick-stats {
+    gap: 20px;
+  }
+  
+  .quick-stat-value {
+    font-size: 14px;
+  }
+  
+  .quick-stat-label {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 480px) {
+  .fee-accordion-header {
+    padding: 14px 16px;
+  }
+  
+  .fee-quick-stats {
+    gap: 12px;
+    flex-direction: column;
+  }
+  
+  .quick-stat {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .quick-stat:last-child {
+    border-bottom: none;
+  }
+}
+/* Menu Tabs inside accordion */
+.fee-tabs-container {
+  display: flex;
+  gap: 4px;
+  background: #f5f5f5;
+  padding: 8px;
+  border-bottom: 1px solid #e5e5e5;
+  flex-wrap: wrap;
+}
+
+.fee-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.fee-tab-btn::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 3px;
+  background: #000000;
+  transition: all 0.3s ease;
+  transform: translateX(-50%);
+}
+
+.fee-tab-btn:hover::before {
+  width: 80%;
+}
+
+.fee-tab-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #000000;
+}
+
+.fee-tab-btn.active {
+  background: #ffffff;
+  color: #000000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.fee-tab-btn.active::before {
+  width: 80%;
+}
+
+.fee-tab-icon {
+  font-size: 18px;
+}
+
+/* Accordion Content */
+.fee-accordion-content {
+  animation: accordionSlideDown 0.3s ease-out;
+  border-top: 1px solid #e5e5e5;
+}
+
+@keyframes accordionSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==================== ENHANCED FEE TAB CONTENT STYLES ==================== */
+
+/* Tab Content Container */
+.fee-tab-content {
+  animation: tabFadeIn 0.3s ease-out;
+  padding: 20px 0;
+}
+
+/* Tab Content Animation */
+@keyframes tabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* First tab content - no top padding */
+.fee-tab-content:first-of-type {
+  padding-top: 0;
+}
+
+/* Last tab content - no bottom padding */
+.fee-tab-content:last-of-type {
+  padding-bottom: 0;
+}
+
+/* Tab Content Header */
+.fee-tab-content h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 20px;
+  letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fee-tab-content h4::before {
+  content: '';
+  width: 4px;
+  height: 20px;
+  background: #000000;
+  border-radius: 2px;
+}
+
+/* Tab Content Grid Layout */
+.fee-tab-content .fee-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+/* Tab Content Cards */
+.fee-tab-content .fee-item {
+  background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+  border-radius: 16px;
+  padding: 20px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid #e5e5e5;
+  position: relative;
+  overflow: hidden;
+}
+
+.fee-tab-content .fee-item:hover {
+  transform: translateY(-4px);
+  border-color: #000000;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.fee-tab-content .fee-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: #000000;
+  transform: scaleY(0);
+  transition: transform 0.3s ease;
+}
+
+.fee-tab-content .fee-item:hover::before {
+  transform: scaleY(1);
+}
+
+.fee-tab-content .fee-item-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #737373;
+  margin-bottom: 12px;
+}
+
+.fee-tab-content .fee-item-value {
+  font-size: 24px;
+  font-weight: 900;
+  color: #000000;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+.fee-tab-content .fee-item-value small {
+  font-size: 13px;
+  font-weight: 500;
+  color: #737373;
+  margin-left: 4px;
+}
+
+.fee-tab-content .fee-item-desc {
+  font-size: 12px;
+  color: #999;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px dashed #e5e5e5;
+}
+
+/* Hostel Options inside Tab Content */
+.fee-tab-content .hostel-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.fee-tab-content .hostel-option-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #e5e5e5;
+  transition: all 0.3s ease;
+}
+
+.fee-tab-content .hostel-option-card:hover {
+  transform: translateY(-4px);
+  border-color: #000000;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.fee-tab-content .hostel-room-type {
+  font-size: 15px;
+  font-weight: 800;
+  color: #000000;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fee-tab-content .hostel-room-badge {
+  background: #f0f0f0;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.fee-tab-content .hostel-fee-amount {
+  font-size: 22px;
+  font-weight: 900;
+  color: #000000;
+  margin-bottom: 12px;
+}
+
+.fee-tab-content .hostel-fee-amount small {
+  font-size: 12px;
+  font-weight: 500;
+  color: #737373;
+}
+
+.fee-tab-content .hostel-seats {
+  font-size: 13px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8f8f8;
+  padding: 8px 12px;
+  border-radius: 10px;
+  margin-top: 12px;
+}
+
+/* Transport Details inside Tab Content */
+.fee-tab-content .transport-details {
+  padding: 8px;
+}
+
+.fee-tab-content .transport-info-card {
+  background: linear-gradient(135deg, #f8f8f8 0%, #ffffff 100%);
+  border-radius: 20px;
+  padding: 28px;
+  border: 1px solid #e5e5e5;
+}
+
+.fee-tab-content .transport-range-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.fee-tab-content .transport-min-card,
+.fee-tab-content .transport-max-card {
+  flex: 1;
+  min-width: 180px;
+  text-align: center;
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid #e5e5e5;
+}
+
+.fee-tab-content .transport-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #737373;
+  margin-bottom: 12px;
+}
+
+.fee-tab-content .transport-amount {
+  font-size: 28px;
+  font-weight: 900;
+  color: #000000;
+}
+
+.fee-tab-content .transport-amount small {
+  font-size: 12px;
+  font-weight: 500;
+  color: #737373;
+}
+
+.fee-tab-content .transport-arrow {
+  font-size: 40px;
+  color: #000000;
+  font-weight: 700;
+  animation: pulseArrow 1.5s infinite;
+}
+
+@keyframes pulseArrow {
+  0%, 100% { transform: translateX(0); opacity: 0.5; }
+  50% { transform: translateX(10px); opacity: 1; }
+}
+
+.fee-tab-content .transport-note {
+  text-align: center;
+  padding: 16px;
+  background: #f0f0f0;
+  border-radius: 12px;
+  font-size: 13px;
+  color: #666;
+  margin-top: 20px;
+}
+
+/* Summary Grid inside Tab Content */
+.fee-tab-content .summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.fee-tab-content .summary-item {
+  background: #fafafa;
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  border: 1px solid #e5e5e5;
+  transition: all 0.3s ease;
+}
+
+.fee-tab-content .summary-item:hover {
+  transform: translateY(-4px);
+  border-color: #000000;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.fee-tab-content .summary-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #737373;
+  margin-bottom: 12px;
+}
+
+.fee-tab-content .summary-amount {
+  font-size: 24px;
+  font-weight: 900;
+  color: #000000;
+}
+
+.fee-tab-content .summary-amount small {
+  font-size: 12px;
+  font-weight: 500;
+  color: #737373;
+}
+
+.fee-tab-content .total-summary {
+  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+  border-color: #000000;
+}
+
+.fee-tab-content .total-summary .summary-label {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.fee-tab-content .total-summary .summary-amount {
+  color: #ffffff;
+}
+
+.fee-tab-content .total-amount {
+  font-size: 32px;
+}
+
+/* Summary Disclaimer */
+.fee-tab-content .summary-disclaimer {
+  text-align: center;
+  padding: 16px;
+  background: #fff8e1;
+  border-radius: 12px;
+  border-left: 4px solid #ffc107;
+}
+
+.fee-tab-content .summary-disclaimer small {
+  color: #856404;
+  font-size: 12px;
+}
+
+/* Fee Note Info */
+.fee-tab-content .fee-note-info {
+  margin-top: 20px;
+  padding: 14px;
+  text-align: center;
+  background: #f0f0f0;
+  border-radius: 12px;
+}
+
+.fee-tab-content .fee-note-info small {
+  font-size: 12px;
+  color: #666;
+}
+
+/* Responsive Tab Content */
+@media (max-width: 768px) {
+  .fee-tab-content {
+    padding: 16px 0;
+  }
+  
+  .fee-tab-content .fee-item-value {
+    font-size: 20px;
+  }
+  
+  .fee-tab-content .transport-amount {
+    font-size: 22px;
+  }
+  
+  .fee-tab-content .transport-arrow {
+    font-size: 30px;
+    transform: rotate(90deg);
+  }
+  
+  .fee-tab-content .transport-min-card,
+  .fee-tab-content .transport-max-card {
+    min-width: 100%;
+  }
+  
+  .fee-tab-content .transport-range-display {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .fee-tab-content .summary-amount {
+    font-size: 20px;
+  }
+  
+  .fee-tab-content .total-amount {
+    font-size: 26px;
+  }
+  
+  .fee-tab-content .hostel-fee-amount {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .fee-tab-content {
+    padding: 12px 0;
+  }
+  
+  .fee-tab-content .fee-item {
+    padding: 14px;
+  }
+  
+  .fee-tab-content .fee-item-value {
+    font-size: 18px;
+  }
+  
+  .fee-tab-content .summary-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .fee-tab-content .hostel-options-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .fee-tab-content .transport-info-card {
+    padding: 16px;
+  }
+  
+  .fee-tab-content .transport-amount {
+    font-size: 18px;
+  }
+  
+  .fee-tab-content .transport-min-card,
+  .fee-tab-content .transport-max-card {
+    padding: 12px;
+  }
 }
