@@ -51,7 +51,7 @@ ROOT_URLCONF = 'backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -117,7 +117,8 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-# Jazzmin Settings
+
+# Update Jazzmin Settings - add custom_css
 JAZZMIN_SETTINGS = {
     "site_title": "ICE Foundation Admin",
     "site_header": "ICE Foundation",
@@ -134,7 +135,7 @@ JAZZMIN_SETTINGS = {
         {"model": "auth.User"},
     ],
     "show_sidebar": True,
-    "navigation_expanded": True,
+    "navigation_expanded": False,  # ← CHANGE to False for better mobile experience
     "hide_apps": [],
     "hide_models": [],
     "icons": {
@@ -148,12 +149,14 @@ JAZZMIN_SETTINGS = {
     "default_icon_parents": "fas fa-chevron-circle-right",
     "default_icon_children": "fas fa-circle",
     "related_modal_active": False,
-    "custom_css": None,
-    "custom_js": None,
+    "custom_css": "admin/css/custom-responsive.css",  # ← ADD THIS LINE
+    "custom_js": "admin/js/sidebar-toggle.js",  # ← ADD THIS LINE (optional)
     "show_ui_builder": True,
     "changeform_format": "horizontal_tabs",
     "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs"},
 }
+
+# Update Jazzmin UI Tweaks for better responsiveness
 JAZZMIN_UI_TWEAKS = {
     "navbar_small": False,
     "footer_small": False,
@@ -163,7 +166,7 @@ JAZZMIN_UI_TWEAKS = {
     "sidebar_nav_legacy_style": False,
     "sidebar_nav_flat_style": False,
     "theme": "flatly",
-    "dark_mode_theme": None,
+    "dark_mode_theme": "darkly",  # ← ADD dark mode support
     "button_classes": {
         "primary": "btn-primary",
         "secondary": "btn-secondary",
@@ -173,4 +176,6 @@ JAZZMIN_UI_TWEAKS = {
         "success": "btn-success",
     },
     "actions_sticky_top": False,
+    "sidebar_fixed": True,  # ← ADD THIS
+    "navbar_fixed": True,   # ← ADD THIS
 }

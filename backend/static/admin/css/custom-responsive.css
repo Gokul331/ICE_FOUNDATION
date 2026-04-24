@@ -1,0 +1,355 @@
+/* ==================== RESPONSIVE FIXES FOR JAZZMIN ==================== */
+
+/* Mobile First Approach */
+@media (max-width: 768px) {
+    /* Viewport adjustments */
+    body {
+        overflow-x: hidden;
+    }
+    
+    /* Make tables scroll horizontally */
+    .table-responsive-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .table {
+        min-width: 600px;
+    }
+    
+    /* Better form layout on mobile */
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    /* Adjust card padding */
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    /* Make buttons touch-friendly (min 44px height) */
+    .btn {
+        padding: 0.5rem 1rem;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Content area padding */
+    .content-wrapper {
+        padding: 0.5rem !important;
+    }
+    
+    .content-header {
+        padding: 1rem 0.5rem !important;
+    }
+    
+    .content-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    /* Better spacing for form rows */
+    .form-row {
+        flex-direction: column;
+        margin-bottom: 1rem;
+    }
+    
+    .form-row .field-box {
+        margin-bottom: 0.75rem;
+    }
+    
+    /* Fix select2 dropdown on mobile */
+    .select2-container--admin-autocomplete {
+        width: 100% !important;
+    }
+    
+    /* Stack buttons in groups */
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        border-radius: 0.25rem;
+        margin-bottom: 0.25rem;
+        width: 100%;
+    }
+    
+    /* Improve modal on mobile */
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+    
+    .modal-content {
+        border-radius: 0.5rem;
+    }
+    
+    /* Better pagination on mobile */
+    .paginator {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.25rem;
+        padding: 0.75rem;
+    }
+    
+    .paginator .step-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        justify-content: center;
+    }
+    
+    /* Object tools (add button) */
+    .object-tools {
+        position: static;
+        text-align: center;
+        margin-top: 0.75rem;
+    }
+    
+    .object-tools li {
+        float: none;
+        display: inline-block;
+        margin: 0.25rem;
+    }
+    
+    /* Filter sidebar improvements */
+    #changelist-filter {
+        position: fixed;
+        top: 0;
+        right: -300px;
+        width: 280px;
+        height: 100%;
+        z-index: 1050;
+        transition: right 0.3s ease;
+        overflow-y: auto;
+        background: white;
+        box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+    }
+    
+    #changelist-filter.show {
+        right: 0;
+    }
+    
+    .filtered #changelist {
+        margin-right: 0;
+    }
+    
+    /* Sidebar improvements */
+    .main-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        position: fixed;
+        z-index: 1040;
+        width: 280px;
+        height: 100%;
+    }
+    
+    .main-sidebar.sidebar-open {
+        transform: translateX(0);
+    }
+    
+    /* Sidebar backdrop */
+    .sidebar-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 1039;
+        display: none;
+    }
+    
+    .sidebar-backdrop.show {
+        display: block;
+    }
+    
+    /* Brand text */
+    .brand-link {
+        padding: 0.75rem;
+    }
+    
+    .brand-text {
+        font-size: 1rem;
+    }
+}
+
+/* Tablet Styles (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+    .content-header h1 {
+        font-size: 1.75rem;
+    }
+    
+    .form-row {
+        flex-direction: row;
+    }
+    
+    .form-row .field-box {
+        margin-bottom: 0;
+    }
+    
+    .btn-group {
+        flex-direction: row;
+    }
+    
+    .btn-group .btn {
+        width: auto;
+        margin-bottom: 0;
+    }
+    
+    .main-sidebar {
+        width: 250px;
+    }
+}
+
+/* Small Mobile (up to 480px) */
+@media (max-width: 480px) {
+    .content-header h1 {
+        font-size: 1.25rem;
+    }
+    
+    .card-header h3 {
+        font-size: 1rem;
+    }
+    
+    .brand-text {
+        font-size: 0.875rem;
+    }
+    
+    .info-box-text {
+        font-size: 0.75rem;
+    }
+    
+    .info-box-number {
+        font-size: 1.25rem;
+    }
+    
+    /* Stack action buttons */
+    .actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .actions select {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .actions button {
+        width: 100%;
+    }
+}
+
+/* Touch-friendly improvements for all touch devices */
+@media (hover: none) and (pointer: coarse) {
+    /* Larger tap targets */
+    .btn, 
+    .nav-link,
+    .dropdown-item,
+    .page-link,
+    .breadcrumb-item a,
+    .object-tools a {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+    }
+    
+    /* Prevent zoom on input focus on iOS */
+    input, 
+    select, 
+    textarea,
+    .select2-container--admin-autocomplete {
+        font-size: 16px !important;
+    }
+    
+    /* Increase spacing between interactive elements */
+    .nav-item {
+        margin-bottom: 2px;
+    }
+    
+    /* Better checkbox/radio touch targets */
+    .checkbox input,
+    .radio input {
+        transform: scale(1.2);
+        margin-right: 0.5rem;
+    }
+}
+
+/* Desktop improvements (1200px+) */
+@media (min-width: 1200px) {
+    .container-fluid {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .content-wrapper {
+        padding: 1rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .main-sidebar,
+    .navbar,
+    .sidebar-backdrop,
+    .object-tools,
+    #changelist-filter {
+        display: none !important;
+    }
+    
+    .content-wrapper {
+        margin-left: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+    }
+    
+    .table {
+        width: 100% !important;
+    }
+}
+
+/* Fix for long text and tables */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Better spacing for related widgets */
+.related-widget-wrapper {
+    width: 100%;
+}
+
+.related-widget-wrapper-link {
+    margin-top: 0.5rem;
+    display: inline-block;
+}
+
+/* Calendar and time widget improvements for mobile */
+.calendarbox, 
+.clockbox {
+    width: 90% !important;
+    left: 5% !important;
+    right: auto !important;
+    top: 10% !important;
+    position: fixed !important;
+}
+
+@media (max-width: 480px) {
+    .calendarbox, 
+    .clockbox {
+        width: 95% !important;
+        left: 2.5% !important;
+    }
+}
