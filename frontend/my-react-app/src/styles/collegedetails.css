@@ -542,7 +542,7 @@
 }
 
 .stat-card .stat-value {
-  font-size: 36px;
+  font-size: 28px;
   font-weight: 900;
   color: #000000;
   margin-bottom: 10px;
@@ -695,7 +695,7 @@
 }
 
 .action-stat-value {
-  font-size: 40px;
+  font-size: 28px;
   font-weight: 900;
   color: #000000;
   letter-spacing: -2px;
@@ -871,7 +871,7 @@
   }
   
   .action-stat-value {
-    font-size: 28px;
+    font-size: 24px;
   }
   
   /* Hide action panel on tablet portrait */
@@ -1251,5 +1251,540 @@
   .contact-item svg {
     width: 16px;
     height: 16px;
+  }
+}
+/* ==================== FEE BREAKDOWN SECTION - ADD THIS ==================== */
+
+/* Fee Breakdown Container */
+.fee-breakdown-container {
+  margin-top: 40px;
+}
+
+.fee-breakdown-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #000000;
+  margin-bottom: 24px;
+  letter-spacing: -0.5px;
+  position: relative;
+  display: inline-block;
+}
+
+.fee-breakdown-title::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, #000000, #404040);
+  border-radius: 2px;
+}
+
+/* Fee Card - 3D Enhanced */
+.fee-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  margin-bottom: 28px;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+
+.fee-card:hover {
+  transform: translateY(-6px) translateZ(15px);
+  box-shadow: var(--shadow-lg);
+  border-color: #000000;
+}
+
+.fee-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #000000, #404040, #000000);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s ease;
+}
+
+.fee-card:hover::before {
+  transform: scaleX(1);
+}
+
+/* Fee Card Header */
+.fee-card-header {
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--border);
+}
+
+.fee-course-name {
+  font-size: 20px;
+  font-weight: 800;
+  color: #000000;
+  margin: 0;
+  letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.fee-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  background: #000000;
+  color: #ffffff;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* Fee Card Body */
+.fee-card-body {
+  padding: 28px;
+}
+
+/* Fee Grid */
+.fee-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+/* Fee Item */
+.fee-item {
+  background: #fafafa;
+  border-radius: 16px;
+  padding: 18px;
+  transition: all 0.3s ease;
+  border: 1px solid #e5e5e5;
+}
+
+.fee-item:hover {
+  transform: translateX(4px);
+  border-color: #000000;
+  background: #ffffff;
+}
+
+.fee-item-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #737373;
+  margin-bottom: 8px;
+}
+
+.fee-item-value {
+  font-size: 22px;
+  font-weight: 900;
+  color: #000000;
+  letter-spacing: -0.5px;
+}
+
+.fee-item-value small {
+  font-size: 12px;
+  font-weight: 500;
+  color: #737373;
+}
+
+/* Hostel Options Section */
+.hostel-section {
+  grid-column: span 2;
+  background: linear-gradient(135deg, #f8f8f8 0%, #ffffff 100%);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #e5e5e5;
+  transition: all 0.3s ease;
+}
+
+.hostel-section:hover {
+  border-color: #000000;
+  box-shadow: var(--shadow-md);
+}
+
+.hostel-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #000000;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hostel-title::before {
+  content: '🏠';
+  font-size: 16px;
+}
+
+/* Hostel Options Grid */
+.hostel-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+/* Hostel Option Card */
+.hostel-option-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e5e5e5;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+  position: relative;
+  overflow: hidden;
+}
+
+.hostel-option-card:hover {
+  transform: translateY(-4px) translateZ(10px);
+  border-color: #000000;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+.hostel-option-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #000000, #404040);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.hostel-option-card:hover::before {
+  transform: scaleX(1);
+}
+
+.hostel-room-type {
+  font-weight: 800;
+  color: #000000;
+  font-size: 14px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hostel-room-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: #f0f0f0;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.hostel-fee-amount {
+  font-size: 20px;
+  font-weight: 900;
+  color: #000000;
+  margin-bottom: 8px;
+}
+
+.hostel-fee-amount small {
+  font-size: 11px;
+  font-weight: 500;
+  color: #737373;
+}
+
+.hostel-seats {
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hostel-seats::before {
+  content: '👥';
+  font-size: 12px;
+}
+
+/* Transport Fee Section */
+.transport-section {
+  background: #fafafa;
+  border-radius: 16px;
+  padding: 18px;
+  border: 1px solid #e5e5e5;
+}
+
+.transport-range {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.transport-min,
+.transport-max {
+  font-size: 18px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.transport-separator {
+  font-size: 14px;
+  color: #737373;
+  font-weight: 500;
+}
+
+/* Total Fee Section */
+.total-fee-section {
+  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.3s ease;
+  transform-style: preserve-3d;
+}
+
+.total-fee-section:hover {
+  transform: translateY(-4px) translateZ(15px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+}
+
+.total-fee-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 8px;
+}
+
+.total-fee-amount {
+  font-size: 32px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: -1px;
+}
+
+.total-fee-note {
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  margin-top: 8px;
+}
+
+/* Fee Notes */
+.fee-notes {
+  margin-top: 24px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border-left: 4px solid #000000;
+}
+
+.fee-notes-text {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.6;
+}
+
+/* Animation for fee cards */
+@keyframes feeCardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px) translateZ(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) translateZ(0);
+  }
+}
+
+.fee-card {
+  animation: feeCardSlideIn 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+.fee-card:nth-child(1) { animation-delay: 0.1s; }
+.fee-card:nth-child(2) { animation-delay: 0.2s; }
+.fee-card:nth-child(3) { animation-delay: 0.3s; }
+.fee-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* ==================== RESPONSIVE FOR FEE BREAKDOWN ==================== */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .fee-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+  }
+  
+  .hostel-section {
+    grid-column: span 1;
+  }
+  
+  .hostel-options-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+/* Mobile Landscape (480px - 768px) */
+@media (max-width: 768px) {
+  .fee-card-header {
+    padding: 16px 20px;
+  }
+  
+  .fee-course-name {
+    font-size: 18px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .fee-card-body {
+    padding: 20px;
+  }
+  
+  .fee-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  
+  .fee-item-value {
+    font-size: 18px;
+  }
+  
+  .hostel-section {
+    padding: 16px;
+  }
+  
+  .hostel-options-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .hostel-room-type {
+    font-size: 13px;
+  }
+  
+  .hostel-fee-amount {
+    font-size: 18px;
+  }
+  
+  .transport-min,
+  .transport-max {
+    font-size: 16px;
+  }
+  
+  .total-fee-amount {
+    font-size: 24px;
+  }
+}
+
+/* Mobile Portrait (320px - 480px) */
+@media (max-width: 480px) {
+  .fee-card-header {
+    padding: 14px 16px;
+  }
+  
+  .fee-course-name {
+    font-size: 16px;
+  }
+  
+  .fee-badge {
+    font-size: 9px;
+    padding: 3px 10px;
+  }
+  
+  .fee-card-body {
+    padding: 16px;
+  }
+  
+  .fee-item {
+    padding: 14px;
+  }
+  
+  .fee-item-label {
+    font-size: 10px;
+  }
+  
+  .fee-item-value {
+    font-size: 16px;
+  }
+  
+  .hostel-title {
+    font-size: 13px;
+  }
+  
+  .hostel-option-card {
+    padding: 12px;
+  }
+  
+  .hostel-room-type {
+    font-size: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .hostel-fee-amount {
+    font-size: 16px;
+  }
+  
+  .transport-section {
+    padding: 14px;
+  }
+  
+  .transport-min,
+  .transport-max {
+    font-size: 14px;
+  }
+  
+  .total-fee-amount {
+    font-size: 20px;
+  }
+  
+  .fee-notes {
+    padding: 12px;
+  }
+  
+  .fee-notes-text {
+    font-size: 11px;
+  }
+}
+
+/* Print Styles for Fee Breakdown */
+@media print {
+  .fee-card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+  
+  .fee-card:hover {
+    transform: none;
+  }
+  
+  .hostel-option-card:hover {
+    transform: none;
+  }
+  
+  .total-fee-section {
+    background: #f0f0f0;
+  }
+  
+  .total-fee-amount {
+    color: #000000;
   }
 }

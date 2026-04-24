@@ -300,7 +300,7 @@ function Colleges() {
               <div className="card-header">
                 <div className="card-logo" style={{ background: college.bg, color: college.fg }}>
                   {college.logo && college.logo.startsWith('http') ? (
-                    <img src={college.logo} alt={college.name} className="logo-img" />
+                    <img src={college.logo} alt={getLogoLetters(college.name)} className="logo-img" />
                   ) : (
                     <span className="logo-text">{college.logo}</span>
                   )}
@@ -366,7 +366,7 @@ function Colleges() {
             <div className="list-card">
               <div className="list-logo" style={{ background: college.bg, color: college.fg }}>
                 {college.logo && college.logo.startsWith('http') ? (
-                  <img src={college.logo} alt={college.name} />
+                  <img src={college.logo} alt={getLogoLetters(college.name)} />
                 ) : (
                   <span>{college.logo}</span>
                 )}

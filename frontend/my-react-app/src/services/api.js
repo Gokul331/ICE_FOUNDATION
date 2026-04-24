@@ -113,6 +113,17 @@ export const getCourseDetail = async (id) => {
   }
 };
 
+// get course fees
+export const getCourseFees = async (courseId) => {
+  try {
+    const response = await API.get(`courses/${courseId}/fees/`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching fees for course ${courseId}:`, error);
+    return [];
+  }
+}
+
 // Timeline Events - Public
 export const getTimelineEvents = async (params) => {
   try {

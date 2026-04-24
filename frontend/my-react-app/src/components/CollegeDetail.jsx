@@ -4,6 +4,7 @@ import {
   getCollegeDetail,
   getCollegeCourses,
   getCollegeFees,
+  getCourseFees,
 } from "../services/api";
 import Navbar from "./Navbar";
 import "../styles/collegedetails.css";
@@ -13,11 +14,11 @@ function CollegeDetail() {
   const [college, setCollege] = useState(null);
   const [courses, setCourses] = useState([]);
   const [fees, setFees] = useState([]);
+  const [courseFees, setCourseFees] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
-  const [hoveredStat, setHoveredStat] = useState(null);
 
   useEffect(() => {
     const fetchCollegeData = async () => {
@@ -31,11 +32,25 @@ function CollegeDetail() {
         // Fetch courses
         try {
           const coursesData = await getCollegeCourses(id);
-          setCourses(
-            Array.isArray(coursesData)
-              ? coursesData
-              : coursesData.results || [],
-          );
+          const coursesList = Array.isArray(coursesData)
+            ? coursesData
+            : coursesData.results || [];
+          setCourses(coursesList);
+
+          // Fetch individual course fees for each course
+          const feesMap = {};
+          for (const course of coursesList) {
+            if (course.course_id) {
+              try {
+                const courseFeeData = await getCourseFees(course.course_id);
+                feesMap[course.course_id] = courseFeeData;
+              } catch (err) {
+                console.log(`No fees found for course ${course.course_id}`);
+                feesMap[course.course_id] = null;
+              }
+            }
+          }
+          setCourseFees(feesMap);
         } catch (coursesErr) {
           console.log("No courses found for this college");
           setCourses([]);
@@ -97,10 +112,14 @@ function CollegeDetail() {
     return `₹${amount.toLocaleString()}`;
   };
 
-  // Get fee for a specific course
+  // Get fee for a specific course from the fetched courseFees
   const getCourseFee = (courseId) => {
-    const fee = fees.find((f) => f.course_id === courseId);
-    return fee ? formatCurrency(fee.total_fees) : "Contact College";
+    const feeData = courseFees[courseId];
+
+    if (feeData) {
+      if (feeData.tuition_fee) return formatCurrency(feeData.tuition_fee);
+    }
+    return "Contact College";
   };
 
   if (loading) {
@@ -145,7 +164,7 @@ function CollegeDetail() {
               {college.logo_url ? (
                 <img
                   src={college.logo_url}
-                  alt={college.college_name}
+                  alt={getLogoLetters(college.college_name)}
                   style={{
                     width: "100%",
                     height: "100%",
@@ -195,7 +214,7 @@ function CollegeDetail() {
                   <div className="stat">
                     <span className="stat-label">Median Package</span>
                     <span className="stat-value">
-                      ₹{(college.median_salary / 100000).toFixed(1)} LPA
+                      ₹{parseFloat(college.median_salary).toFixed(1)} LPA
                     </span>
                   </div>
                 )}
@@ -254,12 +273,6 @@ function CollegeDetail() {
               onClick={() => setActiveTab("admissions")}
             >
               Admissions
-            </button>
-            <button
-              className={`tab-button ${activeTab === "facilities" ? "active" : ""}`}
-              onClick={() => setActiveTab("facilities")}
-            >
-              Facilities
             </button>
             <button
               className={`tab-button ${activeTab === "placements" ? "active" : ""}`}
@@ -418,7 +431,7 @@ function CollegeDetail() {
                 </div>
               </div>
 
-              {/* Right Column - Action Panel (hidden on mobile/tablet via CSS) */}
+              {/* Right Column - Action Panel */}
               <div className="overview-right">
                 <div className="info-card-action">
                   <h3>Ready to Apply?</h3>
@@ -427,7 +440,7 @@ function CollegeDetail() {
                     <div className="action-item">
                       <div className="action-label">Median Package</div>
                       <div className="action-stat-value">
-                        ₹{(college.median_salary / 100000).toFixed(1)} LPA
+                        ₹{parseFloat(college.median_salary)} LPA
                       </div>
                     </div>
                   )}
@@ -457,160 +470,271 @@ function CollegeDetail() {
           {activeTab === "courses" && (
             <div>
               {courses && courses.length > 0 ? (
-                <div className="info-card">
-                  <h3>Courses & Fee Structure</h3>
-                  <div className="courses-table-container">
-                    <table className="courses-table">
-                      <thead>
-                        <tr>
-                          <th>Course Name</th>
-                          <th>Degree</th>
-                          <th>Duration</th>
-                          <th>Intake</th>
-                          <th>Total Fees</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {courses.map((course, index) => (
-                          <tr key={course.course_id || index}>
-                            <td className="course-name">
-                              <strong>
-                                {course.course_name || course.name}
-                              </strong>
-                              {course.specialization && (
-                                <div
-                                  style={{ fontSize: "12px", color: "#666" }}
-                                >
-                                  {course.specialization}
-                                </div>
-                              )}
-                            </td>
-                            <td>
-                              {course.degree_name || course.degree || "N/A"}
-                            </td>
-                            <td>
-                              {course.duration_years ||
-                                course.duration ||
-                                "N/A"}{" "}
-                              years
-                            </td>
-                            <td>{course.intake_seats || "N/A"}</td>
-                            <td>
-                              {getCourseFee(course.course_id)}
-                              {fees.find(
-                                (f) => f.course_id === course.course_id,
-                              )?.fee_per_year && (
-                                <div
-                                  style={{ fontSize: "12px", color: "#666" }}
-                                >
-                                  ₹
-                                  {fees
-                                    .find(
-                                      (f) => f.course_id === course.course_id,
-                                    )
-                                    .fee_per_year.toLocaleString()}
-                                  /year
-                                </div>
-                              )}
-                            </td>
-                            <td>
-                              <button
-                                className="apply-now-btn"
-                                onClick={() =>
-                                  alert(`Applied to ${course.course_name}`)
-                                }
-                              >
-                                Apply
-                              </button>
-                            </td>
+                <>
+                  <div className="info-card">
+                    <h3>Courses & Fee Structure</h3>
+                    <div className="courses-table-container">
+                      <table className="courses-table">
+                        <thead>
+                          <tr>
+                            <th>Course Name</th>
+                            <th>Degree</th>
+                            <th>Duration</th>
+                            <th>Course Fee</th>
+                            <th>Scholarship Amount</th>
+                            <th>Cutoff Marks</th>
+                            <th>Action</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {courses.map((course, index) => (
+                            <tr key={course.course_id || index}>
+                              <td className="course-name">
+                                <strong>
+                                  {course.course_name || course.name}
+                                </strong>
+                              </td>
+                              <td>
+                                {course.degree_name || course.degree || "N/A"}
+                              </td>
+                              <td>
+                                {course.duration_years ||
+                                  course.duration ||
+                                  "N/A"}{" "}
+                                years
+                              </td>
+                              <td>
+                                {(() => {
+                                  const feeData = courseFees[course.course_id];
+
+                                  // Check if feeData exists and is an array with data
+                                  if (
+                                    feeData &&
+                                    Array.isArray(feeData) &&
+                                    feeData[0] &&
+                                    feeData[0].tuition_fee
+                                  ) {
+                                    return (
+                                      <div
+                                        style={{
+                                          fontSize: "14px",
+                                          fontWeight: "500",
+                                          color: "#333",
+                                        }}
+                                      >
+                                        ₹
+                                        {parseFloat(
+                                          feeData[0].tuition_fee,
+                                        ).toLocaleString()}
+                                        /year
+                                      </div>
+                                    );
+                                  }
+                                  // Also handle if feeData is a direct object (not array)
+                                  if (feeData && feeData.tuition_fee) {
+                                    return (
+                                      <div
+                                        style={{
+                                          fontSize: "14px",
+                                          fontWeight: "500",
+                                          color: "#333",
+                                        }}
+                                      >
+                                        ₹
+                                        {parseFloat(
+                                          feeData.tuition_fee,
+                                        ).toLocaleString()}
+                                        /year
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <div
+                                      style={{
+                                        fontSize: "12px",
+                                        color: "#999",
+                                      }}
+                                    >
+                                      Contact College
+                                    </div>
+                                  );
+                                })()}
+                              </td>
+                              <td>
+                                <span className="scholarship-amount">
+                                  {course.scholarship_amount
+                                    ? formatCurrency(
+                                        parseFloat(course.scholarship_amount),
+                                      )
+                                    : "N/A"}
+                                </span>
+                              </td>
+                              <td>
+                                <span className="cutoff-marks">
+                                  {course.cutoff_oc ||
+                                    course.cutoff_marks ||
+                                    "N/A"}
+                                </span>
+                              </td>
+                              <td>
+                                <button
+                                  className="apply-now-btn"
+                                  onClick={() =>
+                                    alert(`Applied to ${course.course_name}`)
+                                  }
+                                >
+                                  Apply
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
 
                   {/* Detailed Fee Breakdown */}
-                  {fees.length > 0 && (
-                    <div style={{ marginTop: "32px" }}>
-                      <h4>Fee Breakdown</h4>
+                  {fees && fees.length > 0 && (
+                    <div className="fee-breakdown-container">
+                      <h3 className="fee-breakdown-title">Fee Breakdown</h3>
                       {fees.map((fee, index) => {
                         const course = courses.find(
-                          (c) => c.course_id === fee.course_id,
+                          (c) => c.course_id === fee.course,
                         );
                         return (
-                          <div
-                            key={index}
-                            style={{
-                              marginBottom: "24px",
-                              padding: "16px",
-                              background: "#fafafa",
-                              borderRadius: "12px",
-                            }}
-                          >
-                            <h5 style={{ marginBottom: "12px" }}>
-                              {course?.course_name || "Course"} - Fee Structure
-                            </h5>
-                            <div
-                              style={{
-                                display: "grid",
-                                gridTemplateColumns:
-                                  "repeat(auto-fit, minmax(200px, 1fr))",
-                                gap: "12px",
-                              }}
-                            >
-                              {fee.tuition_fee && (
-                                <div>
-                                  <strong>Tuition Fee:</strong>{" "}
-                                  {formatCurrency(fee.tuition_fee)}
-                                </div>
-                              )}
-                              {fee.admission_fee && (
-                                <div>
-                                  <strong>Admission Fee:</strong>{" "}
-                                  {formatCurrency(fee.admission_fee)}
-                                </div>
-                              )}
-                              {fee.caution_deposit && (
-                                <div>
-                                  <strong>Caution Deposit:</strong>{" "}
-                                  {formatCurrency(fee.caution_deposit)}
-                                </div>
-                              )}
-                              {fee.library_fee && (
-                                <div>
-                                  <strong>Library Fee:</strong>{" "}
-                                  {formatCurrency(fee.library_fee)}
-                                </div>
-                              )}
-                              {fee.lab_fee && (
-                                <div>
-                                  <strong>Lab Fee:</strong>{" "}
-                                  {formatCurrency(fee.lab_fee)}
-                                </div>
-                              )}
-                              {fee.hostel_fee && (
-                                <div>
-                                  <strong>Hostel Fee:</strong>{" "}
-                                  {formatCurrency(fee.hostel_fee)}
-                                </div>
-                              )}
-                              {fee.mess_fee && (
-                                <div>
-                                  <strong>Mess Fee:</strong>{" "}
-                                  {formatCurrency(fee.mess_fee)}
-                                </div>
-                              )}
-                              {fee.transport_fee && (
-                                <div>
-                                  <strong>Transport Fee:</strong>{" "}
-                                  {formatCurrency(fee.transport_fee)}
-                                </div>
-                              )}
-                              {fee.total_fees && (
-                                <div>
-                                  <strong>Total Fees:</strong>{" "}
-                                  {formatCurrency(fee.total_fees)}
+                          <div key={index} className="fee-card">
+                            <div className="fee-card-header">
+                              <div className="fee-course-name">
+                                {course?.course_name ||
+                                  fee.course_name ||
+                                  "Course"}
+                                {fee.academic_year && (
+                                  <span className="fee-badge">
+                                    {fee.academic_year}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="fee-card-body">
+                              <div className="fee-grid">
+                                {/* Tuition Fee */}
+                                {fee.tuition_fee && (
+                                  <div className="fee-item">
+                                    <div className="fee-item-label">
+                                      TUITION FEE
+                                    </div>
+                                    <div className="fee-item-value">
+                                      {formatCurrency(
+                                        parseFloat(fee.tuition_fee),
+                                      )}
+                                      <small>/year</small>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Admission Fee */}
+                                {fee.admission_fee && (
+                                  <div className="fee-item">
+                                    <div className="fee-item-label">
+                                      ADMISSION FEE
+                                    </div>
+                                    <div className="fee-item-value">
+                                      {formatCurrency(
+                                        parseFloat(fee.admission_fee),
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Hostel Options */}
+                                {fee.hostel_options &&
+                                  fee.hostel_options.length > 0 && (
+                                    <div className="hostel-section">
+                                      <div className="hostel-title">
+                                        Hostel Accommodation
+                                      </div>
+                                      <div className="hostel-options-grid">
+                                        {fee.hostel_options.map(
+                                          (option, idx) => (
+                                            <div
+                                              key={idx}
+                                              className="hostel-option-card"
+                                            >
+                                              <div className="hostel-room-type">
+                                                {option.room_type_display}
+                                                <span className="hostel-room-badge">
+                                                  Room Type {option.room_type}
+                                                </span>
+                                              </div>
+                                              <div className="hostel-fee-amount">
+                                                ₹
+                                                {option.hostel_fee.toLocaleString()}
+                                                <small>/year</small>
+                                              </div>
+                                              {option.available_seats && (
+                                                <div className="hostel-seats">
+                                                  {option.available_seats} seats
+                                                  available
+                                                </div>
+                                              )}
+                                            </div>
+                                          ),
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                {/* Transport Fee */}
+                                {fee.transport_fee_min &&
+                                  fee.transport_fee_max && (
+                                    <div className="transport-section">
+                                      <div className="fee-item-label">
+                                        TRANSPORT FEE
+                                      </div>
+                                      <div className="transport-range">
+                                        <span className="transport-min">
+                                          {formatCurrency(
+                                            parseFloat(fee.transport_fee_min),
+                                          )}
+                                        </span>
+                                        <span className="transport-separator">
+                                          —
+                                        </span>
+                                        <span className="transport-max">
+                                          {formatCurrency(
+                                            parseFloat(fee.transport_fee_max),
+                                          )}
+                                        </span>
+                                        <small>/year</small>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                {/* Total Fee */}
+                                {fee.total_fee && (
+                                  <div className="total-fee-section">
+                                    <div className="total-fee-label">
+                                      TOTAL FEE (Excluding Hostel)
+                                    </div>
+                                    <div className="total-fee-amount">
+                                      {formatCurrency(
+                                        parseFloat(fee.total_fee),
+                                      )}
+                                    </div>
+                                    <div className="total-fee-note">
+                                      *Excludes hostel & transport charges
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Fee Notes */}
+                              {fee.fee_notes && (
+                                <div className="fee-notes">
+                                  <div className="fee-notes-text">
+                                    {fee.fee_notes}
+                                  </div>
                                 </div>
                               )}
                             </div>
@@ -619,10 +743,11 @@ function CollegeDetail() {
                       })}
                     </div>
                   )}
-                </div>
+                </>
               ) : (
                 <div className="info-card">
-                  <p>No courses available for this college.</p>
+                  <h3>Courses & Fee Structure</h3>
+                  <p>No course information available for this college.</p>
                 </div>
               )}
             </div>
@@ -632,14 +757,6 @@ function CollegeDetail() {
           {activeTab === "admissions" && (
             <div className="info-card">
               <h3>Admission Information</h3>
-
-              <div style={{ marginBottom: "24px" }}>
-                <h4>Eligibility Criteria</h4>
-                <p>
-                  {college.eligibility_criteria ||
-                    "Contact college for detailed eligibility criteria."}
-                </p>
-              </div>
 
               <div style={{ marginBottom: "24px" }}>
                 <h4>Admission Process</h4>
@@ -652,178 +769,16 @@ function CollegeDetail() {
                 </ol>
               </div>
 
-              <div style={{ marginBottom: "24px" }}>
-                <h4>Important Dates</h4>
-                <div style={{ display: "grid", gap: "12px" }}>
-                  {college.application_deadline && (
-                    <div>
-                      <strong>Application Deadline:</strong>{" "}
-                      {new Date(
-                        college.application_deadline,
-                      ).toLocaleDateString()}
-                    </div>
-                  )}
-                  {college.entrance_exam_date && (
-                    <div>
-                      <strong>Entrance Exam Date:</strong>{" "}
-                      {new Date(
-                        college.entrance_exam_date,
-                      ).toLocaleDateString()}
-                    </div>
-                  )}
-                  {college.counseling_date && (
-                    <div>
-                      <strong>Counseling Date:</strong>{" "}
-                      {new Date(college.counseling_date).toLocaleDateString()}
-                    </div>
-                  )}
-                </div>
-              </div>
-
               <div>
                 <h4>Required Documents</h4>
                 <ul style={{ lineHeight: "1.8", paddingLeft: "20px" }}>
                   <li>10th and 12th mark sheets</li>
                   <li>Transfer certificate</li>
-                  <li>Community certificate (if applicable)</li>
+                  <li>Community certificate</li>
+                  <li>Income certificate (if applying for scholarship)</li>
+                  <li>First Graduate certificate (if applicable)</li>
                   <li>Passport size photographs</li>
-                  <li>Entrance exam score card</li>
                 </ul>
-              </div>
-            </div>
-          )}
-
-          {/* Facilities Tab */}
-          {activeTab === "facilities" && (
-            <div className="info-card">
-              <h3>Campus Facilities</h3>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-                  gap: "16px",
-                  marginBottom: "32px",
-                }}
-              >
-                {college.hostel_available && (
-                  <div className="facility-item">
-                    <svg
-                      width="24"
-                      height="24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                      <polyline points="9 22 9 12 15 12 15 22" />
-                    </svg>
-                    <span>Hostel Facility</span>
-                  </div>
-                )}
-                {college.library_available && (
-                  <div className="facility-item">
-                    <svg
-                      width="24"
-                      height="24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" />
-                      <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" />
-                    </svg>
-                    <span>Library</span>
-                  </div>
-                )}
-                {college.lab_facilities && (
-                  <div className="facility-item">
-                    <svg
-                      width="24"
-                      height="24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M20 12H4M12 4v16" />
-                    </svg>
-                    <span>Laboratories</span>
-                  </div>
-                )}
-                {college.sports_facilities && (
-                  <div className="facility-item">
-                    <svg
-                      width="24"
-                      height="24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle cx="12" cy="12" r="2" />
-                      <path d="M12 2a15 15 0 000 20 15 15 0 000-20z" />
-                    </svg>
-                    <span>Sports Facilities</span>
-                  </div>
-                )}
-                {college.cafeteria && (
-                  <div className="facility-item">
-                    <svg
-                      width="24"
-                      height="24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M18 8c0 3.314-2.686 6-6 6s-6-2.686-6-6 2.686-6 6-6 6 2.686 6 6z" />
-                      <path d="M12 14v8M9 22h6" />
-                    </svg>
-                    <span>Cafeteria</span>
-                  </div>
-                )}
-                {college.medical_facility && (
-                  <div className="facility-item">
-                    <svg
-                      width="24"
-                      height="24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M22 12h-4l-3 9-4-18-3 9H2" />
-                    </svg>
-                    <span>Medical Facility</span>
-                  </div>
-                )}
-                {college.wifi_campus && (
-                  <div className="facility-item">
-                    <svg
-                      width="24"
-                      height="24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M5 12.55a11 11 0 0114.08 0M1.42 9a16 16 0 0121.16 0M8.53 16.11a6 6 0 016.95 0" />
-                      <line x1="12" y1="20" x2="12.01" y2="20" />
-                    </svg>
-                    <span>Wi-Fi Campus</span>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <h4>Infrastructure</h4>
-                <p>
-                  {college.infrastructure_details ||
-                    "Modern infrastructure with state-of-the-art facilities."}
-                </p>
               </div>
             </div>
           )}
@@ -846,7 +801,7 @@ function CollegeDetail() {
                   {college.highest_salary && (
                     <div className="stat-card">
                       <div className="stat-value">
-                        ₹{(college.highest_salary / 100000).toFixed(1)} LPA
+                        ₹{parseFloat(college.highest_salary).toFixed(1)} LPA
                       </div>
                       <div className="stat-label">Highest Package</div>
                     </div>
@@ -854,7 +809,7 @@ function CollegeDetail() {
                   {college.avg_salary && (
                     <div className="stat-card">
                       <div className="stat-value">
-                        ₹{(college.avg_salary / 100000).toFixed(1)} LPA
+                        ₹{parseFloat(college.avg_salary).toFixed(1)} LPA
                       </div>
                       <div className="stat-label">Average Package</div>
                     </div>
@@ -862,7 +817,7 @@ function CollegeDetail() {
                   {college.median_salary && (
                     <div className="stat-card">
                       <div className="stat-value">
-                        ₹{(college.median_salary / 100000).toFixed(1)} LPA
+                        ₹{parseFloat(college.median_salary).toFixed(1)} LPA
                       </div>
                       <div className="stat-label">Median Package</div>
                     </div>
