@@ -14,7 +14,8 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,.onrender.c
 
 # Application definition - ONLY ONE INSTALLED_APPS
 INSTALLED_APPS = [
-    'jazzmin',  # MUST be before 'django.contrib.admin'
+    'admin_interface',
+    'colorfield',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -118,64 +119,6 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Update Jazzmin Settings - add custom_css
-JAZZMIN_SETTINGS = {
-    "site_title": "ICE Foundation Admin",
-    "site_header": "ICE Foundation",
-    "site_brand": "ICE Foundation",
-    "site_logo": "assets/img/favicon.png",
-    "site_logo_classes": "img-circle",
-    "welcome_sign": "Welcome to ICE Foundation Admin Panel",
-    "copyright": "ICE Foundation",
-    "search_model": "auth.User",
-    "user_avatar": None,
-    "topmenu_links": [
-        {"name": "Home", "url": "admin:index", "permissions": ["auth.view_user"]},
-        {"name": "Frontend", "url": "https://icefoundation.vercel.app", "new_window": True},
-        {"model": "auth.User"},
-    ],
-    "show_sidebar": True,
-    "navigation_expanded": False,  # ← CHANGE to False for better mobile experience
-    "hide_apps": [],
-    "hide_models": [],
-    "icons": {
-        "auth": "fas fa-users-cog",
-        "auth.user": "fas fa-user",
-        "auth.group": "fas fa-users",
-        "colleges.College": "fas fa-university",
-        "colleges.Company": "fas fa-building",
-        "colleges.UserProfile": "fas fa-id-card",
-    },
-    "default_icon_parents": "fas fa-chevron-circle-right",
-    "default_icon_children": "fas fa-circle",
-    "related_modal_active": False,
-    "custom_css": "admin/css/custom-responsive.css",  # ← ADD THIS LINE
-    "custom_js": "admin/js/sidebar-toggle.js",  # ← ADD THIS LINE (optional)
-    "show_ui_builder": True,
-    "changeform_format": "horizontal_tabs",
-    "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs"},
-}
 
-# Update Jazzmin UI Tweaks for better responsiveness
-JAZZMIN_UI_TWEAKS = {
-    "navbar_small": False,
-    "footer_small": False,
-    "body_small": False,
-    "brand_small": False,
-    "sidebar_nav_small": False,
-    "sidebar_nav_legacy_style": False,
-    "sidebar_nav_flat_style": False,
-    "theme": "flatly",
-    "dark_mode_theme": "darkly",  # ← ADD dark mode support
-    "button_classes": {
-        "primary": "btn-primary",
-        "secondary": "btn-secondary",
-        "info": "btn-info",
-        "warning": "btn-warning",
-        "danger": "btn-danger",
-        "success": "btn-success",
-    },
-    "actions_sticky_top": False,
-    "sidebar_fixed": True,  # ← ADD THIS
-    "navbar_fixed": True,   # ← ADD THIS
-}
+X_FRAME_OPTIONS = "SAMEORIGIN"
+SILENCED_SYSTEM_CHECKS = ["security.W019"]
