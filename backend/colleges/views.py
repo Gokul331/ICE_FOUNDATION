@@ -2,22 +2,24 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
-from django.db.models import Q, F, Sum, Avg, Min, Max
+from django.db.models import Q, F, Sum, Avg, Min, Max, Count
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.core.exceptions import ValidationError
 from django.contrib.auth import update_session_auth_hash
-from .models import College, Course, UserProfile, TimelineEvent, Fees
+from .models import College, Course, UserProfile, TimelineEvent, Fees, Hostel
 from .serializers import (
     CollegeSerializer, CollegeListSerializer, CourseSerializer,
     UserProfileSerializer, TimelineEventSerializer, RegisterSerializer, LoginSerializer,
-    FeesSerializer, FeesListSerializer
+    FeesSerializer, FeesListSerializer, HostelSerializer
 )
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout 
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated, AllowAny
 import re
+
+# ==================== COLLEGE VIEWS ====================
 
 @api_view(['GET'])
 def get_colleges(request):
@@ -62,6 +64,7 @@ def get_colleges(request):
     serializer = CollegeSerializer(colleges, many=True)
     return Response(serializer.data)
 
+
 @api_view(['GET'])
 def get_college_detail(request, college_id):
     """Get a single college by ID"""
@@ -72,41 +75,49 @@ def get_college_detail(request, college_id):
     except College.DoesNotExist:
         return Response({'error': 'College not found'}, status=404)
 
+
 @api_view(['GET'])
 def get_college_courses(request, college_id):
     """Get all courses for a specific college"""
     try:
-        # Check if college exists
         college = College.objects.filter(college_id=college_id).first()
         if not college:
             return Response({'error': 'College not found'}, status=404)
         
-        # Get courses for this college
-        courses = Course.objects.filter(college_id=college_id)
-        
-        # Use the CourseSerializer to serialize the data
+        courses = Course.objects.filter(college_id=college_id, is_active=True)
         serializer = CourseSerializer(courses, many=True)
         return Response(serializer.data, status=200)
         
     except Exception as e:
         return Response({'error': str(e)}, status=500)
 
+
 @api_view(['GET'])
-def get_fee_detail(request, fee_id):
-    """Get a single fee record by ID"""
+def get_college_fees(request, college_id):
+    """Get fee structure for a specific college"""
     try:
-        fee = Fees.objects.get(fee_id=fee_id)
-        serializer = FeesSerializer(fee)
-        return Response(serializer.data)
-    except Fees.DoesNotExist:
-        return Response({'error': 'Fee record not found'}, status=404)
+        college = College.objects.filter(college_id=college_id).first()
+        if not college:
+            return Response({'error': 'College not found'}, status=404)
+        
+        fees = Fees.objects.filter(college=college)
+        
+        academic_year = request.GET.get('academic_year')
+        if academic_year:
+            fees = fees.filter(academic_year=academic_year)
+        
+        serializer = FeesSerializer(fees, many=True)
+        return Response(serializer.data, status=200)
+        
     except Exception as e:
+        print(f"Error in get_college_fees: {str(e)}")
         return Response({'error': str(e)}, status=500)
+
 
 @api_view(['GET'])
 def get_courses(request):
-    """Get all courses with optional filtering including quota fees"""
-    courses = Course.objects.all()
+    """Get all courses with optional filtering"""
+    courses = Course.objects.filter(is_active=True)
 
     # Filter by college
     college_id = request.GET.get('college_id')
@@ -123,15 +134,15 @@ def get_courses(request):
     if course_name:
         courses = courses.filter(course_name__icontains=course_name)
 
-    # Filter by specialization/stream
-    stream = request.GET.get('stream')
-    if stream:
-        courses = courses.filter(specialization__icontains=stream)
+    # Filter by degree type
+    degree_type = request.GET.get('degree_type')
+    if degree_type:
+        courses = courses.filter(degree_type=degree_type)
     
     # Filter by fee range for a specific quota
     min_fee = request.GET.get('min_fee')
     max_fee = request.GET.get('max_fee')
-    quota_type = request.GET.get('quota_type', 'management')  # 'management' or 'government'
+    quota_type = request.GET.get('quota_type', 'management')
     
     if min_fee and max_fee:
         if quota_type == 'management':
@@ -149,28 +160,17 @@ def get_courses(request):
         else:
             courses = courses.filter(tuition_fee_government__lte=max_fee)
 
-    # Filter by min cutoff (for a community)
+    # Filter by min cutoff
     cutoff = request.GET.get('cutoff')
     community = request.GET.get('community')
     if cutoff and community:
         cutoff = int(cutoff)
-        if community == 'oc':
-            courses = courses.filter(cutoff_oc__lte=cutoff)
-        elif community == 'bc':
-            courses = courses.filter(cutoff_bc__lte=cutoff)
-        elif community == 'bcm':
-            courses = courses.filter(cutoff_bcm__lte=cutoff)
-        elif community == 'mbc':
-            courses = courses.filter(cutoff_mbc__lte=cutoff)
-        elif community == 'sc':
-            courses = courses.filter(cutoff_sc__lte=cutoff)
-        elif community == 'sca':
-            courses = courses.filter(cutoff_sca__lte=cutoff)
-        elif community == 'st':
-            courses = courses.filter(cutoff_st__lte=cutoff)
+        community_field = f'cutoff_{community.lower()}'
+        courses = courses.filter(**{f'{community_field}__lte': cutoff})
 
     serializer = CourseSerializer(courses, many=True)
     return Response(serializer.data)
+
 
 @api_view(['GET'])
 def get_course_detail(request, course_id):
@@ -182,9 +182,171 @@ def get_course_detail(request, course_id):
     except Course.DoesNotExist:
         return Response({'error': 'Course not found'}, status=404)
 
+
+# ==================== FEES VIEWS ====================
+
+@api_view(['GET'])
+def get_filtered_fees(request):
+    """Get fees with advanced filtering"""
+    try:
+        fees = Fees.objects.all()
+        
+        college_id = request.GET.get('college_id')
+        if college_id:
+            fees = fees.filter(college_id=college_id)
+        
+        academic_year = request.GET.get('academic_year')
+        if academic_year:
+            fees = fees.filter(academic_year=academic_year)
+        
+        serializer = FeesSerializer(fees, many=True)
+        return Response(serializer.data, status=200)
+        
+    except Exception as e:
+        print(f"Error in get_filtered_fees: {str(e)}")
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+def get_fee_detail(request, fee_id):
+    """Get a single fee record by ID"""
+    try:
+        fee = Fees.objects.get(fee_id=fee_id)
+        serializer = FeesSerializer(fee)
+        return Response(serializer.data)
+    except Fees.DoesNotExist:
+        return Response({'error': 'Fee record not found'}, status=404)
+
+
+@api_view(['GET'])
+def get_fee_comparison(request):
+    """Compare fees across multiple colleges"""
+    college_ids = request.GET.getlist('college_ids')
+    academic_year = request.GET.get('academic_year', '2024-2025')
+    
+    if not college_ids:
+        return Response({'error': 'college_ids parameter is required'}, status=400)
+    
+    comparison_data = []
+    
+    for college_id in college_ids:
+        try:
+            college = College.objects.get(college_id=college_id)
+            fees = Fees.objects.filter(college=college, academic_year=academic_year).first()
+            
+            if fees:
+                comparison_data.append({
+                    'college_id': college.college_id,
+                    'college_name': college.college_name,
+                    'admission_fee': float(fees.admission_fee),
+                    'application_fee': float(fees.application_fee),
+                    'book_fee': float(fees.book_fee),
+                    'exam_fee': float(fees.exam_fee),
+                    'lab_fee': float(fees.lab_fee),
+                    'sports_fee': float(fees.sports_fee),
+                    'miscellaneous_fee': float(fees.miscellaneous_fee),
+                    'transport_fee_min': float(fees.transport_fee_min),
+                    'transport_fee_max': float(fees.transport_fee_max),
+                    'total_fee': fees.total_fee,
+                    'academic_year': fees.academic_year
+                })
+        except College.DoesNotExist:
+            continue
+    
+    return Response(comparison_data)
+
+
+@api_view(['GET'])
+def get_fee_statistics(request):
+    """Get fee statistics across all colleges"""
+    academic_year = request.GET.get('academic_year', '2024-2025')
+    
+    fees = Fees.objects.filter(academic_year=academic_year)
+    
+    stats = {
+        'average_admission_fee': fees.aggregate(Avg('admission_fee'))['admission_fee__avg'] or 0,
+        'min_admission_fee': fees.aggregate(Min('admission_fee'))['admission_fee__min'] or 0,
+        'max_admission_fee': fees.aggregate(Max('admission_fee'))['admission_fee__max'] or 0,
+        'average_transport_fee_min': fees.aggregate(Avg('transport_fee_min'))['transport_fee_min__avg'] or 0,
+        'average_transport_fee_max': fees.aggregate(Avg('transport_fee_max'))['transport_fee_max__avg'] or 0,
+        'total_colleges': fees.count(),
+        'academic_year': academic_year
+    }
+    
+    return Response(stats)
+
+
+# ==================== HOSTEL VIEWS ====================
+
+@api_view(['GET'])
+def get_college_hostels(request, college_id):
+    """Get all hostels for a specific college"""
+    try:
+        college = College.objects.get(college_id=college_id)
+        hostels = Hostel.objects.filter(college=college, is_active=True)
+        serializer = HostelSerializer(hostels, many=True)
+        return Response(serializer.data)
+    except College.DoesNotExist:
+        return Response({'error': 'College not found'}, status=404)
+
+
+@api_view(['GET'])
+def get_hostel_by_room_type(request, college_id, room_type):
+    """Get hostel by specific room type"""
+    try:
+        college = College.objects.get(college_id=college_id)
+        hostel = Hostel.objects.filter(
+            college=college, 
+            room_type=room_type, 
+            is_active=True
+        ).first()
+        
+        if hostel:
+            serializer = HostelSerializer(hostel)
+            return Response(serializer.data)
+        return Response({'error': 'Hostel not found for this room type'}, status=404)
+    except College.DoesNotExist:
+        return Response({'error': 'College not found'}, status=404)
+
+
+@api_view(['GET'])
+def get_available_hostels(request):
+    """Get all hostels with available rooms"""
+    hostels = Hostel.objects.filter(is_active=True)
+    
+    # Optional filters
+    college_id = request.GET.get('college_id')
+    if college_id:
+        hostels = hostels.filter(college_id=college_id)
+    
+    gender = request.GET.get('gender')
+    if gender:
+        hostels = hostels.filter(gender=gender)
+    
+    room_type = request.GET.get('room_type')
+    if room_type:
+        hostels = hostels.filter(room_type=room_type)
+    
+    serializer = HostelSerializer(hostels, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+def get_hostel_detail(request, hostel_id):
+    """Get a single hostel by ID"""
+    try:
+        hostel = Hostel.objects.get(hostel_id=hostel_id)
+        serializer = HostelSerializer(hostel)
+        return Response(serializer.data)
+    except Hostel.DoesNotExist:
+        return Response({'error': 'Hostel not found'}, status=404)
+
+
+# ==================== SUGGESTION VIEWS ====================
+
 @api_view(['GET'])
 def suggest_colleges(request):
-    """Suggest colleges based on user preferences (cutoff, community, district, stream)"""
+    """Suggest colleges based on user preferences"""
     cutoff = request.GET.get('cutoff_mark')
     community = request.GET.get('community')
     district = request.GET.get('preferred_district')
@@ -194,28 +356,25 @@ def suggest_colleges(request):
         return Response({'error': 'cutoff_mark and community are required'}, status=400)
 
     cutoff = int(cutoff)
-
-    # Determine cutoff field based on community
     cutoff_field = f'cutoff_{community.lower()}'
 
-    # Get courses that match the cutoff criteria
     courses = Course.objects.filter(**{cutoff_field + '__lte': cutoff})
 
     if stream:
-        courses = courses.filter(specialization__icontains=stream)
+        courses = courses.filter(course_name__icontains=stream)
 
-    # Get college IDs from filtered courses
     college_ids = courses.values_list('college_id', flat=True).distinct()
-
-    # Filter colleges by district if provided
     colleges = College.objects.filter(college_id__in=college_ids)
+    
     if district:
         colleges = colleges.filter(location_city__icontains=district)
 
     colleges = colleges.order_by('-placement_percentage', 'nirf_rank')[:20]
-
     serializer = CollegeListSerializer(colleges, many=True)
     return Response(serializer.data)
+
+
+# ==================== USER PROFILE VIEWS ====================
 
 @api_view(['GET', 'POST'])
 def user_profiles(request):
@@ -230,6 +389,7 @@ def user_profiles(request):
             serializer.save()
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
+
 
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 def user_profile_detail(request, profile_id):
@@ -252,20 +412,18 @@ def user_profile_detail(request, profile_id):
         profile.delete()
         return Response(status=204)
 
-# ==================== USER PROFILE VIEWS ====================
 
 @api_view(['GET', 'PUT', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def get_current_user_profile(request):
     """Get or update the current authenticated user's profile"""
     try:
-        # Get or create user profile
         profile, created = UserProfile.objects.get_or_create(
             user=request.user,
             defaults={
                 'first_name': request.user.first_name or '',
                 'email': request.user.email,
-                'phone_number': '0000000000',  # Temporary, user must update
+                'phone_number': '0000000000',
                 'address': '',
                 'city': '',
                 'pincode': '000000'
@@ -273,7 +431,6 @@ def get_current_user_profile(request):
         )
         
         if request.method == 'GET':
-            # Get user data
             user_data = {
                 'id': request.user.id,
                 'username': request.user.username,
@@ -283,46 +440,24 @@ def get_current_user_profile(request):
                 'date_joined': request.user.date_joined,
                 'is_staff': request.user.is_staff,
             }
-            
-            # Get profile data
             profile_serializer = UserProfileSerializer(profile)
-            profile_data = profile_serializer.data
-            
-            # Combine both
-            combined_data = {**user_data, **profile_data}
-            
+            combined_data = {**user_data, **profile_serializer.data}
             return Response(combined_data)
         
         elif request.method in ['PUT', 'PATCH']:
-            # Update User model fields
-            user_update = False
-            
             if 'email' in request.data and request.data['email'] != request.user.email:
-                # Check if email is already taken
                 if User.objects.filter(email=request.data['email']).exclude(id=request.user.id).exists():
-                    return Response(
-                        {'error': 'Email already exists'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+                    return Response({'error': 'Email already exists'}, status=status.HTTP_400_BAD_REQUEST)
                 request.user.email = request.data['email']
-                user_update = True
-            
-            if user_update:
                 request.user.save()
             
-            # Update profile fields
-            # Map profile fields
-            profile_fields = [
-                'first_name', 'last_name', 'date_of_birth', 'gender',
-                'phone_number', 'whatsapp_number', 'address', 'city', 
-                'state', 'pincode'
-            ]
+            profile_fields = ['first_name', 'last_name', 'date_of_birth', 'gender', 'phone_number', 
+                            'whatsapp_number', 'address', 'city', 'state', 'pincode']
             
             for field in profile_fields:
                 if field in request.data:
                     setattr(profile, field, request.data[field])
             
-            # Also update User model's first_name and last_name if provided
             if 'first_name' in request.data:
                 request.user.first_name = request.data['first_name']
                 request.user.save()
@@ -330,167 +465,22 @@ def get_current_user_profile(request):
                 request.user.last_name = request.data['last_name']
                 request.user.save()
             
-            try:
-                profile.save()
-                
-                # Return updated data
-                user_data = {
-                    'id': request.user.id,
-                    'username': request.user.username,
-                    'email': request.user.email,
-                    'first_name': request.user.first_name,
-                    'last_name': request.user.last_name,
-                    'date_joined': request.user.date_joined,
-                    'is_staff': request.user.is_staff,
-                }
-                
-                profile_serializer = UserProfileSerializer(profile)
-                response_data = {**user_data, **profile_serializer.data}
-                
-                return Response({
-                    'message': 'Profile updated successfully',
-                    'user': response_data
-                })
-                
-            except ValidationError as e:
-                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-@api_view(['PUT', 'PATCH'])
-@permission_classes([IsAuthenticated])
-def update_profile(request):
-    """Update the current user's profile"""
-    try:
-        # Get user profile
-        try:
-            profile = UserProfile.objects.get(user=request.user)
-        except UserProfile.DoesNotExist:
-            return Response(
-                {'error': 'Profile not found. Please complete your registration.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        
-        # Update User model fields
-        if 'email' in request.data and request.data['email'] != request.user.email:
-            if User.objects.filter(email=request.data['email']).exclude(id=request.user.id).exists():
-                return Response(
-                    {'error': 'Email already exists'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            request.user.email = request.data['email']
-        
-        if 'first_name' in request.data:
-            request.user.first_name = request.data['first_name']
-        if 'last_name' in request.data:
-            request.user.last_name = request.data['last_name']
-        
-        request.user.save()
-        
-        # Update profile fields
-        profile_fields = [
-            'first_name', 'last_name', 'date_of_birth', 'gender',
-            'phone_number', 'whatsapp_number', 'address', 'city', 
-            'state', 'pincode'
-        ]
-        
-        for field in profile_fields:
-            if field in request.data:
-                setattr(profile, field, request.data[field])
-        
-        profile.save()
-        
-        # Prepare response
-        user_data = {
-            'id': request.user.id,
-            'username': request.user.username,
-            'email': request.user.email,
-            'first_name': request.user.first_name,
-            'last_name': request.user.last_name,
-        }
-        
-        profile_serializer = UserProfileSerializer(profile)
-        
-        return Response({
-            'message': 'Profile updated successfully',
-            'user': {**user_data, **profile_serializer.data}
-        }, status=status.HTTP_200_OK)
-    
-    except UserProfile.DoesNotExist:
-        return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
-    except ValidationError as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-@api_view(['PUT', 'PATCH'])
-@permission_classes([IsAuthenticated])
-def update_profile_by_id(request, profile_id):
-    """Update a user profile by ID (admin only or own profile)"""
-    try:
-        # Get the profile
-        profile = UserProfile.objects.get(id=profile_id)
-        
-        # Check permission - users can only update their own profile unless admin
-        if profile.user != request.user and not request.user.is_staff:
-            return Response(
-                {'error': 'Permission denied. You can only update your own profile.'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        # Update User model fields if user is updating their own profile
-        if profile.user == request.user:
-            if 'email' in request.data and request.data['email'] != profile.user.email:
-                if User.objects.filter(email=request.data['email']).exclude(id=profile.user.id).exists():
-                    return Response(
-                        {'error': 'Email already exists'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-                profile.user.email = request.data['email']
+            profile.save()
             
-            if 'first_name' in request.data:
-                profile.user.first_name = request.data['first_name']
-            if 'last_name' in request.data:
-                profile.user.last_name = request.data['last_name']
+            user_data = {
+                'id': request.user.id,
+                'username': request.user.username,
+                'email': request.user.email,
+                'first_name': request.user.first_name,
+                'last_name': request.user.last_name,
+            }
+            profile_serializer = UserProfileSerializer(profile)
             
-            profile.user.save()
-        
-        # Update profile fields
-        profile_fields = [
-            'first_name', 'last_name', 'date_of_birth', 'gender',
-            'phone_number', 'whatsapp_number', 'address', 'city', 
-            'state', 'pincode'
-        ]
-        
-        for field in profile_fields:
-            if field in request.data:
-                setattr(profile, field, request.data[field])
-        
-        profile.save()
-        
-        # Prepare response
-        user_data = {
-            'id': profile.user.id,
-            'username': profile.user.username,
-            'email': profile.user.email,
-            'first_name': profile.user.first_name,
-            'last_name': profile.user.last_name,
-        }
-        
-        profile_serializer = UserProfileSerializer(profile)
-        
-        return Response({
-            'message': 'Profile updated successfully',
-            'user': {**user_data, **profile_serializer.data}
-        }, status=status.HTTP_200_OK)
+            return Response({
+                'message': 'Profile updated successfully',
+                'user': {**user_data, **profile_serializer.data}
+            })
     
-    except UserProfile.DoesNotExist:
-        return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
-    except ValidationError as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -500,59 +490,32 @@ def update_profile_by_id(request, profile_id):
 def change_password(request):
     """Change user's password"""
     try:
-        # Get current password and new password from request
         current_password = request.data.get('current_password')
         new_password = request.data.get('new_password')
         confirm_password = request.data.get('confirm_password')
         
-        # Validate input
         if not current_password:
-            return Response(
-                {'error': 'Current password is required'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'Current password is required'}, status=status.HTTP_400_BAD_REQUEST)
         
         if not new_password:
-            return Response(
-                {'error': 'New password is required'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'New password is required'}, status=status.HTTP_400_BAD_REQUEST)
         
         if new_password != confirm_password:
-            return Response(
-                {'error': 'New passwords do not match'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'New passwords do not match'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Check if current password is correct
         if not request.user.check_password(current_password):
-            return Response(
-                {'error': 'Current password is incorrect'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'Current password is incorrect'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Validate new password strength
         if len(new_password) < 8:
-            return Response(
-                {'error': 'Password must be at least 8 characters long'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'Password must be at least 8 characters long'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Check if new password is different from current
         if current_password == new_password:
-            return Response(
-                {'error': 'New password must be different from current password'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'New password must be different from current password'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Set new password
         request.user.set_password(new_password)
         request.user.save()
-        
-        # Update session to prevent logout
         update_session_auth_hash(request, request.user)
         
-        # Generate new token (invalidate old token and create new one)
         Token.objects.filter(user=request.user).delete()
         new_token = Token.objects.create(user=request.user)
         
@@ -565,73 +528,7 @@ def change_password(request):
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def create_or_update_profile(request):
-    """Create or update the current user's profile"""
-    try:
-        # Get or create profile
-        profile, created = UserProfile.objects.get_or_create(
-            user=request.user,
-            defaults={
-                'first_name': request.user.first_name or '',
-                'email': request.user.email,
-                'phone_number': request.data.get('phone_number', '0000000000'),
-                'address': request.data.get('address', ''),
-                'city': request.data.get('city', ''),
-                'pincode': request.data.get('pincode', '000000')
-            }
-        )
-        
-        # Update User model
-        if 'email' in request.data and request.data['email'] != request.user.email:
-            if User.objects.filter(email=request.data['email']).exclude(id=request.user.id).exists():
-                return Response(
-                    {'error': 'Email already exists'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            request.user.email = request.data['email']
-        
-        if 'first_name' in request.data:
-            request.user.first_name = request.data['first_name']
-        if 'last_name' in request.data:
-            request.user.last_name = request.data['last_name']
-        
-        request.user.save()
-        
-        # Update profile fields
-        profile_fields = [
-            'first_name', 'last_name', 'date_of_birth', 'gender',
-            'phone_number', 'whatsapp_number', 'address', 'city', 
-            'state', 'pincode'
-        ]
-        
-        for field in profile_fields:
-            if field in request.data:
-                setattr(profile, field, request.data[field])
-        
-        profile.save()
-        
-        # Prepare response
-        user_data = {
-            'id': request.user.id,
-            'username': request.user.username,
-            'email': request.user.email,
-            'first_name': request.user.first_name,
-            'last_name': request.user.last_name,
-        }
-        
-        profile_serializer = UserProfileSerializer(profile)
-        
-        return Response({
-            'message': 'Profile created/updated successfully',
-            'user': {**user_data, **profile_serializer.data}
-        }, status=status.HTTP_200_OK)
-    
-    except ValidationError as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+# ==================== TIMELINE EVENT VIEWS ====================
 
 @api_view(['GET', 'POST'])
 def timeline_events(request):
@@ -639,25 +536,23 @@ def timeline_events(request):
     if request.method == 'GET':
         events = TimelineEvent.objects.filter(is_active=True)
 
-        # Filter by event type
         event_type = request.GET.get('event_type')
         if event_type:
             events = events.filter(event_type=event_type)
 
-        # Filter by college
         college_id = request.GET.get('college_id')
         if college_id:
             events = events.filter(college_id=college_id)
 
-        # Filter by upcoming (start_date >= now)
         upcoming = request.GET.get('upcoming')
         if upcoming and upcoming.lower() == 'true':
             from django.utils import timezone
             events = events.filter(start_date__gte=timezone.now())
 
-        events = events[:50]  # Limit results
+        events = events[:50]
         serializer = TimelineEventSerializer(events, many=True)
         return Response(serializer.data)
+    
     elif request.method == 'POST':
         serializer = TimelineEventSerializer(data=request.data)
         if serializer.is_valid():
@@ -695,17 +590,10 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        print("="*50)
-        print("REGISTER REQUEST RECEIVED")
-        print("Request data:", request.data)
-        print("="*50)
-        
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             try:
                 user = serializer.save()
-                
-                # Create auth token
                 token, created = Token.objects.get_or_create(user=user)
                 
                 response_data = {
@@ -719,18 +607,10 @@ class RegisterView(APIView):
                     },
                     'token': token.key
                 }
-                
-                print("Registration successful:", response_data)
-                
                 return Response(response_data, status=status.HTTP_201_CREATED)
-                
             except Exception as e:
-                print("Registration error:", str(e))
-                import traceback
-                traceback.print_exc()
                 return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        print("Serializer errors:", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -739,17 +619,11 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        print("="*50)
-        print("LOGIN REQUEST RECEIVED")
-        print("Request data:", request.data)
-        print("="*50)
-        
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
             username = serializer.validated_data['username']
             password = serializer.validated_data['password']
             
-            # Check if username is email
             if re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', username):
                 try:
                     user_obj = User.objects.get(email=username)
@@ -774,14 +648,10 @@ class LoginView(APIView):
                     },
                     'token': token.key
                 }
-                
-                print("Login successful:", response_data)
-                
                 return Response(response_data, status=status.HTTP_200_OK)
             
             return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
         
-        print("Login serializer errors:", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -806,7 +676,6 @@ class LogoutView(APIView):
 
     def post(self, request):
         try:
-            # Delete the user's token to log them out
             request.user.auth_token.delete()
             logout(request)
             return Response({'message': 'Logout successful'}, status=status.HTTP_200_OK)
@@ -836,53 +705,171 @@ class UserProfileView(APIView):
         except UserProfile.DoesNotExist:
             return Response({'error': 'Profile not found'}, status=404)
         
-
-@api_view(['GET'])
-def get_college_fees(request, college_id):
-    """Get all fee structures for a specific college"""
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    """Update the current user's profile"""
     try:
-        # Check if college exists
-        college = College.objects.filter(college_id=college_id).first()
-        if not college:
-            return Response({'error': 'College not found'}, status=404)
+        profile = UserProfile.objects.get(user=request.user)
         
-        # Get fees for this college
-        fees = Fees.objects.filter(college=college)
+        if 'email' in request.data and request.data['email'] != request.user.email:
+            if User.objects.filter(email=request.data['email']).exclude(id=request.user.id).exists():
+                return Response({'error': 'Email already exists'}, status=status.HTTP_400_BAD_REQUEST)
+            request.user.email = request.data['email']
         
-        # Get query parameters for filtering
-        academic_year = request.GET.get('academic_year')
+        if 'first_name' in request.data:
+            request.user.first_name = request.data['first_name']
+        if 'last_name' in request.data:
+            request.user.last_name = request.data['last_name']
         
-        if academic_year:
-            fees = fees.filter(academic_year=academic_year)
+        request.user.save()
         
-        # Note: course_id and hostel_room_type filtering is handled on the frontend
-        # since fees are now per college, not per course
+        profile_fields = ['first_name', 'last_name', 'date_of_birth', 'gender', 'phone_number', 
+                          'whatsapp_number', 'address', 'city', 'state', 'pincode']
         
-        serializer = FeesSerializer(fees, many=True)
-        return Response(serializer.data, status=200)
+        for field in profile_fields:
+            if field in request.data:
+                setattr(profile, field, request.data[field])
         
+        profile.save()
+        
+        user_data = {
+            'id': request.user.id,
+            'username': request.user.username,
+            'email': request.user.email,
+            'first_name': request.user.first_name,
+            'last_name': request.user.last_name,
+        }
+        
+        profile_serializer = UserProfileSerializer(profile)
+        
+        return Response({
+            'message': 'Profile updated successfully',
+            'user': {**user_data, **profile_serializer.data}
+        }, status=status.HTTP_200_OK)
+    
+    except UserProfile.DoesNotExist:
+        return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        print(f"Error in get_college_fees: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return Response({'error': str(e)}, status=500)
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def update_profile_by_id(request, profile_id):
+    """Update a user profile by ID (admin only or own profile)"""
+    try:
+        profile = UserProfile.objects.get(id=profile_id)
+        
+        if profile.user != request.user and not request.user.is_staff:
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+        
+        if profile.user == request.user:
+            if 'email' in request.data and request.data['email'] != profile.user.email:
+                if User.objects.filter(email=request.data['email']).exclude(id=profile.user.id).exists():
+                    return Response({'error': 'Email already exists'}, status=status.HTTP_400_BAD_REQUEST)
+                profile.user.email = request.data['email']
+            
+            if 'first_name' in request.data:
+                profile.user.first_name = request.data['first_name']
+            if 'last_name' in request.data:
+                profile.user.last_name = request.data['last_name']
+            
+            profile.user.save()
+        
+        profile_fields = ['first_name', 'last_name', 'date_of_birth', 'gender', 'phone_number', 
+                          'whatsapp_number', 'address', 'city', 'state', 'pincode']
+        
+        for field in profile_fields:
+            if field in request.data:
+                setattr(profile, field, request.data[field])
+        
+        profile.save()
+        
+        user_data = {
+            'id': profile.user.id,
+            'username': profile.user.username,
+            'email': profile.user.email,
+            'first_name': profile.user.first_name,
+            'last_name': profile.user.last_name,
+        }
+        
+        profile_serializer = UserProfileSerializer(profile)
+        
+        return Response({
+            'message': 'Profile updated successfully',
+            'user': {**user_data, **profile_serializer.data}
+        }, status=status.HTTP_200_OK)
+    
+    except UserProfile.DoesNotExist:
+        return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_or_update_profile(request):
+    """Create or update the current user's profile"""
+    try:
+        profile, created = UserProfile.objects.get_or_create(
+            user=request.user,
+            defaults={
+                'first_name': request.user.first_name or '',
+                'email': request.user.email,
+                'phone_number': request.data.get('phone_number', '0000000000'),
+                'address': request.data.get('address', ''),
+                'city': request.data.get('city', ''),
+                'pincode': request.data.get('pincode', '000000')
+            }
+        )
+        
+        if 'email' in request.data and request.data['email'] != request.user.email:
+            if User.objects.filter(email=request.data['email']).exclude(id=request.user.id).exists():
+                return Response({'error': 'Email already exists'}, status=status.HTTP_400_BAD_REQUEST)
+            request.user.email = request.data['email']
+        
+        if 'first_name' in request.data:
+            request.user.first_name = request.data['first_name']
+        if 'last_name' in request.data:
+            request.user.last_name = request.data['last_name']
+        
+        request.user.save()
+        
+        profile_fields = ['first_name', 'last_name', 'date_of_birth', 'gender', 'phone_number', 
+                          'whatsapp_number', 'address', 'city', 'state', 'pincode']
+        
+        for field in profile_fields:
+            if field in request.data:
+                setattr(profile, field, request.data[field])
+        
+        profile.save()
+        
+        user_data = {
+            'id': request.user.id,
+            'username': request.user.username,
+            'email': request.user.email,
+            'first_name': request.user.first_name,
+            'last_name': request.user.last_name,
+        }
+        
+        profile_serializer = UserProfileSerializer(profile)
+        
+        return Response({
+            'message': 'Profile created/updated successfully',
+            'user': {**user_data, **profile_serializer.data}
+        }, status=status.HTTP_200_OK)
+    
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
 @api_view(['GET'])
 def get_course_fees(request, course_id):
-    """Get fee structure for a specific course (if it exists)"""
+    """Get fee structure for a specific course"""
     try:
-        # Check if course exists
-        course = Course.objects.filter(course_id=course_id).first()
-        if not course:
-            return Response({'error': 'Course not found'}, status=404)
+        course = Course.objects.get(course_id=course_id)
+        fees = Fees.objects.filter(college=course.college)
         
-        # Since fees are now per college, we need to get the college's fees
-        # and include course-specific information from the course model
-        college = course.college
-        fees = Fees.objects.filter(college=college)
-        
-        # Get query parameters
         academic_year = request.GET.get('academic_year')
         if academic_year:
             fees = fees.filter(academic_year=academic_year)
@@ -890,227 +877,12 @@ def get_course_fees(request, course_id):
         serializer = FeesSerializer(fees, many=True)
         data = serializer.data
         
-        # Add course-specific fees from the Course model
         for fee_data in data:
-            fee_data['course_specific_fees'] = {
-                'course_id': course.course_id,
-                'course_name': course.course_name,
-                'tuition_fee_management': float(course.tuition_fee_management) if course.tuition_fee_management else 0,
-                'tuition_fee_government': float(course.tuition_fee_government) if course.tuition_fee_government else 0,
-                'course_duration': course.duration_years,
-                'course_type': course.course_type
+            fee_data['course_specific_tuition'] = {
+                'management': float(course.tuition_fee_management),
+                'government': float(course.tuition_fee_government)
             }
         
         return Response(data, status=200)
-        
-    except Exception as e:
-        print(f"Error in get_course_fees: {str(e)}")
-        return Response({'error': str(e)}, status=500)
-
-
-@api_view(['GET'])
-def get_filtered_fees(request):
-    """Get fees with advanced filtering including hostel room type"""
-    try:
-        fees = Fees.objects.all()
-        
-        # Basic filters
-        college_id = request.GET.get('college_id')
-        if college_id:
-            fees = fees.filter(college_id=college_id)
-        
-        academic_year = request.GET.get('academic_year')
-        if academic_year:
-            fees = fees.filter(academic_year=academic_year)
-        
-        # Hostel room type filter (handled in serializer)
-        hostel_room_type = request.GET.get('hostel_room_type')
-        
-        # Serialize data
-        serializer = FeesSerializer(fees, many=True)
-        data = serializer.data
-        
-        # Apply hostel room type filtering on serialized data
-        if hostel_room_type:
-            hostel_room_type = int(hostel_room_type)
-            filtered_data = []
-            for fee_data in data:
-                if 'hostel_options' in fee_data:
-                    for option in fee_data['hostel_options']:
-                        if option['room_type'] == hostel_room_type:
-                            filtered_data.append(fee_data)
-                            break
-                else:
-                    filtered_data.append(fee_data)
-            data = filtered_data
-        
-        return Response(data, status=200)
-        
-    except Exception as e:
-        print(f"Error in get_filtered_fees: {str(e)}")
-        return Response({'error': str(e)}, status=500)
-
-
-@api_view(['GET'])
-def get_fee_comparison(request):
-    """Compare fees across multiple colleges/courses with quota support"""
-    college_ids = request.GET.getlist('college_ids')
-    course_id = request.GET.get('course_id')
-    academic_year = request.GET.get('academic_year', '2024-2025')
-    quota_type = request.GET.get('quota_type', 'management')  # 'management' or 'government'
-    
-    if not college_ids:
-        return Response({'error': 'college_ids parameter is required'}, status=400)
-    
-    comparison_data = []
-    
-    for college_id in college_ids:
-        try:
-            college = College.objects.get(college_id=college_id)
-            
-            # Get fees for this college
-            fees = Fees.objects.filter(college=college, academic_year=academic_year).first()
-            
-            # Get course information if course_id is provided
-            course = None
-            tuition_fee = 0
-            if course_id:
-                course = Course.objects.filter(course_id=course_id, college=college).first()
-                if course:
-                    if quota_type == 'management':
-                        tuition_fee = float(course.tuition_fee_management) if course.tuition_fee_management else 0
-                    else:  # government
-                        tuition_fee = float(course.tuition_fee_government) if course.tuition_fee_government else 0
-            
-            if fees:
-                # Get hostel options from JSON field
-                hostel_options = []
-                if fees.hostel_fees:
-                    for room_type, fee_data in fees.hostel_fees.items():
-                        hostel_options.append({
-                            'room_type': int(room_type),
-                            'room_type_display': dict(Fees.HOSTEL_ROOM_TYPE_CHOICES).get(int(room_type)),
-                            'fee': float(fee_data.get('fee', 0)),
-                            'available_seats': fee_data.get('available_seats', 0)
-                        })
-                
-                # Calculate total fee
-                total_fee = tuition_fee + float(fees.admission_fee or 0)
-                
-                comparison_item = {
-                    'college_id': college.college_id,
-                    'college_name': college.college_name,
-                    'quota_type': quota_type,
-                    'tuition_fee': tuition_fee,
-                    'admission_fee': float(fees.admission_fee),
-                    'transport_fee_min': float(fees.transport_fee_min),
-                    'transport_fee_max': float(fees.transport_fee_max),
-                    'hostel_options': hostel_options,
-                    'total_fee_min': total_fee + float(fees.transport_fee_min or 0),
-                    'total_fee_max': total_fee + float(fees.transport_fee_max or 0),
-                    'academic_year': fees.academic_year
-                }
-                
-                # Add course info if available
-                if course:
-                    comparison_item['course'] = {
-                        'course_id': course.course_id,
-                        'course_name': course.course_name,
-                        'course_code': course.course_code
-                    }
-                else:
-                    comparison_item['note'] = 'No course selected'
-                
-                comparison_data.append(comparison_item)
-            
-        except College.DoesNotExist:
-            continue
-        except Exception as e:
-            print(f"Error processing college {college_id}: {str(e)}")
-            continue
-    
-    return Response(comparison_data)
-
-
-@api_view(['GET'])
-def get_fee_statistics(request):
-    """Get fee statistics across all colleges with quota support"""
-    academic_year = request.GET.get('academic_year', '2024-2025')
-    quota_type = request.GET.get('quota_type', 'management')  # 'management' or 'government'
-    
-    fees = Fees.objects.filter(academic_year=academic_year)
-    
-    # Since fees are now college-based, get tuition fees from courses
-    # We need to calculate average across all courses in all colleges
-    all_tuition_fees = []
-    
-    for fee in fees:
-        # Get all courses for this college
-        courses = Course.objects.filter(college=fee.college)
-        for course in courses:
-            if quota_type == 'management':
-                if course.tuition_fee_management:
-                    all_tuition_fees.append(float(course.tuition_fee_management))
-            else:  # government
-                if course.tuition_fee_government:
-                    all_tuition_fees.append(float(course.tuition_fee_government))
-    
-    # Calculate average hostel fee from JSON data
-    all_hostel_fees = []
-    for fee in fees:
-        if fee.hostel_fees:
-            for room_data in fee.hostel_fees.values():
-                if room_data.get('fee', 0) > 0:
-                    all_hostel_fees.append(room_data['fee'])
-    
-    avg_hostel_fee = sum(all_hostel_fees) / len(all_hostel_fees) if all_hostel_fees else 0
-    min_hostel_fee = min(all_hostel_fees) if all_hostel_fees else 0
-    max_hostel_fee = max(all_hostel_fees) if all_hostel_fees else 0
-    
-    stats = {
-        'quota_type': quota_type,
-        'average_tuition_fee': sum(all_tuition_fees) / len(all_tuition_fees) if all_tuition_fees else 0,
-        'min_tuition_fee': min(all_tuition_fees) if all_tuition_fees else 0,
-        'max_tuition_fee': max(all_tuition_fees) if all_tuition_fees else 0,
-        'average_hostel_fee': avg_hostel_fee,
-        'min_hostel_fee': min_hostel_fee,
-        'max_hostel_fee': max_hostel_fee,
-        'total_fees_records': fees.count(),
-        'total_colleges': fees.values('college').distinct().count(),
-        'academic_year': academic_year
-    }
-    
-    return Response(stats)
-
-
-@api_view(['GET'])
-def get_hostel_options(request, college_id):
-    """Get all hostel options for a college's fees"""
-    try:
-        college = College.objects.filter(college_id=college_id).first()
-        if not college:
-            return Response({'error': 'College not found'}, status=404)
-        
-        fees = Fees.objects.filter(college=college)
-        
-        # Collect all unique hostel options across all fee records
-        all_hostel_options = []
-        for fee in fees:
-            if fee.hostel_fees:
-                for room_type, data in fee.hostel_fees.items():
-                    option = {
-                        'college_id': college.college_id,
-                        'college_name': college.college_name,
-                        'academic_year': fee.academic_year,
-                        'room_type': int(room_type),
-                        'room_type_display': dict(Fees.HOSTEL_ROOM_TYPE_CHOICES).get(int(room_type)),
-                        'hostel_fee': data.get('fee', 0),
-                        'available_seats': data.get('available_seats', 0),
-                        'total_seats': data.get('total_seats', 0)
-                    }
-                    all_hostel_options.append(option)
-        
-        return Response(all_hostel_options, status=200)
-        
-    except Exception as e:
-        return Response({'error': str(e)}, status=500)
+    except Course.DoesNotExist:
+        return Response({'error': 'Course not found'}, status=404)

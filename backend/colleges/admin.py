@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.db.models import Avg
-from .models import College, Course, Fees, UserProfile, TeamMember, TimelineEvent
+from .models import College, Course, Fees, Hostel, UserProfile, TeamMember, TimelineEvent
 
 
 # ==================== COLLEGE ADMIN ====================
@@ -22,6 +22,49 @@ class CollegeAdmin(admin.ModelAdmin):
     )
 
 
+# ==================== HOSTEL ADMIN ====================
+@admin.register(Hostel)
+class HostelAdmin(admin.ModelAdmin):
+    list_display = ('name', 'college', 'gender', 'room_type_display', 
+                    'fee_per_year', 'total_rooms', 'total_capacity', 'is_active')
+    list_filter = ('gender', 'room_type', 'is_active', 'college')
+    search_fields = ('name', 'college__college_name')
+    readonly_fields = ('created_at', 'updated_at', 'total_capacity', 'total_fee_with_deposit')
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('college', 'name', 'gender')
+        }),
+        ('Room Details', {
+            'fields': ('room_type', 'total_rooms', 'capacity_per_room')
+        }),
+        ('Fee Structure', {
+            'fields': ('fee_per_semester', 'fee_per_year', 'caution_deposit'),
+            'description': 'Hostel fees per student (per year or per semester)'
+        }),
+        ('Status', {
+            'fields': ('is_active',)
+        }),
+        ('System Information', {
+            'fields': ('created_at', 'updated_at', 'total_capacity', 'total_fee_with_deposit'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def room_type_display(self, obj):
+        return obj.room_type_display
+    room_type_display.short_description = 'Room Type'
+    room_type_display.admin_order_field = 'room_type'
+    
+    def total_capacity(self, obj):
+        return obj.total_capacity
+    total_capacity.short_description = 'Total Capacity'
+    
+    def total_fee_with_deposit(self, obj):
+        return f"₹{obj.total_fee_with_deposit:,.2f}/year"
+    total_fee_with_deposit.short_description = 'Total with Deposit'
+
+
 # ==================== COURSE ADMIN ====================
 class CollegeStateListFilter(admin.SimpleListFilter):
     title = 'College State'
@@ -39,10 +82,9 @@ class CourseAdmin(admin.ModelAdmin):
     list_display = ('course_name', 'course_code', 'college', 'degree_name', 
                     'tuition_fee_management', 'tuition_fee_government', 
                     'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
-    search_fields = ('course_name', 'course_code', 'specialization', 'college__college_name')
-    list_filter = (CollegeStateListFilter, 'college','degree_type', 'degree_name', 'is_active', 'college__type', 'college__affiliation')
+    search_fields = ('course_name', 'course_code', 'college__college_name')
+    list_filter = (CollegeStateListFilter, 'college', 'degree_type', 'degree_name', 'is_active', 'college__type', 'college__affiliation')
     readonly_fields = ('created_at', 'updated_at')
-    # The actual fields for editing (not the display methods)
     list_editable = ('tuition_fee_management', 'tuition_fee_government', 'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
     list_per_page = 25
     
@@ -78,26 +120,15 @@ class CourseAdmin(admin.ModelAdmin):
         })
     )
     
-    # Display method for Management Quota Fee
-    def tuition_fee_management_display(self, obj):
-        return f"₹ {obj.tuition_fee_management:,.2f}/year" if obj.tuition_fee_management else "Not Set"
-    tuition_fee_management_display.short_description = 'Management Quota'
-    tuition_fee_management_display.admin_order_field = 'tuition_fee_management'
-    
-    # Display method for Government Quota Fee
-    def tuition_fee_government_display(self, obj):
-        return f"₹ {obj.tuition_fee_government:,.2f}/year" if obj.tuition_fee_government else "Not Set"
-    tuition_fee_government_display.short_description = 'Govt/Management'
-    tuition_fee_government_display.admin_order_field = 'tuition_fee_government'
-    
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('college')
 
-# ==================== FEES ADMIN (UPDATED - course field removed) ====================
+
+# ==================== FEES ADMIN (UPDATED) ====================
 @admin.register(Fees)
 class FeesAdmin(admin.ModelAdmin):
     list_display = ('college', 'academic_year', 'admission_fee_display', 
-                    'hostel_fees_summary', 'transport_fee_range_display', 
+                    'total_fee_display', 'transport_fee_range_display', 
                     'payment_frequency', 'created_at')
     search_fields = ('college__college_name', 'college__short_name', 'academic_year')
     list_filter = ('academic_year', 'payment_frequency', 'college__location_state', 'college__type')
@@ -107,46 +138,41 @@ class FeesAdmin(admin.ModelAdmin):
         ('College Information', {
             'fields': ('college', 'academic_year')
         }),
-        ('Basic Fee Components', {
-            'fields': ('admission_fee',),
-            'description': '''
-                <div style="background: #e8f5e9; padding: 8px 12px; border-radius: 6px; margin-bottom: 10px;">
-                    📘 <strong>Note:</strong> 
-                    Tuition fees are now managed in the Course model. Each course has its own tuition fee structure 
-                    (Management and Government quotas). The Fees model only handles college-wide fees (admission, hostel, transport).
-                </div>
-            '''
+        ('Application & Admission Fees', {
+            'fields': ('application_fee', 'admission_fee'),
+            'description': 'One-time fees paid during application and admission process'
         }),
-        ('Hostel Accommodation (JSON Format)', {
-            'fields': ('hostel_fees',),
+        ('Academic Fees', {
+            'fields': ('book_fee', 'exam_fee', 'lab_fee', 'sports_fee'),
+            'description': 'Annual academic and facility fees'
+        }),
+        ('Miscellaneous Fees', {
+            'fields': ('miscellaneous_fee', 'miscellaneous_description'),
+            'description': 'Other miscellaneous charges'
+        }),
+        ('Additional Fees (JSON Format)', {
+            'fields': ('additional_fees',),
             'description': '''
                 <div style="background: #f8fafc; padding: 12px; border-radius: 6px;">
-                    <strong>📘 Hostel Fees Format:</strong><br>
-                    Enter hostel fees as JSON with room type keys:<br><br>
+                    <strong>📘 Additional Fees Format:</strong><br>
+                    Enter additional fees as JSON:<br><br>
                     <code>
                     {
-                        "1": {"fee": 45000, "available_seats": 100},
-                        "2": {"fee": 55000, "available_seats": 80},
-                        "3": {"fee": 75000, "available_seats": 50},
-                        "4": {"fee": 90000, "available_seats": 40}
+                        "caution_deposit": {"amount": 5000, "refundable": true, "description": "Library caution deposit"},
+                        "alumni_fee": {"amount": 1000, "description": "Alumni association fee"},
+                        "medical_fee": {"amount": 2000, "description": "Medical insurance"}
                     }
-                    </code><br><br>
-                    <strong>Room Types:</strong><br>
-                    1 = Normal Room + Common Bathroom<br>
-                    2 = Normal Room + Attached Bathroom<br>
-                    3 = AC Room + Common Bathroom<br>
-                    4 = AC Room + Attached Bathroom
+                    </code>
                 </div>
             ''',
             'classes': ('wide',)
         }),
         ('Transport Facility', {
             'fields': ('transport_fee_min', 'transport_fee_max'),
-            'description': 'Transport fee range based on distance (min to max) - Example: 5000 to 30000'
+            'description': 'Transport fee range based on distance (min to max)'
         }),
         ('Payment Settings', {
             'fields': ('payment_frequency', 'fee_notes'),
-            'classes': ('wide',)
         }),
         ('System Information', {
             'fields': ('created_at', 'updated_at', 'total_fee_calculated'),
@@ -158,27 +184,9 @@ class FeesAdmin(admin.ModelAdmin):
         return f"₹ {obj.admission_fee:,.2f}" if obj.admission_fee else "Not Set"
     admission_fee_display.short_description = 'Admission Fee'
     
-    def hostel_fees_summary(self, obj):
-        """Display hostel fees summary in admin list view"""
-        if not obj.hostel_fees:
-            return "Not Available"
-        
-        room_names = {
-            '1': 'Normal+Common',
-            '2': 'Normal+Attached',
-            '3': 'AC+Common',
-            '4': 'AC+Attached'
-        }
-        
-        summary = []
-        for room_type, data in obj.hostel_fees.items():
-            fee = data.get('fee', 0)
-            if fee > 0:
-                room_name = room_names.get(room_type, f'Room {room_type}')
-                summary.append(f"{room_name}: ₹{fee:,.0f}")
-        
-        return ", ".join(summary) if summary else "Not Available"
-    hostel_fees_summary.short_description = 'Hostel Fees'
+    def total_fee_display(self, obj):
+        return f"₹ {obj.total_fee:,.2f}"
+    total_fee_display.short_description = 'Total Fee'
     
     def transport_fee_range_display(self, obj):
         if obj.transport_fee_min == obj.transport_fee_max:
@@ -189,83 +197,67 @@ class FeesAdmin(admin.ModelAdmin):
     transport_fee_range_display.short_description = 'Transport Fee Range'
     
     def total_fee_calculated(self, obj):
-        """Display detailed fee breakdown in admin panel - courses are separate now"""
+        """Display detailed fee breakdown in admin panel"""
         # Get all courses for this college
         courses = Course.objects.filter(college=obj.college, is_active=True)
+        breakdown = obj.get_fee_breakdown()
         
         html = '<div style="background: #f8fafc; padding: 12px; border-radius: 6px; border-left: 3px solid #3AAAD4;">'
-        html += '<strong style="font-size: 14px;">📊 College Fee Structure (Academic Year: {})</strong><br/><br/>'.format(obj.academic_year)
+        html += '<strong style="font-size: 14px;">📊 Fee Breakdown (Academic Year: {})</strong><br/><br/>'.format(obj.academic_year)
         
-        # Admission fee
-        html += '• <strong>Admission Fee:</strong> ₹ {:,.2f}<br/>'.format(obj.admission_fee)
+        # One-time fees
+        html += '<strong>💰 One-time Fees:</strong><br/>'
+        html += '• Application Fee: ₹ {:,.2f}<br/>'.format(breakdown['one_time_fees']['application_fee'])
+        html += '• Admission Fee: ₹ {:,.2f}<br/>'.format(breakdown['one_time_fees']['admission_fee'])
+        html += '<strong>Total One-time: ₹ {:,.2f}</strong><br/><br/>'.format(breakdown['one_time_fees']['total_one_time'])
         
-        # Hostel fees breakdown
-        if obj.hostel_fees:
-            room_names = {
-                1: 'Normal + Common Bathroom',
-                2: 'Normal + Attached Bathroom',
-                3: 'AC + Common Bathroom',
-                4: 'AC + Attached Bathroom'
-            }
-            html += '<br/><strong>🏠 Hostel Options:</strong><br/>'
-            for room_type, data in obj.hostel_fees.items():
-                fee = data.get('fee', 0)
-                seats = data.get('available_seats', 0)
-                room_name = room_names.get(int(room_type), f'Room {room_type}')
-                html += '&nbsp;&nbsp;• {}: ₹ {:,.2f}'.format(room_name, fee)
-                if seats:
-                    html += ' ({} seats)'.format(seats)
-                html += '<br/>'
-        else:
-            html += '<br/>• <strong>Hostel Fee:</strong> Not Available<br/>'
+        # Annual fees
+        html += '<strong>📚 Annual Fees:</strong><br/>'
+        html += '• Book Fee: ₹ {:,.2f}<br/>'.format(breakdown['annual_fees']['book_fee'])
+        html += '• Exam Fee: ₹ {:,.2f}<br/>'.format(breakdown['annual_fees']['exam_fee'])
+        html += '• Lab Fee: ₹ {:,.2f}<br/>'.format(breakdown['annual_fees']['lab_fee'])
+        html += '• Sports Fee: ₹ {:,.2f}<br/>'.format(breakdown['annual_fees']['sports_fee'])
+        if breakdown['annual_fees']['miscellaneous_fee'] > 0:
+            html += '• Miscellaneous: ₹ {:,.2f}<br/>'.format(breakdown['annual_fees']['miscellaneous_fee'])
+        html += '<strong>Total Annual: ₹ {:,.2f}</strong><br/><br/>'.format(breakdown['annual_fees']['total_annual'])
+        
+        # Additional fees
+        if breakdown['additional_fees']:
+            html += '<strong>📝 Additional Fees:</strong><br/>'
+            for fee in breakdown['additional_fees']:
+                refundable = " (Refundable)" if fee['refundable'] else ""
+                html += '• {}: ₹ {:,.2f}{}<br/>'.format(fee['name'], fee['amount'], refundable)
+            html += '<br/>'
         
         # Transport fees
         if obj.transport_fee_min == obj.transport_fee_max:
             transport_text = f"₹ {obj.transport_fee_min:,.2f}" if obj.transport_fee_min > 0 else "Not Available"
         else:
             transport_text = f"₹ {obj.transport_fee_min:,.2f} - ₹ {obj.transport_fee_max:,.2f}"
-        html += '<br/>• <strong>Transport Fee Range:</strong> {}<br/>'.format(transport_text)
+        html += '• <strong>Transport Fee Range:</strong> {}<br/><br/>'.format(transport_text)
         
-        # Courses and their tuition fees
-        if courses.exists():
-            html += '<br/><hr style="margin: 10px 0; border-color: #e2e8f0;">'
-            html += '<strong>📚 Courses Offered with Tuition Fees:</strong><br/><br/>'
-            html += '<table style="width: 100%; border-collapse: collapse;">'
-            html += '<tr style="background: #e2e8f0;">'
-            html += '<th style="padding: 6px; text-align: left;">Course</th>'
-            html += '<th style="padding: 6px; text-align: left;">Management Quota</th>'
-            html += '<th style="padding: 6px; text-align: left;">Government Quota</th>'
-            html += '</tr>'
-            
-            for course in courses[:10]:  # Limit to 10 courses for display
-                html += '<tr>'
-                html += '<td style="padding: 6px; border-bottom: 1px solid #e2e8f0;">{}</td>'.format(course.course_name[:40])
-                html += '<td style="padding: 6px; border-bottom: 1px solid #e2e8f0;">₹ {:,.2f}/year</td>'.format(course.tuition_fee_management)
-                html += '<td style="padding: 6px; border-bottom: 1px solid #e2e8f0;">₹ {:,.2f}/year</td>'.format(course.tuition_fee_government)
-                html += '</tr>'
-            
-            if courses.count() > 10:
-                html += '<tr><td colspan="3" style="padding: 6px; text-align: center;"><em>... and {} more courses</em></td></tr>'.format(courses.count() - 10)
-            
-            html += '</table>'
-            
-            # Calculate average tuition fee for reference
-            avg_management = courses.aggregate(Avg('tuition_fee_management'))['tuition_fee_management__avg'] or 0
-            avg_government = courses.aggregate(Avg('tuition_fee_government'))['tuition_fee_government__avg'] or 0
-            
-            html += '<br/><div style="background: #f1f5f9; padding: 8px; border-radius: 4px; margin-top: 8px;">'
-            html += '<strong>📈 Average Tuition Fee:</strong><br/>'
-            html += '• Management Quota: ₹ {:,.2f}/year<br/>'.format(avg_management)
-            html += '• Government Quota: ₹ {:,.2f}/year'.format(avg_government)
+        # Grand total
+        html += '<hr style="margin: 10px 0; border-color: #e2e8f0;">'
+        html += '<strong>🎯 Grand Total: ₹ {:,.2f}</strong><br/>'.format(breakdown['grand_total'])
+        
+        # Hostel information note
+        hostel_count = Hostel.objects.filter(college=obj.college, is_active=True).count()
+        if hostel_count > 0:
+            html += '<br/><div style="background: #e3f2fd; padding: 8px; border-radius: 4px; margin-top: 8px;">'
+            html += '🏠 <strong>Note:</strong> Hostel fees are managed separately. '
+            html += 'This college has {} hostel option(s) with different room types.'.format(hostel_count)
             html += '</div>'
-        else:
-            html += '<br/><div style="background: #fff3cd; padding: 8px; border-radius: 4px;">'
-            html += '⚠️ No active courses found for this college. Please add courses in the Course section.'
+        
+        # Courses information
+        if courses.exists():
+            html += '<br/><div style="background: #f1f5f9; padding: 8px; border-radius: 4px; margin-top: 8px;">'
+            html += '📚 <strong>Note:</strong> Tuition fees are course-specific. '
+            html += 'This college offers {} active course(s) with their own tuition fee structures.'.format(courses.count())
             html += '</div>'
         
         html += '</div>'
         return html
-    total_fee_calculated.short_description = 'Fee Calculator (with Courses)'
+    total_fee_calculated.short_description = 'Fee Calculator'
     total_fee_calculated.allow_tags = True
     
     def save_model(self, request, obj, form, change):
@@ -279,15 +271,15 @@ class FeesAdmin(admin.ModelAdmin):
         if obj.transport_fee_max is None:
             obj.transport_fee_max = 0
         
-        # Ensure hostel_fees is a dict
-        if obj.hostel_fees is None:
-            obj.hostel_fees = {}
+        # Ensure additional_fees is a dict
+        if obj.additional_fees is None:
+            obj.additional_fees = {}
         
         super().save_model(request, obj, form, change)
     
     def get_queryset(self, request):
-        """Optimize queryset with select_related"""
         return super().get_queryset(request).select_related('college')
+
 
 # ==================== USER PROFILE ADMIN ====================
 @admin.register(UserProfile)
@@ -298,7 +290,7 @@ class UserProfileAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at', 'updated_at')
     
     fieldsets = (
-        ('Personal Information', {'fields': ('first_name', 'last_name', 'date_of_birth', 'gender')}),
+        ('Personal Information', {'fields': ('user', 'first_name', 'last_name', 'date_of_birth', 'gender')}),
         ('Contact Information', {'fields': ('email', 'phone_number', 'whatsapp_number')}),
         ('Address', {'fields': ('address', 'city', 'state', 'pincode')}),
         ('Timestamps', {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)})

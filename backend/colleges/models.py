@@ -224,41 +224,43 @@ class Course(models.Model):
     class Meta:
         ordering = ['college__college_name', 'course_code']
         unique_together = ['college', 'course_code']
-        
+
 class Fees(models.Model):
     PAYMENT_FREQUENCY_CHOICES = [
         ('yearly', 'Yearly'),
         ('semester', 'Semester'),
         ('quarterly', 'Quarterly'),
     ]
-    
-    HOSTEL_ROOM_TYPE_CHOICES = [
-        (1, 'Normal Room + Common Bathroom'),
-        (2, 'Normal Room + Attached Bathroom'),
-        (3, 'AC Room + Common Bathroom'),
-        (4, 'AC Room + Attached Bathroom'),
-    ]
 
     fee_id = models.AutoField(primary_key=True)
     college = models.ForeignKey('College', on_delete=models.CASCADE, related_name='fees')
     academic_year = models.CharField(max_length=9)
-    
-    # Hostel Fees - Store as JSON for multiple room types
-    hostel_fees = models.JSONField(default=dict, blank=True, help_text="Hostel fees for different room types")
-    # Example format:
-    # {
-    #     "1": {"fee": 45000, "available_seats": 100},  # Normal + Common
-    #     "2": {"fee": 55000, "available_seats": 80},   # Normal + Attached
-    #     "3": {"fee": 75000, "available_seats": 50},   # AC + Common
-    #     "4": {"fee": 90000, "available_seats": 40}    # AC + Attached
-    # }
     
     # Transport Fee Range
     transport_fee_min = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     transport_fee_max = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
     # One-time fees
-    admission_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    admission_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="One-time admission fee")
+    application_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Application fee for admission")
+    book_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Book/library fee")
+    exam_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Examination fee")
+    lab_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Laboratory fee")
+    sports_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Sports facilities fee")
+    
+    # Miscellaneous fees
+    miscellaneous_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Other miscellaneous charges")
+    miscellaneous_description = models.TextField(null=True, blank=True, help_text="Description of miscellaneous fees")
+    
+    # Additional JSON field for flexible miscellaneous fees
+    additional_fees = models.JSONField(default=dict, blank=True, help_text="Additional fees like: caution_deposit, alumni_fee, etc.")
+    # Example format:
+    # {
+    #     "caution_deposit": {"amount": 5000, "refundable": true, "description": "Library caution deposit"},
+    #     "alumni_fee": {"amount": 1000, "description": "Alumni association fee"},
+    #     "medical_fee": {"amount": 2000, "description": "Medical insurance"},
+    #     "cultural_fee": {"amount": 1500, "description": "Cultural activities fee"}
+    # }
     
     # Payment settings
     payment_frequency = models.CharField(max_length=20, choices=PAYMENT_FREQUENCY_CHOICES, default='yearly')
@@ -275,77 +277,144 @@ class Fees(models.Model):
         unique_together = ['college', 'academic_year']
         ordering = ['-academic_year', 'college__college_name']
     
-    @property
-    def hostel_room_display(self):
-        """Get display name for hostel room type"""
-        return dict(self.HOSTEL_ROOM_TYPE_CHOICES)
-    
-    def get_hostel_fee(self, room_type):
-        """Get hostel fee for specific room type"""
-        return self.hostel_fees.get(str(room_type), {}).get('fee', 0)
-    
-    def get_all_hostel_options(self):
-        """Get all hostel options with fees"""
-        options = []
-        for room_type, display_name in self.HOSTEL_ROOM_TYPE_CHOICES:
-            fee_data = self.hostel_fees.get(str(room_type), {})
-            options.append({
-                'room_type': room_type,
-                'room_type_display': display_name,
-                'hostel_fee': float(fee_data.get('fee', 0)),
-                'available_seats': fee_data.get('available_seats', 0)
-            })
-        return options
-    
-    def get_fee_summary(self):
-        """Get fee summary for API response"""
-        return {
-            'fee_id': self.fee_id,
-            'academic_year': self.academic_year,
-            'admission_fee': float(self.admission_fee),
-            'hostel_options': self.get_all_hostel_options(),
-            'transport_fee_min': float(self.transport_fee_min),
-            'transport_fee_max': float(self.transport_fee_max),
-            'payment_frequency': self.payment_frequency,
-            'fee_notes': self.fee_notes,
-        }
-    
     def __str__(self):
-        # Fixed: Removed reference to self.course
         return f"{self.college.college_name} - Fees ({self.academic_year})"
-
+    
+    @property
+    def total_one_time_fees(self):
+        """Calculate all one-time fees"""
+        return (float(self.admission_fee or 0) + 
+                float(self.application_fee or 0))
+    
+    @property
+    def total_annual_fees(self):
+        """Calculate all annual/recurring fees"""
+        return (float(self.book_fee or 0) + 
+                float(self.exam_fee or 0) + 
+                float(self.lab_fee or 0) + 
+                float(self.sports_fee or 0) +
+                float(self.miscellaneous_fee or 0))
+    
     @property
     def total_fee(self):
-        """Calculate total fee without transport (tuition fees are now in Course model)"""
-        # Fixed: Removed reference to self.course
-        # Since tuition fees are now in Course model and each college has multiple courses,
-        # total_fee should be calculated per course or removed entirely
-        # For now, return only admission fee as base
-        return float(self.admission_fee or 0)
+        """Calculate total fee without transport and hostel"""
+        return self.total_one_time_fees + self.total_annual_fees
     
     @property
     def total_fee_with_transport_min(self):
-        """Calculate total fee with minimum transport fee"""
+        """Total fee with minimum transport"""
         return self.total_fee + float(self.transport_fee_min or 0)
     
     @property
     def total_fee_with_transport_max(self):
-        """Calculate total fee with maximum transport fee"""
+        """Total fee with maximum transport"""
         return self.total_fee + float(self.transport_fee_max or 0)
     
+    def get_additional_fees_list(self):
+        """Get additional fees as a list for API response"""
+        fees_list = []
+        for key, value in self.additional_fees.items():
+            fee_item = {
+                'name': key.replace('_', ' ').title(),
+                'amount': float(value.get('amount', 0)),
+                'refundable': value.get('refundable', False),
+                'description': value.get('description', '')
+            }
+            fees_list.append(fee_item)
+        return fees_list
+    
+    def get_fee_breakdown(self):
+        """Get complete fee breakdown"""
+        return {
+            'one_time_fees': {
+                'admission_fee': float(self.admission_fee),
+                'application_fee': float(self.application_fee),
+                'total_one_time': self.total_one_time_fees
+            },
+            'annual_fees': {
+                'book_fee': float(self.book_fee),
+                'exam_fee': float(self.exam_fee),
+                'lab_fee': float(self.lab_fee),
+                'sports_fee': float(self.sports_fee),
+                'miscellaneous_fee': float(self.miscellaneous_fee),
+                'total_annual': self.total_annual_fees
+            },
+            'transport_fees': {
+                'min': float(self.transport_fee_min),
+                'max': float(self.transport_fee_max)
+            },
+            'additional_fees': self.get_additional_fees_list(),
+            'grand_total': self.total_fee
+        }
+
+# models.py
+
+class Hostel(models.Model):
+    GENDER_CHOICES = [
+        ('boys', 'Boys'),
+        ('girls', 'Girls'),
+        ('both', 'Both'),
+    ]
+    
+    ROOM_TYPE_CHOICES = [
+        (1, 'Normal Room + Common Bathroom'),
+        (2, 'Normal Room + Attached Bathroom'),
+        (3, 'AC Room + Common Bathroom'),
+        (4, 'AC Room + Attached Bathroom'),
+    ]
+    
+    # Basic Information
+    hostel_id = models.AutoField(primary_key=True)
+    college = models.ForeignKey('College', on_delete=models.CASCADE, related_name='hostels')
+    name = models.CharField(max_length=100, help_text="Hostel name (e.g., 'Boys Hostel - Block A', 'Ladies Hostel')")
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, default='boys')
+    
+    # Room Details
+    room_type = models.IntegerField(choices=ROOM_TYPE_CHOICES, help_text="Type of room")
+    
+    # Fee Structure
+    fee_per_semester = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    fee_per_year = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    caution_deposit = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Refundable caution deposit")
+    
+    # Capacity
+    total_rooms = models.IntegerField(default=1, help_text="Total number of rooms of this type")
+    capacity_per_room = models.IntegerField(default=2, help_text="Number of students per room")
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['college__college_name', 'name', 'room_type']
+        unique_together = ['college', 'name', 'room_type']
+        verbose_name = 'Hostel'
+        verbose_name_plural = 'Hostels'
+    
+    def __str__(self):
+        room_type_display = dict(self.ROOM_TYPE_CHOICES).get(self.room_type, 'Unknown')
+        return f"{self.college.college_name} - {self.name} ({room_type_display})"
+    
     @property
-    def transport_fee_range(self):
-        """Get transport fee range as string"""
-        if self.transport_fee_min == self.transport_fee_max:
-            if self.transport_fee_min == 0:
-                return "Not Available"
-            return f"₹ {self.transport_fee_min:,.2f}"
-        return f"₹ {self.transport_fee_min:,.2f} - ₹ {self.transport_fee_max:,.2f}"
-
-    def get_payment_frequency_display(self):
-        """Get display name for payment frequency"""
-        return dict(self.PAYMENT_FREQUENCY_CHOICES).get(self.payment_frequency, self.payment_frequency)
-
+    def room_type_display(self):
+        """Get display name for room type"""
+        return dict(self.ROOM_TYPE_CHOICES).get(self.room_type)
+    
+    @property
+    def total_capacity(self):
+        """Calculate total capacity"""
+        return self.total_rooms * self.capacity_per_room
+    
+   
+    
+    @property
+    def total_fee_with_deposit(self):
+        """Calculate total fee including caution deposit"""
+        return self.fee_per_year + self.caution_deposit
+    
 # ==================== USER PROFILE MODEL ====================
 class UserProfile(models.Model):
     GENDER_CHOICES = [

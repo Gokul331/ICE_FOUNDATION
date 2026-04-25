@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from .models import College, Course, UserProfile, TimelineEvent, Fees
+from .models import College, Course, UserProfile, TimelineEvent, Fees, Hostel
 
 
 class CollegeSerializer(serializers.ModelSerializer):
@@ -66,7 +66,32 @@ class CourseSerializer(serializers.ModelSerializer):
             return f"₹{obj.tuition_fee_government:,.2f}/year"
         return None
 
-# ==================== FEES SERIALIZER (UPDATED - No course field) ====================
+
+# ==================== HOSTEL SERIALIZER ====================
+
+class HostelSerializer(serializers.ModelSerializer):
+    room_type_display = serializers.ReadOnlyField()
+    gender_display = serializers.SerializerMethodField()
+    total_capacity = serializers.ReadOnlyField()
+    total_fee_with_deposit = serializers.ReadOnlyField()
+    
+    class Meta:
+        model = Hostel
+        fields = [
+            'hostel_id', 'college', 'name', 'gender', 'gender_display',
+            'room_type', 'room_type_display',
+            'fee_per_semester', 'fee_per_year', 'caution_deposit',
+            'total_fee_with_deposit',
+            'total_rooms', 'capacity_per_room', 'total_capacity',
+            'is_active', 'created_at', 'updated_at'
+        ]
+    
+    def get_gender_display(self, obj):
+        return dict(Hostel.GENDER_CHOICES).get(obj.gender, obj.gender)
+
+
+# ==================== FEES SERIALIZER ====================
+
 class FeesSerializer(serializers.ModelSerializer):
     # Display fields for better readability
     payment_frequency_display = serializers.SerializerMethodField()
@@ -74,14 +99,10 @@ class FeesSerializer(serializers.ModelSerializer):
     total_fee_with_transport_min = serializers.ReadOnlyField()
     total_fee_with_transport_max = serializers.ReadOnlyField()
     transport_fee_range = serializers.ReadOnlyField()
-    
-    # NOTE: Tuition fees are now stored directly in the Fees model
-    # or can be fetched from Course model via college relationship
-    tuition_fee_management = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
-    tuition_fee_government = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
-    
-    # Hostel options as structured data
-    hostel_options = serializers.SerializerMethodField()
+    total_one_time_fees = serializers.ReadOnlyField()
+    total_annual_fees = serializers.ReadOnlyField()
+    additional_fees_list = serializers.SerializerMethodField()
+    fee_breakdown = serializers.SerializerMethodField()
     
     # Nested fields for better API response
     college_name = serializers.ReadOnlyField(source='college.college_name')
@@ -90,36 +111,26 @@ class FeesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Fees
         fields = [
-            'fee_id',
-            'college',
-            'college_name',
-            'college_details',
-            'academic_year',
-            'tuition_fee_management',   # Management quota fee (now in Fees model)
-            'tuition_fee_government',   # Government quota fee (now in Fees model)
-            'hostel_fees',
-            'hostel_options',
-            'transport_fee_min',
-            'transport_fee_max',
-            'transport_fee_range',
-            'admission_fee',
-            'payment_frequency',
-            'payment_frequency_display',
-            'total_fee',
-            'total_fee_with_transport_min',
-            'total_fee_with_transport_max',
-            'fee_notes',
-            'created_at',
-            'updated_at'
+            'fee_id', 'college', 'college_name', 'college_details', 'academic_year',
+            'transport_fee_min', 'transport_fee_max', 'transport_fee_range',
+            'admission_fee', 'application_fee', 'book_fee', 'exam_fee', 
+            'lab_fee', 'sports_fee', 'miscellaneous_fee', 'miscellaneous_description',
+            'additional_fees', 'additional_fees_list', 'fee_breakdown',
+            'total_one_time_fees', 'total_annual_fees',
+            'payment_frequency', 'payment_frequency_display',
+            'total_fee', 'total_fee_with_transport_min', 'total_fee_with_transport_max',
+            'fee_notes', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
     
     def get_payment_frequency_display(self, obj):
         return obj.get_payment_frequency_display()
     
-    def get_hostel_options(self, obj):
-        """Get all hostel options with fees from the JSON field"""
-        return obj.get_all_hostel_options()
+    def get_additional_fees_list(self, obj):
+        return obj.get_additional_fees_list()
+    
+    def get_fee_breakdown(self, obj):
+        return obj.get_fee_breakdown()
     
     def get_college_details(self, obj):
         """Get basic college details"""
@@ -138,54 +149,35 @@ class FeesSerializer(serializers.ModelSerializer):
 class FeesListSerializer(serializers.ModelSerializer):
     """Simplified serializer for list views"""
     college_name = serializers.ReadOnlyField(source='college.college_name')
-    tuition_fee_management = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
-    tuition_fee_government = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
     total_fee = serializers.ReadOnlyField()
     transport_fee_range = serializers.ReadOnlyField()
     payment_frequency_display = serializers.SerializerMethodField()
-    # Add basic hostel info for list view
-    hostel_fee_range = serializers.SerializerMethodField()
     
     class Meta:
         model = Fees
         fields = [
-            'fee_id',
-            'college',
-            'college_name',
-            'academic_year',
-            'tuition_fee_management',
-            'tuition_fee_government',
-            'hostel_fee_range',
-            'transport_fee_range',
-            'total_fee',
-            'payment_frequency',
-            'payment_frequency_display',
+            'fee_id', 'college', 'college_name', 'academic_year',
+            'admission_fee', 'application_fee', 'book_fee', 'exam_fee',
+            'transport_fee_range', 'total_fee',
+            'payment_frequency', 'payment_frequency_display',
         ]
     
     def get_payment_frequency_display(self, obj):
         return obj.get_payment_frequency_display()
-    
-    def get_hostel_fee_range(self, obj):
-        """Get hostel fee range from JSON data"""
-        hostel_fees = obj.hostel_fees or {}
-        fees = [data.get('fee', 0) for data in hostel_fees.values() if data.get('fee', 0) > 0]
-        if not fees:
-            return "Not Available"
-        if len(fees) == 1:
-            return f"₹{fees[0]:,.2f}"
-        return f"₹{min(fees):,.2f} - ₹{max(fees):,.2f}"
 
 
 class CollegeWithFeesSerializer(serializers.ModelSerializer):
     """Serializer for college with all fees"""
     fees = serializers.SerializerMethodField()
     courses = serializers.SerializerMethodField()
+    hostels = serializers.SerializerMethodField()
     
     class Meta:
         model = College
         fields = [
             'college_id', 'college_name', 'counselling_code', 
-            'location_city', 'location_state', 'type', 'courses', 'fees'
+            'location_city', 'location_state', 'type', 
+            'courses', 'fees', 'hostels'
         ]
     
     def get_fees(self, obj):
@@ -193,13 +185,18 @@ class CollegeWithFeesSerializer(serializers.ModelSerializer):
         return FeesListSerializer(fees, many=True).data
     
     def get_courses(self, obj):
-        courses = Course.objects.filter(college_id=obj.college_id)
+        courses = Course.objects.filter(college_id=obj.college_id, is_active=True)
         return CourseSerializer(courses, many=True).data
+    
+    def get_hostels(self, obj):
+        hostels = Hostel.objects.filter(college=obj, is_active=True)
+        return HostelSerializer(hostels, many=True).data
 
 
 class CourseWithFeesSerializer(serializers.ModelSerializer):
     """Serializer for course with fees from its college"""
     college_fees = serializers.SerializerMethodField()
+    college_hostels = serializers.SerializerMethodField()
     
     class Meta:
         model = Course
@@ -209,6 +206,11 @@ class CourseWithFeesSerializer(serializers.ModelSerializer):
         """Get fees from the college this course belongs to"""
         fees = Fees.objects.filter(college=obj.college).order_by('-academic_year')
         return FeesListSerializer(fees, many=True).data
+    
+    def get_college_hostels(self, obj):
+        """Get hostels from the college this course belongs to"""
+        hostels = Hostel.objects.filter(college=obj.college, is_active=True)
+        return HostelSerializer(hostels, many=True).data
 
 
 class FeeRangeSerializer(serializers.Serializer):
@@ -216,21 +218,35 @@ class FeeRangeSerializer(serializers.Serializer):
     min_fee = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     max_fee = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     academic_year = serializers.CharField(required=False)
-    quota_type = serializers.ChoiceField(choices=['management', 'government'], required=False, help_text="Quota type: management or government")
-    hostel_room_type_id = serializers.IntegerField(required=False, help_text="1-4 for different room types")
+    quota_type = serializers.ChoiceField(choices=['management', 'government'], required=False)
 
-# ==================== EXISTING SERIALIZERS ====================
+
+# ==================== USER PROFILE SERIALIZER ====================
+
 class UserProfileSerializer(serializers.ModelSerializer):
+    username = serializers.ReadOnlyField(source='user.username')
+    
     class Meta:
         model = UserProfile
         fields = '__all__'
+        read_only_fields = ['created_at', 'updated_at']
 
+
+# ==================== TIMELINE EVENT SERIALIZER ====================
 
 class TimelineEventSerializer(serializers.ModelSerializer):
+    college_name = serializers.ReadOnlyField(source='college.college_name')
+    event_type_display = serializers.SerializerMethodField()
+    
     class Meta:
         model = TimelineEvent
         fields = '__all__'
+    
+    def get_event_type_display(self, obj):
+        return dict(TimelineEvent.EVENT_TYPES).get(obj.event_type, obj.event_type)
 
+
+# ==================== AUTH SERIALIZERS ====================
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
@@ -258,6 +274,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         validated_data.pop('password2')
+        phone_number = validated_data.pop('phone_number', '')
         
         user = User.objects.create_user(
             username=validated_data['username'],
@@ -272,11 +289,11 @@ class RegisterSerializer(serializers.ModelSerializer):
             first_name=validated_data.get('first_name', ''),
             last_name=validated_data.get('last_name', ''),
             email=validated_data['email'],
-            phone_number=validated_data.get('phone_number', ''),
+            phone_number=phone_number or '0000000000',
             address='',
             city='',
             state='Tamil Nadu',
-            pincode=''
+            pincode='000000'
         )    
         return user
 
