@@ -14,20 +14,26 @@ function Home() {
     const fetchCollegesAndCourses = async () => {
       try {
         setLoading(true);
+        setError(null);
+        
         const collegesData = await getColleges();
         const collegesArray = Array.isArray(collegesData)
           ? collegesData
           : collegesData.results || [];
 
+        // Fetch courses for each college (limit to first 8 for performance)
         const collegesWithCourses = await Promise.all(
-          collegesArray.map(async (college) => {
+          collegesArray.slice(0, 8).map(async (college) => {
             try {
               const courses = await getCollegeCourses(college.college_id);
+              // Get only first 3 courses for display
+              const topCourses = Array.isArray(courses) ? courses.slice(0, 3) : [];
               return {
                 ...college,
-                courses: Array.isArray(courses) ? courses : [],
+                courses: topCourses,
               };
             } catch (err) {
+              console.error(`Error fetching courses for college ${college.college_id}:`, err);
               return { ...college, courses: [] };
             }
           }),
@@ -36,7 +42,8 @@ function Home() {
         setColleges(collegesWithCourses);
         setLoading(false);
       } catch (err) {
-        setError("Failed to load colleges");
+        console.error("Error fetching colleges:", err);
+        setError("Failed to load colleges. Please try again later.");
         setColleges([]);
         setLoading(false);
       }
@@ -47,14 +54,39 @@ function Home() {
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    const storedToken = localStorage.getItem("token");
+    
+    if (storedUser && storedToken) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (err) {
+        console.error("Error parsing user data:", err);
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+      }
     }
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
     setUser(null);
+    // Optionally redirect to home page
+    window.location.href = "/";
+  };
+
+  // Function to get college initials for logo fallback
+  const getCollegeInitials = (name) => {
+    if (!name) return "CO";
+    const words = name.split(" ");
+    if (words.length === 1) {
+      return words[0].substring(0, 2).toUpperCase();
+    }
+    return words
+      .map((word) => word.charAt(0))
+      .join("")
+      .substring(0, 2)
+      .toUpperCase();
   };
 
   return (
@@ -244,64 +276,91 @@ function Home() {
             </p>
           </div>
 
-          {loading && <div className="loading">Loading colleges...</div>}
-          {error && <div className="error">{error}</div>}
+          {loading && (
+            <div className="loading-container">
+              <div className="loading-spinner"></div>
+              <p>Loading colleges...</p>
+            </div>
+          )}
+          
+          {error && (
+            <div className="error-container">
+              <div className="error-icon">!</div>
+              <p>{error}</p>
+              <button onClick={() => window.location.reload()} className="retry-btn">
+                Try Again
+              </button>
+            </div>
+          )}
 
-          {!loading &&
-            !error &&
-            Array.isArray(colleges) &&
-            colleges.length > 0 && (
-              <div className="colleges-list">
-                {colleges.slice(0, 8).map((college, index) => (
-                  <Link
-                    key={college.college_id}
-                    to={`/colleges/${college.college_id}`}
-                    className="college-item"
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    <div className="college-item-left">
-                      <div className="college-item-logo">
-                        {college.logo_url ? (
-                          <img
-                            src={college.logo_url}
-                            alt={college.college_name}
-                          />
-                        ) : (
-                          <span>
-                            {college.college_name?.slice(0, 2).toUpperCase() ||
-                              "CO"}
-                          </span>
-                        )}
-                      </div>
-                      <div className="college-item-info">
-                        <h4>{college.college_name || "College Name"}</h4>
-                        <p>
-                          {college.location_city || "City"},{" "}
-                          {college.location_state || "State"}
-                        </p>
-                        <div className="college-label">Popular courses :</div>
-                        <div className="college-item-courses">
-                          {college.courses
-                            ?.slice(0, 2)
-                            .map((c, i) => (
-                              <span key={i}>{c.course_name || c.name}</span>
-                            )) || <span>Multiple courses available</span>}
-                        </div>
-                      </div>
+          {!loading && !error && colleges.length > 0 && (
+            <div className="colleges-list">
+              {colleges.map((college, index) => (
+                <Link
+                  key={college.college_id}
+                  to={`/colleges/${college.college_id}`}
+                  className="college-item"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  <div className="college-item-card">
+                    <div className="college-item-logo">
+                      {college.logo_url ? (
+                        <img
+                          src={college.logo_url}
+                          alt={college.college_name}
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                            e.target.parentElement.querySelector("span").style.display = "flex";
+                          }}
+                        />
+                      ) : null}
+                      <span style={{ display: college.logo_url ? "none" : "flex" }}>
+                        {getCollegeInitials(college.college_name)}
+                      </span>
+                      <h4>{college.college_name || "College Name"}</h4>
                     </div>
-                    <div className="college-item-right">
-                      <span className="college-item-arrow">→</span>
+                    <div className="college-item-info">
+                      <p>
+                        {college.location_city || "City"},{" "}
+                        {college.location_state || "State"}
+                      </p>
+                      {college.courses && college.courses.length > 0 && (
+                        <>
+                          <div className="college-label">Popular courses :</div>
+                          <div className="college-item-courses">
+                            {college.courses.slice(0, 2).map((c, i) => (
+                              <span key={i}>
+                                {c.course_name || c.course_code || "Course"}
+                              </span>
+                            ))}
+                            {college.courses.length > 2 && (
+                              <span className="more-courses">
+                                +{college.courses.length - 2} more
+                              </span>
+                            )}
+                          </div>
+                        </>
+                      )}
+                      {(!college.courses || college.courses.length === 0) && (
+                        <div className="college-label">Multiple courses available</div>
+                      )}
                     </div>
-                  </Link>
-                ))}
-              </div>
-            )}
+                  </div>
+                  <div className="college-item-right">
+                    <span className="college-item-arrow">→</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
 
-          {!loading &&
-            !error &&
-            (!Array.isArray(colleges) || colleges.length === 0) && (
-              <div className="no-colleges">No colleges found</div>
-            )}
+          {!loading && !error && colleges.length === 0 && (
+            <div className="no-colleges-container">
+              <div className="no-colleges-icon">🏫</div>
+              <h3>No Colleges Found</h3>
+              <p>We couldn't find any colleges at the moment. Please check back later.</p>
+            </div>
+          )}
 
           <div className="view-all-wrap">
             <Link to="/colleges" className="btn-dark-outline">
@@ -358,7 +417,7 @@ function Home() {
             </div>
             <div className="bento-card">
               <div className="flex gap-2 items-center">
-                <div className="bento-icon ">💎</div>
+                <div className="bento-icon">💎</div>
                 <h3>Scholarship Finder</h3>
               </div>
               <p>
@@ -372,7 +431,6 @@ function Home() {
                 <div className="bento-icon">📊</div>
                 <h3>Rankings & Reviews</h3>
               </div>
-
               <p>
                 Real student reviews and official rankings to make informed
                 decisions.
@@ -384,7 +442,6 @@ function Home() {
                 <div className="bento-icon">🎯</div>
                 <h3>Expert Counseling</h3>
               </div>
-
               <p>
                 Get guidance from education experts with decades of experience.
               </p>
@@ -398,20 +455,18 @@ function Home() {
               <p>
                 Apply to multiple colleges with a single application form. Save
                 time and effort with our streamlined process.
-                <br />
-                <span>(JEE Entrance)</span>
               </p>
-
               <div className="quick-apply-logos">
                 <span>IIT</span>
-                <span>IIM</span>
                 <span>NIT</span>
+                <span>IIIT</span>
                 <span>AIIMS</span>
               </div>
             </div>
           </div>
         </div>
       </section>
+      
       {/* STATS SECTION */}
       <section className="stats-section">
         <div className="stats-container">

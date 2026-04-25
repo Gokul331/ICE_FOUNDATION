@@ -82,6 +82,47 @@ export const getCollegeFees = async (collegeId, params = {}) => {
   }
 };
 
+// Hostels - Public
+export const getCollegeHostels = async (collegeId) => {
+  try {
+    const response = await API.get(`colleges/${collegeId}/hostels/`);
+    return response.data;
+  } catch (error) {
+    console.log(`No hostels found for college ${collegeId}`);
+    return [];
+  }
+};
+
+export const getHostelDetail = async (hostelId) => {
+  try {
+    const response = await API.get(`hostels/${hostelId}/`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching hostel ${hostelId}:`, error);
+    throw error;
+  }
+};
+
+export const getAvailableHostels = async (params = {}) => {
+  try {
+    const response = await API.get("hostels/", { params });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching available hostels:", error);
+    throw error;
+  }
+};
+
+export const getHostelByRoomType = async (collegeId, roomType) => {
+  try {
+    const response = await API.get(`colleges/${collegeId}/hostels/${roomType}/`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching hostel with room type ${roomType}:`, error);
+    throw error;
+  }
+};
+
 export const suggestColleges = async (params) => {
   try {
     const response = await API.get("colleges/suggest/", { params });
@@ -113,7 +154,7 @@ export const getCourseDetail = async (id) => {
   }
 };
 
-// get course fees
+// Get course fees
 export const getCourseFees = async (courseId) => {
   try {
     const response = await API.get(`courses/${courseId}/fees/`);
@@ -122,7 +163,49 @@ export const getCourseFees = async (courseId) => {
     console.error(`Error fetching fees for course ${courseId}:`, error);
     return [];
   }
-}
+};
+
+// Fees - Public
+export const getFilteredFees = async (params = {}) => {
+  try {
+    const response = await API.get("fees/filter/", { params });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching filtered fees:", error);
+    throw error;
+  }
+};
+
+export const getFeeDetail = async (feeId) => {
+  try {
+    const response = await API.get(`fees/${feeId}/`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching fee ${feeId}:`, error);
+    throw error;
+  }
+};
+
+export const getFeeStatistics = async (params = {}) => {
+  try {
+    const response = await API.get("fees/statistics/", { params });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching fee statistics:", error);
+    throw error;
+  }
+};
+
+export const getFeeComparison = async (collegeIds, params = {}) => {
+  try {
+    const queryParams = { ...params, college_ids: collegeIds };
+    const response = await API.get("fees/comparison/", { params: queryParams });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching fee comparison:", error);
+    throw error;
+  }
+};
 
 // Timeline Events - Public
 export const getTimelineEvents = async (params) => {
@@ -385,6 +468,21 @@ export const changePassword = async (passwordData) => {
     return response.data;
   } catch (error) {
     console.error("Error changing password:", error);
+    throw error;
+  }
+};
+
+// ==================== HOSTEL APPLICATION (Requires Auth) ====================
+
+export const applyForHostel = async (applicationData) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await API.post("/hostel/apply/", applicationData, {
+      headers: { Authorization: `Token ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error applying for hostel:", error);
     throw error;
   }
 };
