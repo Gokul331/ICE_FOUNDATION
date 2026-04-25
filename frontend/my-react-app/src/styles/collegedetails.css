@@ -2452,3 +2452,237 @@
     padding: 12px;
   }
 }
+/* ==================== QUOTA SELECTOR STYLES ==================== */
+
+.quota-selector-container {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  border: 1px solid #e5e5e5;
+  box-shadow: var(--shadow-sm);
+}
+
+.quota-selector {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.quota-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+}
+
+.quota-btn {
+  padding: 8px 24px;
+  border: 2px solid #000000;
+  background: transparent;
+  color: #000000;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.quota-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+.quota-btn.active {
+  background: #000000;
+  color: #ffffff;
+}
+
+.quota-badge-container {
+  margin-bottom: 20px;
+  text-align: right;
+}
+
+.quota-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  background: #f0f0f0;
+  border-radius: 20px;
+  font-size: 13px;
+  color: #333;
+}
+
+.quota-badge strong {
+  color: #000000;
+}
+
+@media (max-width: 768px) {
+  .quota-selector {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .quota-btn {
+    text-align: center;
+  }
+  
+  .quota-badge-container {
+    text-align: center;
+  }
+}
+
+/* Other Fees Tab Styles */
+.other-fees-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+.other-fee-item {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  position: relative;
+  overflow: hidden;
+}
+
+.other-fee-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+ 
+}
+
+.other-fee-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(97, 97, 97, 0.1);
+  border-color: #e0e0e0;
+}
+
+.other-fee-label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  color: #6c757d;
+  margin-bottom: 0.75rem;
+  display: inline-block;
+  background: #f8f9fa;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+}
+
+.other-fee-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #2c3e50;
+  background: linear-gradient(135deg, #2c3e50, #3498db);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 0.5rem;
+}
+
+.other-fee-value small {
+  font-size: 0.75rem;
+  font-weight: normal;
+  color: #6c757d;
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
+}
+
+/* Alternative styling with icons */
+.other-fee-item.with-icon {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  gap: 1rem;
+}
+
+.fee-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #4CAF50, #8BC34A);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: white;
+}
+
+.fee-info {
+  flex: 1;
+}
+
+.fee-info .fee-label {
+  font-size: 0.8rem;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+}
+
+.fee-info .fee-amount {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.fee-info .fee-period {
+  font-size: 0.7rem;
+  color: #95a5a6;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .other-fees-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .other-fee-item {
+    padding: 1rem 1.25rem;
+  }
+  
+  .other-fee-value {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .other-fee-value {
+    font-size: 1.25rem;
+  }
+  
+  .other-fee-label {
+    font-size: 0.75rem;
+  }
+}
+
+/* Dark mode support (if needed) */
+@media (prefers-color-scheme: dark) {
+  .other-fee-item {
+    background: #fff;
+    border-color: #404040;
+  }
+  
+  .other-fee-label {
+    color: #202020;
+  }
+  
+  .other-fee-value {
+    color: #000000;
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+}

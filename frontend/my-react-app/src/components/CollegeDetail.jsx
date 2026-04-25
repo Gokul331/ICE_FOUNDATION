@@ -4,7 +4,6 @@ import {
   getCollegeDetail,
   getCollegeCourses,
   getCollegeFees,
-  getCourseFees,
 } from "../services/api";
 import Navbar from "./Navbar";
 import "../styles/collegedetails.css";
@@ -13,14 +12,14 @@ function CollegeDetail() {
   const { id } = useParams();
   const [college, setCollege] = useState(null);
   const [courses, setCourses] = useState([]);
-  const [fees, setFees] = useState([]);
-  const [courseFees, setCourseFees] = useState({});
+  const [fees, setFees] = useState(null); // Changed to single fee object
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [activeFeeTab, setActiveFeeTab] = useState({});
   const [expandedFees, setExpandedFees] = useState({});
+  const [selectedQuota, setSelectedQuota] = useState("management"); // 'management' or 'government'
 
   useEffect(() => {
     const fetchCollegeData = async () => {
@@ -38,33 +37,21 @@ function CollegeDetail() {
             ? coursesData
             : coursesData.results || [];
           setCourses(coursesList);
-
-          // Fetch individual course fees for each course
-          const feesMap = {};
-          for (const course of coursesList) {
-            if (course.course_id) {
-              try {
-                const courseFeeData = await getCourseFees(course.course_id);
-                feesMap[course.course_id] = courseFeeData;
-              } catch (err) {
-                console.log(`No fees found for course ${course.course_id}`);
-                feesMap[course.course_id] = null;
-              }
-            }
-          }
-          setCourseFees(feesMap);
         } catch (coursesErr) {
           console.log("No courses found for this college");
           setCourses([]);
         }
 
-        // Fetch fees structure
+        // Fetch fees structure - Now returns a single fee object per college
         try {
-          const feesData = await getCollegeFees(id);
-          setFees(Array.isArray(feesData) ? feesData : feesData.results || []);
+          const feesData = await getCollegeFees(collegeData.college_id);
+          // API returns array, but there's only one fee structure per college per academic year
+          const feeStructure =
+            Array.isArray(feesData) && feesData.length > 0 ? feesData[0] : null;
+          setFees(feeStructure);
         } catch (feesErr) {
           console.log("No fees structure found for this college");
-          setFees([]);
+          setFees(null);
         }
 
         setLoading(false);
@@ -104,7 +91,7 @@ function CollegeDetail() {
   };
 
   const formatCurrency = (amount) => {
-    if (!amount) return "N/A";
+    if (!amount || amount === 0) return "N/A";
     if (amount >= 10000000) {
       return `₹${(amount / 10000000).toFixed(2)} Cr`;
     }
@@ -114,14 +101,40 @@ function CollegeDetail() {
     return `₹${amount.toLocaleString()}`;
   };
 
-  // Get fee for a specific course from the fetched courseFees
-  const getCourseFee = (courseId) => {
-    const feeData = courseFees[courseId];
+  // Get tuition fee for a specific course with quota support
+  const getCourseTuitionFee = (course, quotaType = selectedQuota) => {
+    if (!course) return 0;
 
-    if (feeData) {
-      if (feeData.tuition_fee) return formatCurrency(feeData.tuition_fee);
+    if (quotaType === "management") {
+      return parseFloat(course.tuition_fee_management) || 0;
+    } else {
+      return parseFloat(course.tuition_fee_government) || 0;
+    }
+  };
+
+  // Get formatted tuition fee string
+  const getFormattedCourseFee = (course, quotaType = selectedQuota) => {
+    const fee = getCourseTuitionFee(course, quotaType);
+    if (fee > 0) {
+      return formatCurrency(fee);
     }
     return "Contact College";
+  };
+
+  // Get both quota fees for a course
+  const getCourseFeesByQuota = (course) => {
+    if (!course) return { management: 0, government: 0 };
+    return {
+      management: parseFloat(course.tuition_fee_management) || 0,
+      government: parseFloat(course.tuition_fee_government) || 0,
+    };
+  };
+
+  // Calculate total fee (tuition + admission)
+  const getTotalFee = (course) => {
+    const tuition = getCourseTuitionFee(course, selectedQuota);
+    const admission = fees ? parseFloat(fees.admission_fee) || 0 : 0;
+    return tuition + admission;
   };
 
   if (loading) {
@@ -256,6 +269,25 @@ function CollegeDetail() {
             Back to Colleges
           </Link>
 
+          {/* Quota Selector */}
+          <div className="quota-selector-container">
+            <div className="quota-selector">
+              <span className="quota-label">Select Admission Type:</span>
+              <button
+                className={`quota-btn ${selectedQuota === "management" ? "active" : ""}`}
+                onClick={() => setSelectedQuota("management")}
+              >
+                Management Quota
+              </button>
+              <button
+                className={`quota-btn ${selectedQuota === "government" ? "active" : ""}`}
+                onClick={() => setSelectedQuota("government")}
+              >
+                Government Quota
+              </button>
+            </div>
+          </div>
+
           {/* Tabs */}
           <div className="tabs-container">
             <button
@@ -308,11 +340,6 @@ function CollegeDetail() {
                         style={{ textTransform: "capitalize" }}
                       >
                         {college.affiliation.replace("_", " ")}
-                      </span>
-                    )}
-                    {college.scholarship_available && (
-                      <span className="badge badge-dark">
-                        Scholarship Available
                       </span>
                     )}
                     {college.hostel_available && (
@@ -368,11 +395,13 @@ function CollegeDetail() {
                   )}
 
                   {/* Contact Information */}
-                  {(college.phone || college.email || college.website) && (
+                  {(college.contact_phone ||
+                    college.email_domain ||
+                    college.website_url) && (
                     <div className="contact-section">
                       <h4>Contact Information</h4>
                       <div className="contact-list">
-                        {college.phone && (
+                        {college.contact_phone && (
                           <div className="contact-item">
                             <svg
                               width="20"
@@ -384,10 +413,10 @@ function CollegeDetail() {
                             >
                               <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.17-1.17a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z" />
                             </svg>
-                            <span>{college.phone}</span>
+                            <span>{college.contact_phone}</span>
                           </div>
                         )}
-                        {college.email && (
+                        {college.email_domain && (
                           <div className="contact-item">
                             <svg
                               width="20"
@@ -400,10 +429,10 @@ function CollegeDetail() {
                               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                               <polyline points="22,6 12,13 2,6" />
                             </svg>
-                            <span>{college.email}</span>
+                            <span>{college.email_domain}</span>
                           </div>
                         )}
-                        {college.website && (
+                        {college.website_url && (
                           <div className="contact-item">
                             <svg
                               width="20"
@@ -418,12 +447,12 @@ function CollegeDetail() {
                               <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
                             </svg>
                             <a
-                              href={college.website}
+                              href={college.website_url}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="contact-link"
                             >
-                              {college.website}
+                              {college.website_url}
                             </a>
                           </div>
                         )}
@@ -442,7 +471,7 @@ function CollegeDetail() {
                     <div className="action-item">
                       <div className="action-label">Median Package</div>
                       <div className="action-stat-value">
-                        ₹{parseFloat(college.median_salary)} LPA
+                        ₹{parseFloat(college.median_salary).toFixed(1)} LPA
                       </div>
                     </div>
                   )}
@@ -468,12 +497,22 @@ function CollegeDetail() {
             </div>
           )}
 
-          {/* Courses & Fees Tab */}
+          {/* Courses & Fees Tab - Updated for new model */}
           {activeTab === "courses" && (
             <div>
               {courses && courses.length > 0 ? (
                 <>
                   <div className="info-card">
+                    <div className="quota-badge-container">
+                      <span className="quota-badge">
+                        Showing fees for:{" "}
+                        <strong>
+                          {selectedQuota === "management"
+                            ? "Management Quota"
+                            : "Government Quota"}
+                        </strong>
+                      </span>
+                    </div>
                     <h3>Courses & Fee Structure</h3>
                     <div className="courses-table-container">
                       <table className="courses-table">
@@ -482,529 +521,613 @@ function CollegeDetail() {
                             <th>Course Name</th>
                             <th>Degree</th>
                             <th>Duration</th>
-                            <th>Course Fee</th>
-                            <th>Scholarship Amount</th>
+                            <th>
+                              Tuition Fee (
+                              {selectedQuota === "management"
+                                ? "Management"
+                                : "Government"}
+                              )
+                            </th>
+                            <th>Admission Fee</th>
+                            <th>Total Fee</th>
                             <th>Cutoff Marks</th>
                             <th>Action</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {courses.map((course, index) => (
-                            <tr key={course.course_id || index}>
-                              <td className="course-name">
-                                <strong>
-                                  {course.course_name || course.name}
-                                </strong>
-                              </td>
-                              <td>
-                                {course.degree_name || course.degree || "N/A"}
-                              </td>
-                              <td>
-                                {course.duration_years ||
-                                  course.duration ||
-                                  "N/A"}{" "}
-                                years
-                              </td>
-                              <td>
-                                {(() => {
-                                  const feeData = courseFees[course.course_id];
+                          {courses.map((course, index) => {
+                            const tuitionFee = getCourseTuitionFee(
+                              course,
+                              selectedQuota,
+                            );
+                            const admissionFee = fees
+                              ? parseFloat(fees.admission_fee) || 0
+                              : 0;
+                            const totalFee = tuitionFee + admissionFee;
+                            const feesByQuota = getCourseFeesByQuota(course);
 
-                                  // Check if feeData exists and is an array with data
-                                  if (
-                                    feeData &&
-                                    Array.isArray(feeData) &&
-                                    feeData[0] &&
-                                    feeData[0].tuition_fee
-                                  ) {
-                                    return (
-                                      <div
-                                        style={{
-                                          fontSize: "14px",
-                                          fontWeight: "500",
-                                          color: "#333",
-                                        }}
-                                      >
-                                        ₹
-                                        {parseFloat(
-                                          feeData[0].tuition_fee,
-                                        ).toLocaleString()}
-                                        /year
-                                      </div>
-                                    );
-                                  }
-                                  // Also handle if feeData is a direct object (not array)
-                                  if (feeData && feeData.tuition_fee) {
-                                    return (
-                                      <div
-                                        style={{
-                                          fontSize: "14px",
-                                          fontWeight: "500",
-                                          color: "#333",
-                                        }}
-                                      >
-                                        ₹
-                                        {parseFloat(
-                                          feeData.tuition_fee,
-                                        ).toLocaleString()}
-                                        /year
-                                      </div>
-                                    );
-                                  }
-                                  return (
-                                    <div
-                                      style={{
-                                        fontSize: "12px",
-                                        color: "#999",
-                                      }}
-                                    >
-                                      Contact College
-                                    </div>
-                                  );
-                                })()}
-                              </td>
-                              <td>
-                                <span className="scholarship-amount">
-                                  {course.scholarship_amount
-                                    ? formatCurrency(
-                                        parseFloat(course.scholarship_amount),
-                                      )
-                                    : "N/A"}
-                                </span>
-                              </td>
-                              <td>
-                                <span className="cutoff-marks">
-                                  {course.cutoff_oc ||
-                                    course.cutoff_marks ||
+                            return (
+                              <tr key={course.course_id || index}>
+                                <td className="course-name">
+                                  <strong>
+                                    {course.course_name || course.name}
+                                  </strong>
+                                </td>
+                                <td>
+                                  {course.degree_name ||
+                                    course.degree_type ||
                                     "N/A"}
-                                </span>
-                              </td>
-                              <td>
-                                <button
-                                  className="apply-now-btn"
-                                  onClick={() =>
-                                    alert(`Applied to ${course.course_name}`)
-                                  }
-                                >
-                                  Apply
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
+                                </td>
+                                <td>{course.duration_years || "N/A"} years</td>
+                                <td>
+                                  <div
+                                    style={{
+                                      fontSize: "14px",
+                                      fontWeight: "500",
+                                      color: "#333",
+                                    }}
+                                  >
+                                    {tuitionFee > 0
+                                      ? formatCurrency(tuitionFee)
+                                      : "Contact College"}
+                                    {tuitionFee > 0 && (
+                                      <small
+                                        style={{
+                                          fontSize: "11px",
+                                          color: "#666",
+                                        }}
+                                      >
+                                        /year
+                                      </small>
+                                    )}
+                                  </div>
+
+                                  {/* Show both fees for comparison */}
+                                  {feesByQuota.management !==
+                                    feesByQuota.government &&
+                                    feesByQuota.government > 0 && (
+                                      <div
+                                        style={{
+                                          fontSize: "11px",
+                                          color: "#999",
+                                          marginTop: "4px",
+                                        }}
+                                      >
+                                        {selectedQuota === "management" ? (
+                                          <>
+                                            Govt:{" "}
+                                            {formatCurrency(
+                                              feesByQuota.government,
+                                            )}
+                                          </>
+                                        ) : (
+                                          <>
+                                            Management:{" "}
+                                            {formatCurrency(
+                                              feesByQuota.management,
+                                            )}
+                                          </>
+                                        )}
+                                      </div>
+                                    )}
+                                </td>
+                                <td>
+                                  {admissionFee > 0
+                                    ? formatCurrency(admissionFee)
+                                    : "N/A"}
+                                </td>
+                                <td>
+                                  <div
+                                    style={{
+                                      fontWeight: "bold",
+                                      color: "#2c7da0",
+                                    }}
+                                  >
+                                    {totalFee > 0
+                                      ? formatCurrency(totalFee)
+                                      : "N/A"}
+                                  </div>
+                                  <small style={{ fontSize: "10px" }}>
+                                    per year
+                                  </small>
+                                </td>
+                                <td>
+                                  <span className="cutoff-marks">
+                                    {course.cutoff_oc || "N/A"}
+                                  </span>
+                                </td>
+                                <td>
+                                  <button
+                                    className="apply-now-btn"
+                                    onClick={() =>
+                                      alert(
+                                        `Applied to ${course.course_name} via ${selectedQuota === "management" ? "Management" : "Government"} Quota`,
+                                      )
+                                    }
+                                  >
+                                    Apply
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
                   </div>
-
-                  {/* Detailed Fee Breakdown - Accordion Style */}
-                  {fees && fees.length > 0 && (
+                  {/* Common Fee Breakdown - College-wide Fees */}
+                  {fees && (
                     <div className="fee-breakdown-container">
-                      <h3 className="fee-breakdown-title">Fee Breakdown</h3>
-                      {fees.map((fee, index) => {
-                        const course = courses.find(
-                          (c) => c.course_id === fee.course,
-                        );
-                        const courseId = course?.course_id || index;
-                        const isExpanded = expandedFees[courseId] || false;
+                      <h3 className="fee-breakdown-title">
+                        College Fee Structure (Common for All Courses)
+                      </h3>
 
-                        return (
-                          <div key={index} className="fee-accordion-item">
-                            {/* Accordion Header */}
-                            <div
-                              className="fee-accordion-header"
-                              onClick={() =>
-                                setExpandedFees({
-                                  ...expandedFees,
-                                  [courseId]: !isExpanded,
-                                })
-                              }
-                            >
-                              <div className="fee-accordion-title">
-                                <div className="fee-course-name">
-                                  {course?.course_name ||
-                                    fee.course_name ||
-                                    "Course"}
-                                  {fee.academic_year && (
-                                    <span className="fee-badge">
-                                      {fee.academic_year}
+                      <div className="fee-accordion-item">
+                        {/* Accordion Header */}
+                        <div
+                          className="fee-accordion-header"
+                          onClick={() =>
+                            setExpandedFees({
+                              ...expandedFees,
+                              common: !expandedFees.common,
+                            })
+                          }
+                        >
+                          <div className="fee-accordion-title">
+                            <div className="fee-course-name">
+                              Common Fees
+                              {fees.academic_year && (
+                                <span className="fee-badge">
+                                  {fees.academic_year}
+                                </span>
+                              )}
+                            </div>
+                            <div className="fee-accordion-icon">
+                              {expandedFees.common ? "−" : "+"}
+                            </div>
+                          </div>
+
+                          {/* Quick Stats Summary when collapsed */}
+                          {!expandedFees.common && (
+                            <div className="fee-quick-stats">
+                              {fees.admission_fee > 0 && (
+                                <div className="quick-stat">
+                                  <span className="quick-stat-label">
+                                    Admission
+                                  </span>
+                                  <span className="quick-stat-value">
+                                    {formatCurrency(
+                                      parseFloat(fees.admission_fee),
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                              {fees.hostel_options &&
+                                fees.hostel_options.length > 0 && (
+                                  <div className="quick-stat">
+                                    <span className="quick-stat-label">
+                                      Hostel
                                     </span>
+                                    <span className="quick-stat-value">
+                                      From ₹
+                                      {Math.min(
+                                        ...fees.hostel_options.map(
+                                          (o) => o.hostel_fee,
+                                        ),
+                                      ).toLocaleString()}
+                                    </span>
+                                  </div>
+                                )}
+                              {(fees.transport_fee_min > 0 ||
+                                fees.transport_fee_max > 0) && (
+                                <div className="quick-stat">
+                                  <span className="quick-stat-label">
+                                    Transport
+                                  </span>
+                                  <span className="quick-stat-value">
+                                    {formatCurrency(
+                                      parseFloat(fees.transport_fee_min),
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="quick-stat">
+                                <span className="quick-stat-label">Total with Transport (Min)</span>
+                                <span className="quick-stat-value">
+                                  {formatCurrency(
+                                    parseFloat(3500) +
+                                      (parseFloat(3500) || 0) +
+                                      (parseFloat(fees.transport_fee_min) || 0),
                                   )}
-                                </div>
-                                <div className="fee-accordion-icon">
-                                  {isExpanded ? "−" : "+"}
-                                </div>
+                                </span>
                               </div>
-
-                              {/* Quick Stats Summary when collapsed */}
-                              {!isExpanded && (
-                                <div className="fee-quick-stats">
-                                  {fee.tuition_fee && (
-                                    <div className="quick-stat">
-                                      <span className="quick-stat-label">
-                                        Tuition
-                                      </span>
-                                      <span className="quick-stat-value">
-                                        {formatCurrency(
-                                          parseFloat(fee.tuition_fee),
-                                        )}
-                                      </span>
-                                    </div>
+                              <div className="quick-stat">
+                                <span className="quick-stat-label">Total with Hostel (Min)</span>
+                                <span className="quick-stat-value">
+                                  {formatCurrency(
+                                    parseFloat(3500) +
+                                      (parseFloat(3500) || 0) +
+                                      Math.min(
+                                        ...fees.hostel_options.map(
+                                          (opt) => opt.hostel_fee,
+                                        ),
+                                      ),
                                   )}
-                                  {fee.hostel_options &&
-                                    fee.hostel_options.length > 0 && (
-                                      <div className="quick-stat">
-                                        <span className="quick-stat-label">
-                                          Hostel
-                                        </span>
-                                        <span className="quick-stat-value">
-                                          From ₹
-                                          {Math.min(
-                                            ...fee.hostel_options.map(
-                                              (o) => o.hostel_fee,
-                                            ),
-                                          ).toLocaleString()}
-                                        </span>
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Accordion Content (Expanded) */}
+                        {expandedFees.common && (
+                          <div className="fee-accordion-content">
+                            {/* Menu Tabs */}
+                            <div className="fee-tabs-container">
+                              <button
+                                className={`fee-tab-btn ${activeFeeTab.common === "admission" ? "active" : ""}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveFeeTab({
+                                    ...activeFeeTab,
+                                    common: "admission",
+                                  });
+                                }}
+                              >
+                                <span className="fee-tab-icon">📝</span>
+                                Admission & One-time
+                              </button>
+
+                              {fees.hostel_options &&
+                                fees.hostel_options.length > 0 && (
+                                  <button
+                                    className={`fee-tab-btn ${activeFeeTab.common === "hostel" ? "active" : ""}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveFeeTab({
+                                        ...activeFeeTab,
+                                        common: "hostel",
+                                      });
+                                    }}
+                                  >
+                                    <span className="fee-tab-icon">🏠</span>
+                                    Hostel
+                                  </button>
+                                )}
+
+                              <button
+                                className={`fee-tab-btn ${activeFeeTab.common === "transport" ? "active" : ""}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveFeeTab({
+                                    ...activeFeeTab,
+                                    common: "transport",
+                                  });
+                                }}
+                              >
+                                <span className="fee-tab-icon">📚</span>
+                                Transport
+                              </button>
+                              <button
+                                className={`fee-tab-btn ${activeFeeTab.common === "other" ? "active" : ""}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveFeeTab({
+                                    ...activeFeeTab,
+                                    common: "other",
+                                  });
+                                }}
+                              >
+                                <span className="fee-tab-icon">🔍</span>
+                                Other Fees
+                              </button>
+                              <button
+                                className={`fee-tab-btn ${activeFeeTab.common === "summary" ? "active" : ""}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveFeeTab({
+                                    ...activeFeeTab,
+                                    common: "summary",
+                                  });
+                                }}
+                              >
+                                <span className="fee-tab-icon">📊</span>
+                                Summary
+                              </button>
+                            </div>
+
+                            <div className="fee-card-body">
+                              {/* Admission & One-time Tab */}
+                              {(activeFeeTab.common === "admission" ||
+                                !activeFeeTab.common) && (
+                                <div className="fee-tab-content">
+                                  <div className="fee-grid">
+                                    {fees.admission_fee > 0 && (
+                                      <div className="fee-item">
+                                        <div className="fee-item-label">
+                                          ADMISSION FEE
+                                        </div>
+                                        <div className="fee-item-value">
+                                          {formatCurrency(
+                                            parseFloat(fees.admission_fee),
+                                          )}
+                                        </div>
+                                        <div className="fee-item-desc">
+                                          One-time payment at admission
+                                        </div>
                                       </div>
                                     )}
-                                  {fee.total_fee && (
-                                    <div className="quick-stat">
-                                      <span className="quick-stat-label">
-                                        Total
-                                      </span>
-                                      <span className="quick-stat-value">
-                                        {formatCurrency(
-                                          parseFloat(fee.total_fee),
-                                        )}
-                                      </span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Hostel Options Tab */}
+                              {activeFeeTab.common === "hostel" &&
+                                fees.hostel_options &&
+                                fees.hostel_options.length > 0 && (
+                                  <div className="fee-tab-content">
+                                    <div className="hostel-options-grid">
+                                      {fees.hostel_options.map(
+                                        (option, idx) => (
+                                          <div
+                                            key={idx}
+                                            className="hostel-option-card"
+                                          >
+                                            <div className="hostel-room-type">
+                                              {option.room_type_display}
+                                              <span className="hostel-room-badge">
+                                                Type {option.room_type}
+                                              </span>
+                                            </div>
+                                            <div className="hostel-fee-amount">
+                                              ₹
+                                              {option.hostel_fee.toLocaleString()}
+                                              <small>/year</small>
+                                            </div>
+                                            {option.available_seats && (
+                                              <div className="hostel-seats">
+                                                🪑 {option.available_seats}{" "}
+                                                seats available
+                                              </div>
+                                            )}
+                                          </div>
+                                        ),
+                                      )}
+                                    </div>
+                                    <div className="fee-note-info">
+                                      <small>
+                                        💡 Hostel fees are separate and vary by
+                                        room type
+                                      </small>
+                                    </div>
+                                  </div>
+                                )}
+
+                              {/* Transport Fees Tab */}
+                              {activeFeeTab.common === "transport" && (
+                                <div className="fee-tab-content">
+                                  {(fees.transport_fee_min > 0 ||
+                                    fees.transport_fee_max > 0) && (
+                                    <div className="transport-details">
+                                      <div className="transport-info-card">
+                                        <div className="transport-range-display">
+                                          <div className="transport-min-card">
+                                            <div className="transport-label">
+                                              Minimum Transport Fee
+                                            </div>
+                                            <div className="transport-amount">
+                                              {fees.transport_fee_min > 0
+                                                ? formatCurrency(
+                                                    parseFloat(
+                                                      fees.transport_fee_min,
+                                                    ),
+                                                  )
+                                                : "Not specified"}
+                                              <small>/year</small>
+                                            </div>
+                                          </div>
+                                          <div className="transport-arrow">
+                                            →
+                                          </div>
+                                          <div className="transport-max-card">
+                                            <div className="transport-label">
+                                              Maximum Transport Fee
+                                            </div>
+                                            <div className="transport-amount">
+                                              {fees.transport_fee_max > 0
+                                                ? formatCurrency(
+                                                    parseFloat(
+                                                      fees.transport_fee_max,
+                                                    ),
+                                                  )
+                                                : "Not specified"}
+                                              <small>/year</small>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <div className="transport-note">
+                                          🚍 Transport fee varies based on
+                                          distance and route
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {!fees.transport_fee_min &&
+                                    !fees.transport_fee_max && (
+                                      <div className="fee-note-info">
+                                        <small>
+                                          ℹ️ No transport facility available
+                                        </small>
+                                      </div>
+                                    )}
+                                </div>
+                              )}
+
+                              {/* Other Fees Tab */}
+                              {activeFeeTab.common === "other" && (
+                                <div className="fee-tab-content">
+                                  <div className="other-fees-grid">
+                                    <div className="other-fee-item">
+                                      <div className="other-fee-label">
+                                        Book Fee
+                                      </div>
+                                      <div className="other-fee-value">
+                                        ₹3500/semester
+                                      </div>
+                                    </div>
+
+                                    <div className="other-fee-item">
+                                      <div className="other-fee-label">
+                                        Exam Fee
+                                      </div>
+                                      <div className="other-fee-value">
+                                        ₹3500/semester
+                                      </div>
+                                    </div>
+
+                                    {/* Add more fee types here if available */}
+                                  </div>
+                                  {!(
+                                    fees.book_fee > 0 || fees.exam_fee > 0
+                                  ) && (
+                                    <div className="fee-note-info">
+                                      <small>
+                                        ℹ️ No additional fees specified
+                                      </small>
                                     </div>
                                   )}
                                 </div>
                               )}
-                            </div>
 
-                            {/* Accordion Content (Expanded) */}
-                            {isExpanded && (
-                              <div className="fee-accordion-content">
-                                {/* Menu Tabs inside accordion */}
-                                <div className="fee-tabs-container">
-                                  <button
-                                    className={`fee-tab-btn ${activeFeeTab[courseId] === "tuition" ? "active" : ""}`}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setActiveFeeTab({
-                                        ...activeFeeTab,
-                                        [courseId]: "tuition",
-                                      });
-                                    }}
-                                  >
-                                    <span className="fee-tab-icon">💰</span>
-                                    Tuition Fee
-                                  </button>
-
-                                  {fee.hostel_options &&
-                                    fee.hostel_options.length > 0 && (
-                                      <button
-                                        className={`fee-tab-btn ${activeFeeTab[courseId] === "hostel" ? "active" : ""}`}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setActiveFeeTab({
-                                            ...activeFeeTab,
-                                            [courseId]: "hostel",
-                                          });
-                                        }}
-                                      >
-                                        <span className="fee-tab-icon">🏠</span>
-                                        Hostel Options
-                                      </button>
-                                    )}
-
-                                  {(fee.transport_fee_min ||
-                                    fee.transport_fee_max) && (
-                                    <button
-                                      className={`fee-tab-btn ${activeFeeTab[courseId] === "transport" ? "active" : ""}`}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setActiveFeeTab({
-                                          ...activeFeeTab,
-                                          [courseId]: "transport",
-                                        });
-                                      }}
-                                    >
-                                      <span className="fee-tab-icon">🚌</span>
-                                      Transport
-                                    </button>
-                                  )}
-
-                                  <button
-                                    className={`fee-tab-btn ${activeFeeTab[courseId] === "summary" ? "active" : ""}`}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setActiveFeeTab({
-                                        ...activeFeeTab,
-                                        [courseId]: "summary",
-                                      });
-                                    }}
-                                  >
-                                    <span className="fee-tab-icon">📊</span>
-                                    Summary
-                                  </button>
-                                </div>
-
-                                <div className="fee-card-body">
-                                  {/* Tuition & Admission Tab */}
-                                  {(activeFeeTab[courseId] === "tuition" ||
-                                    !activeFeeTab[courseId]) && (
-                                    <div className="fee-tab-content">
-                                      <div className="fee-grid">
-                                        {fee.tuition_fee && (
-                                          <div className="fee-item">
-                                            <div className="fee-item-label">
-                                              TUITION FEE
-                                            </div>
-                                            <div className="fee-item-value">
-                                              {formatCurrency(
-                                                parseFloat(fee.tuition_fee),
-                                              )}
-                                              <small>/year</small>
-                                            </div>
-                                            <div className="fee-item-desc">
-                                              Annual tuition fee
-                                            </div>
-                                          </div>
-                                        )}
-
-                                        {fee.admission_fee && (
-                                          <div className="fee-item">
-                                            <div className="fee-item-label">
-                                              ADMISSION FEE
-                                            </div>
-                                            <div className="fee-item-value">
-                                              {formatCurrency(
-                                                parseFloat(fee.admission_fee),
-                                              )}
-                                            </div>
-                                            <div className="fee-item-desc">
-                                              One-time payment
-                                            </div>
-                                          </div>
-                                        )}
-
-                                        {fee.payment_frequency && (
-                                          <div className="fee-item">
-                                            <div className="fee-item-label">
-                                              PAYMENT FREQUENCY
-                                            </div>
-                                            <div className="fee-item-value">
-                                              {fee.payment_frequency_display ||
-                                                fee.payment_frequency}
-                                            </div>
-                                            <div className="fee-item-desc">
-                                              Payment schedule
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Hostel Options Tab */}
-                                  {activeFeeTab[courseId] === "hostel" &&
-                                    fee.hostel_options &&
-                                    fee.hostel_options.length > 0 && (
-                                      <div className="fee-tab-content">
-                                        <div className="hostel-options-grid">
-                                          {fee.hostel_options.map(
-                                            (option, idx) => (
-                                              <div
-                                                key={idx}
-                                                className="hostel-option-card"
-                                              >
-                                                <div className="hostel-room-type">
-                                                  {option.room_type_display}
-                                                  <span className="hostel-room-badge">
-                                                    Type {option.room_type}
-                                                  </span>
-                                                </div>
-                                                <div className="hostel-fee-amount">
-                                                  ₹
-                                                  {option.hostel_fee.toLocaleString()}
-                                                  <small>/year</small>
-                                                </div>
-                                                {option.available_seats && (
-                                                  <div className="hostel-seats">
-                                                    🪑 {option.available_seats}{" "}
-                                                    seats available
-                                                  </div>
-                                                )}
-                                              </div>
-                                            ),
+                              {/* Summary Tab */}
+                              {activeFeeTab.common === "summary" && (
+                                <div className="fee-tab-content">
+                                  <div className="summary-grid">
+                                    {fees.admission_fee > 0 && (
+                                      <div className="summary-item">
+                                        <div className="summary-label">
+                                          Admission Fee
+                                        </div>
+                                        <div className="summary-amount">
+                                          {formatCurrency(
+                                            parseFloat(fees.admission_fee),
                                           )}
                                         </div>
-                                        <div className="fee-note-info">
-                                          <small>
-                                            💡 Hostel fees are separate from
-                                            tuition fees
-                                          </small>
-                                        </div>
                                       </div>
                                     )}
 
-                                  {/* Transport Tab */}
-                                  {activeFeeTab[courseId] === "transport" && (
-                                    <div className="fee-tab-content">
-                                      <div className="transport-details">
-                                        <div className="transport-info-card">
-                                          <div className="transport-range-display">
-                                            <div className="transport-min-card">
-                                              <div className="transport-label">
-                                                Minimum Transport Fee
-                                              </div>
-                                              <div className="transport-amount">
-                                                {fee.transport_fee_min
-                                                  ? formatCurrency(
-                                                      parseFloat(
-                                                        fee.transport_fee_min,
-                                                      ),
-                                                    )
-                                                  : "Not specified"}
-                                                <small>/year</small>
-                                              </div>
-                                            </div>
-                                            <div className="transport-arrow">
-                                              →
-                                            </div>
-                                            <div className="transport-max-card">
-                                              <div className="transport-label">
-                                                Maximum Transport Fee
-                                              </div>
-                                              <div className="transport-amount">
-                                                {fee.transport_fee_max
-                                                  ? formatCurrency(
-                                                      parseFloat(
-                                                        fee.transport_fee_max,
-                                                      ),
-                                                    )
-                                                  : "Not specified"}
-                                                <small>/year</small>
-                                              </div>
-                                            </div>
-                                          </div>
-                                          <div className="transport-note">
-                                            🚍 Transport fee varies based on
-                                            distance and route
-                                          </div>
-                                        </div>
+                                    <div className="summary-item">
+                                      <div className="summary-label">
+                                        Book Fee
+                                      </div>
+                                      <div className="summary-amount">
+                                        ₹3500/semester
                                       </div>
                                     </div>
-                                  )}
 
-                                  {/* Summary Tab */}
-                                  {activeFeeTab[courseId] === "summary" && (
-                                    <div className="fee-tab-content">
-                                      <div className="summary-grid">
+                                    <div className="summary-item">
+                                      <div className="summary-label">
+                                        Exam Fee
+                                      </div>
+                                      <div className="summary-amount">
+                                        ₹3500/semester
+                                      </div>
+                                    </div>
+
+                                    {fees.hostel_options &&
+                                      fees.hostel_options.length > 0 && (
                                         <div className="summary-item">
                                           <div className="summary-label">
-                                            Tuition Fee
+                                            Hostel Fee Range
                                           </div>
                                           <div className="summary-amount">
-                                            {fee.tuition_fee
-                                              ? formatCurrency(
-                                                  parseFloat(fee.tuition_fee),
-                                                )
-                                              : "N/A"}
+                                            {(() => {
+                                              const hostelFees =
+                                                fees.hostel_options.map(
+                                                  (opt) => opt.hostel_fee,
+                                                );
+                                              const minHostel = Math.min(
+                                                ...hostelFees,
+                                              );
+                                              const maxHostel = Math.max(
+                                                ...hostelFees,
+                                              );
+                                              return `₹${minHostel.toLocaleString()} - ₹${maxHostel.toLocaleString()}`;
+                                            })()}
                                             <small>/year</small>
                                           </div>
                                         </div>
+                                      )}
 
-                                        {fee.admission_fee && (
-                                          <div className="summary-item">
-                                            <div className="summary-label">
-                                              Admission Fee (One-time)
-                                            </div>
-                                            <div className="summary-amount">
-                                              {formatCurrency(
-                                                parseFloat(fee.admission_fee),
-                                              )}
-                                            </div>
-                                          </div>
-                                        )}
-
-                                        {fee.hostel_options &&
-                                          fee.hostel_options.length > 0 && (
-                                            <div className="summary-item">
-                                              <div className="summary-label">
-                                                Hostel Fee Range
-                                              </div>
-                                              <div className="summary-amount">
-                                                {(() => {
-                                                  const hostelFees =
-                                                    fee.hostel_options.map(
-                                                      (opt) => opt.hostel_fee,
-                                                    );
-                                                  const minHostel = Math.min(
-                                                    ...hostelFees,
-                                                  );
-                                                  const maxHostel = Math.max(
-                                                    ...hostelFees,
-                                                  );
-                                                  return `₹${minHostel.toLocaleString()} - ₹${maxHostel.toLocaleString()}`;
-                                                })()}
-                                                <small>/year</small>
-                                              </div>
-                                            </div>
+                                    {(fees.transport_fee_min > 0 ||
+                                      fees.transport_fee_max > 0) && (
+                                      <div className="summary-item">
+                                        <div className="summary-label">
+                                          Transport Fee Range
+                                        </div>
+                                        <div className="summary-amount">
+                                          {formatCurrency(
+                                            parseFloat(fees.transport_fee_min),
                                           )}
-
-                                        {fee.transport_fee_min &&
-                                          fee.transport_fee_max && (
-                                            <div className="summary-item">
-                                              <div className="summary-label">
-                                                Transport Fee Range
-                                              </div>
-                                              <div className="summary-amount">
-                                                {formatCurrency(
-                                                  parseFloat(
-                                                    fee.transport_fee_min,
-                                                  ),
-                                                )}{" "}
-                                                -{" "}
-                                                {formatCurrency(
-                                                  parseFloat(
-                                                    fee.transport_fee_max,
-                                                  ),
-                                                )}
-                                                <small>/year</small>
-                                              </div>
-                                            </div>
-                                          )}
-
-                                        {fee.total_fee && (
-                                          <div className="summary-item total-summary">
-                                            <div className="summary-label">
-                                              Total (Excluding Hostel)
-                                            </div>
-                                            <div className="summary-amount total-amount">
-                                              {formatCurrency(
-                                                parseFloat(fee.total_fee),
-                                              )}
-                                              <small>/year</small>
-                                            </div>
-                                          </div>
-                                        )}
+                                          {fees.transport_fee_max >
+                                            fees.transport_fee_min &&
+                                            ` - ${formatCurrency(parseFloat(fees.transport_fee_max))}`}
+                                          <small>/year</small>
+                                        </div>
                                       </div>
+                                    )}
 
-                                      <div className="summary-disclaimer">
-                                        <small>
-                                          ⚠️ Hostel and transport fees are
-                                          additional and vary based on selection
-                                        </small>
+                                    <div className="summary-item total-summary">
+                                      <div className="summary-label">
+                                        Total with Transport (Min)
+                                      </div>
+                                      <div className="summary-amount total-amount">
+                                        {formatCurrency(
+                                          (parseFloat(3500) || 0) +
+                                            (parseFloat(3500) || 0) +
+                                            (parseFloat(
+                                              fees.transport_fee_min,
+                                            ) || 0),
+                                        )}
+                                        <small>/year</small>
                                       </div>
                                     </div>
-                                  )}
+
+                                    {fees.hostel_options &&
+                                      fees.hostel_options.length > 0 && (
+                                        <div className="summary-item total-summary">
+                                          <div className="summary-label">
+                                            Total with Hostel (Min)
+                                          </div>
+                                          <div className="summary-amount total-amount">
+                                            {formatCurrency(
+                                              (parseFloat(3500) || 0) +
+                                                (parseFloat(3500) || 0) +
+                                                +Math.min(
+                                                  ...fees.hostel_options.map(
+                                                    (opt) => opt.hostel_fee,
+                                                  ),
+                                                ),
+                                            )}
+                                            <small>/year</small>
+                                          </div>
+                                        </div>
+                                      )}
+                                  </div>
+
+                                  <div className="summary-disclaimer">
+                                    <small>
+                                      ⚠️ Tuition fees vary by course and are
+                                      shown in the Courses table above
+                                    </small>
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </div>
-                        );
-                      })}
+                        )}
+                      </div>
                     </div>
                   )}
                 </>
@@ -1088,65 +1211,14 @@ function CollegeDetail() {
                   )}
                 </div>
 
-                {college.top_recruiters &&
-                  college.top_recruiters.length > 0 && (
-                    <div style={{ marginBottom: "32px" }}>
-                      <h4>Top Recruiters</h4>
-                      <div
-                        style={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: "12px",
-                          marginTop: "16px",
-                        }}
-                      >
-                        {college.top_recruiters.map((recruiter, index) => (
-                          <span key={index} className="recruiter-badge">
-                            {recruiter}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                 <div>
                   <h4>Placement Process</h4>
                   <p>
-                    {college.placement_process ||
-                      "The college has a dedicated placement cell that organizes campus recruitment drives."}
+                    The college has a dedicated placement cell that organizes
+                    campus recruitment drives.
                   </p>
                 </div>
               </div>
-
-              {/* Recent Placements */}
-              {college.recent_placements &&
-                college.recent_placements.length > 0 && (
-                  <div className="info-card" style={{ marginTop: "24px" }}>
-                    <h4>Recent Placements</h4>
-                    <div className="courses-table-container">
-                      <table className="courses-table">
-                        <thead>
-                          <tr>
-                            <th>Student Name</th>
-                            <th>Course</th>
-                            <th>Company</th>
-                            <th>Package</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {college.recent_placements.map((placement, index) => (
-                            <tr key={index}>
-                              <td>{placement.student_name}</td>
-                              <td>{placement.course}</td>
-                              <td>{placement.company}</td>
-                              <td>{formatCurrency(placement.package)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
             </div>
           )}
         </div>
