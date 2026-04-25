@@ -40,7 +40,7 @@ class CourseAdmin(admin.ModelAdmin):
                     'tuition_fee_management', 'tuition_fee_government', 
                     'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
     search_fields = ('course_name', 'course_code', 'specialization', 'college__college_name')
-    list_filter = (CollegeStateListFilter, 'degree_type', 'degree_name', 'is_active', 'college__type', 'college__affiliation')
+    list_filter = (CollegeStateListFilter, 'college','degree_type', 'degree_name', 'is_active', 'college__type', 'college__affiliation')
     readonly_fields = ('created_at', 'updated_at')
     # The actual fields for editing (not the display methods)
     list_editable = ('tuition_fee_management', 'tuition_fee_government', 'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
