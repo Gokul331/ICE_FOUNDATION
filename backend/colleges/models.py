@@ -241,10 +241,7 @@ class Fees(models.Model):
 
     fee_id = models.AutoField(primary_key=True)
     college = models.ForeignKey('College', on_delete=models.CASCADE, related_name='fees')
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, blank=True, related_name='fees')
     academic_year = models.CharField(max_length=9)
-    
-    # Tuition Fee - REMOVED (now in Course model)
     
     # Hostel Fees - Store as JSON for multiple room types
     hostel_fees = models.JSONField(default=dict, blank=True, help_text="Hostel fees for different room types")
@@ -275,7 +272,7 @@ class Fees(models.Model):
     class Meta:
         verbose_name = 'Fee'
         verbose_name_plural = 'Fees'
-        unique_together = ['college', 'course', 'academic_year']
+        unique_together = ['college', 'academic_year']
         ordering = ['-academic_year', 'college__college_name']
     
     @property
@@ -314,24 +311,27 @@ class Fees(models.Model):
         }
     
     def __str__(self):
-        course_name = self.course.course_name if self.course else "All Courses"
-        return f"{self.college.college_name} - {course_name} ({self.academic_year})"
+        # Fixed: Removed reference to self.course
+        return f"{self.college.college_name} - Fees ({self.academic_year})"
 
     @property
     def total_fee(self):
-        """Calculate total fee without transport (uses tuition_fee from Course model)"""
-        tuition = self.course.tuition_fee if self.course else 0
-        return (tuition or 0) + (self.admission_fee or 0)
+        """Calculate total fee without transport (tuition fees are now in Course model)"""
+        # Fixed: Removed reference to self.course
+        # Since tuition fees are now in Course model and each college has multiple courses,
+        # total_fee should be calculated per course or removed entirely
+        # For now, return only admission fee as base
+        return float(self.admission_fee or 0)
     
     @property
     def total_fee_with_transport_min(self):
         """Calculate total fee with minimum transport fee"""
-        return self.total_fee + (self.transport_fee_min or 0)
+        return self.total_fee + float(self.transport_fee_min or 0)
     
     @property
     def total_fee_with_transport_max(self):
         """Calculate total fee with maximum transport fee"""
-        return self.total_fee + (self.transport_fee_max or 0)
+        return self.total_fee + float(self.transport_fee_max or 0)
     
     @property
     def transport_fee_range(self):
@@ -345,6 +345,7 @@ class Fees(models.Model):
     def get_payment_frequency_display(self):
         """Get display name for payment frequency"""
         return dict(self.PAYMENT_FREQUENCY_CHOICES).get(self.payment_frequency, self.payment_frequency)
+
 # ==================== USER PROFILE MODEL ====================
 class UserProfile(models.Model):
     GENDER_CHOICES = [

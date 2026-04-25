@@ -92,23 +92,29 @@ class CourseAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('college')
 
-# ==================== FEES ADMIN (UPDATED - tuition_fee removed) ====================
+# ==================== FEES ADMIN (UPDATED - course field removed) ====================
 @admin.register(Fees)
 class FeesAdmin(admin.ModelAdmin):
-    list_display = ('college', 'course', 'academic_year', 'admission_fee_display', 
+    list_display = ('college', 'academic_year', 'admission_fee_display', 
                     'hostel_fees_summary', 'transport_fee_range_display', 
                     'payment_frequency', 'created_at')
-    search_fields = ('college__college_name', 'college__short_name', 'course__course_name', 'academic_year')
+    search_fields = ('college__college_name', 'college__short_name', 'academic_year')
     list_filter = ('academic_year', 'payment_frequency', 'college__location_state', 'college__type')
     readonly_fields = ('created_at', 'updated_at', 'total_fee_calculated')
     
     fieldsets = (
-        ('College & Course Information', {
-            'fields': ('college', 'course', 'academic_year')
+        ('College Information', {
+            'fields': ('college', 'academic_year')
         }),
         ('Basic Fee Components', {
             'fields': ('admission_fee',),
-            'description': '<div style="background: #e8f5e9; padding: 8px 12px; border-radius: 6px; margin-bottom: 10px;">📘 <strong>Note:</strong> Tuition fee is now managed in the Course model. This allows each course to have a base tuition fee that applies across all academic years.</div>'
+            'description': '''
+                <div style="background: #e8f5e9; padding: 8px 12px; border-radius: 6px; margin-bottom: 10px;">
+                    📘 <strong>Note:</strong> 
+                    Tuition fees are now managed in the Course model. Each course has its own tuition fee structure 
+                    (Management and Government quotas). The Fees model only handles college-wide fees (admission, hostel, transport).
+                </div>
+            '''
         }),
         ('Hostel Accommodation (JSON Format)', {
             'fields': ('hostel_fees',),
@@ -182,12 +188,14 @@ class FeesAdmin(admin.ModelAdmin):
     transport_fee_range_display.short_description = 'Transport Fee Range'
     
     def total_fee_calculated(self, obj):
-        """Display detailed fee breakdown in admin panel using tuition_fee from Course model"""
-        tuition = obj.course.tuition_fee if obj.course else 0
+        """Display detailed fee breakdown in admin panel - courses are separate now"""
+        # Get all courses for this college
+        courses = Course.objects.filter(college=obj.college, is_active=True)
         
         html = '<div style="background: #f8fafc; padding: 12px; border-radius: 6px; border-left: 3px solid #3AAAD4;">'
-        html += '<strong style="font-size: 14px;">📊 Fee Breakdown</strong><br/><br/>'
-        html += '• <strong>Tuition Fee (from Course):</strong> ₹ {:,.2f}<small style="color: #666;">/year</small><br/>'.format(tuition)
+        html += '<strong style="font-size: 14px;">📊 College Fee Structure (Academic Year: {})</strong><br/><br/>'.format(obj.academic_year)
+        
+        # Admission fee
         html += '• <strong>Admission Fee:</strong> ₹ {:,.2f}<br/>'.format(obj.admission_fee)
         
         # Hostel fees breakdown
@@ -208,28 +216,55 @@ class FeesAdmin(admin.ModelAdmin):
                     html += ' ({} seats)'.format(seats)
                 html += '<br/>'
         else:
-            html += '• <strong>Hostel Fee:</strong> Not Available<br/>'
+            html += '<br/>• <strong>Hostel Fee:</strong> Not Available<br/>'
         
         # Transport fees
         if obj.transport_fee_min == obj.transport_fee_max:
             transport_text = f"₹ {obj.transport_fee_min:,.2f}" if obj.transport_fee_min > 0 else "Not Available"
         else:
             transport_text = f"₹ {obj.transport_fee_min:,.2f} - ₹ {obj.transport_fee_max:,.2f}"
-        html += '<br/>• <strong>Transport Fee:</strong> {}<br/>'.format(transport_text)
+        html += '<br/>• <strong>Transport Fee Range:</strong> {}<br/>'.format(transport_text)
         
-        # Total calculation
-        base_total = tuition + obj.admission_fee
-        html += '<hr style="margin: 10px 0; border-color: #e2e8f0;">'
-        html += '<strong>💰 Total Amount (without hostel):</strong> ₹ {:,.2f}<small style="color: #666;">/year</small><br/>'.format(base_total)
-        
-        if obj.transport_fee_min > 0:
-            html += '<strong>💰 Total with Min Transport:</strong> ₹ {:,.2f}<br/>'.format(base_total + obj.transport_fee_min)
-            if obj.transport_fee_max != obj.transport_fee_min:
-                html += '<strong>💰 Total with Max Transport:</strong> ₹ {:,.2f}<br/>'.format(base_total + obj.transport_fee_max)
+        # Courses and their tuition fees
+        if courses.exists():
+            html += '<br/><hr style="margin: 10px 0; border-color: #e2e8f0;">'
+            html += '<strong>📚 Courses Offered with Tuition Fees:</strong><br/><br/>'
+            html += '<table style="width: 100%; border-collapse: collapse;">'
+            html += '<tr style="background: #e2e8f0;">'
+            html += '<th style="padding: 6px; text-align: left;">Course</th>'
+            html += '<th style="padding: 6px; text-align: left;">Management Quota</th>'
+            html += '<th style="padding: 6px; text-align: left;">Government Quota</th>'
+            html += '</tr>'
+            
+            for course in courses[:10]:  # Limit to 10 courses for display
+                html += '<tr>'
+                html += '<td style="padding: 6px; border-bottom: 1px solid #e2e8f0;">{}</td>'.format(course.course_name[:40])
+                html += '<td style="padding: 6px; border-bottom: 1px solid #e2e8f0;">₹ {:,.2f}/year</td>'.format(course.tuition_fee_management)
+                html += '<td style="padding: 6px; border-bottom: 1px solid #e2e8f0;">₹ {:,.2f}/year</td>'.format(course.tuition_fee_government)
+                html += '</tr>'
+            
+            if courses.count() > 10:
+                html += '<tr><td colspan="3" style="padding: 6px; text-align: center;"><em>... and {} more courses</em></td></tr>'.format(courses.count() - 10)
+            
+            html += '</table>'
+            
+            # Calculate average tuition fee for reference
+            avg_management = courses.aggregate(Avg('tuition_fee_management'))['tuition_fee_management__avg'] or 0
+            avg_government = courses.aggregate(Avg('tuition_fee_government'))['tuition_fee_government__avg'] or 0
+            
+            html += '<br/><div style="background: #f1f5f9; padding: 8px; border-radius: 4px; margin-top: 8px;">'
+            html += '<strong>📈 Average Tuition Fee:</strong><br/>'
+            html += '• Management Quota: ₹ {:,.2f}/year<br/>'.format(avg_management)
+            html += '• Government Quota: ₹ {:,.2f}/year'.format(avg_government)
+            html += '</div>'
+        else:
+            html += '<br/><div style="background: #fff3cd; padding: 8px; border-radius: 4px;">'
+            html += '⚠️ No active courses found for this college. Please add courses in the Course section.'
+            html += '</div>'
         
         html += '</div>'
         return html
-    total_fee_calculated.short_description = 'Fee Calculator'
+    total_fee_calculated.short_description = 'Fee Calculator (with Courses)'
     total_fee_calculated.allow_tags = True
     
     def save_model(self, request, obj, form, change):
@@ -251,16 +286,7 @@ class FeesAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         """Optimize queryset with select_related"""
-        return super().get_queryset(request).select_related('college', 'course')
-    
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        """Filter courses based on selected college"""
-        if db_field.name == "course":
-            college_id = request.GET.get('college')
-            if college_id:
-                kwargs["queryset"] = Course.objects.filter(college_id=college_id)
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
+        return super().get_queryset(request).select_related('college')
 
 # ==================== USER PROFILE ADMIN ====================
 @admin.register(UserProfile)

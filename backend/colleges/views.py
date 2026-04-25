@@ -62,7 +62,6 @@ def get_colleges(request):
     serializer = CollegeSerializer(colleges, many=True)
     return Response(serializer.data)
 
-
 @api_view(['GET'])
 def get_college_detail(request, college_id):
     """Get a single college by ID"""
@@ -72,7 +71,6 @@ def get_college_detail(request, college_id):
         return Response(serializer.data)
     except College.DoesNotExist:
         return Response({'error': 'College not found'}, status=404)
-
 
 @api_view(['GET'])
 def get_college_courses(request, college_id):
@@ -93,66 +91,6 @@ def get_college_courses(request, college_id):
     except Exception as e:
         return Response({'error': str(e)}, status=500)
 
-
-@api_view(['GET'])
-def get_college_fees(request, college_id):
-    """Get all fee structures for a specific college"""
-    try:
-        # Check if college exists
-        college = College.objects.filter(college_id=college_id).first()
-        if not college:
-            return Response({'error': 'College not found'}, status=404)
-        
-        # Get fees for this college
-        fees = Fees.objects.filter(college=college)
-        
-        # Get query parameters for filtering
-        course_id = request.GET.get('course_id')
-        academic_year = request.GET.get('academic_year')
-        
-        if course_id:
-            fees = fees.filter(course_id=course_id)
-        if academic_year:
-            fees = fees.filter(academic_year=academic_year)
-        
-        # Note: hostel_room_type filtering is handled on the frontend
-        # since hostel fees are stored as JSON. Return all data and let frontend filter.
-        
-        serializer = FeesSerializer(fees, many=True)
-        return Response(serializer.data, status=200)
-        
-    except Exception as e:
-        print(f"Error in get_college_fees: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return Response({'error': str(e)}, status=500)
-
-
-@api_view(['GET'])
-def get_course_fees(request, course_id):
-    """Get fee structure for a specific course"""
-    try:
-        # Check if course exists
-        course = Course.objects.filter(course_id=course_id).first()
-        if not course:
-            return Response({'error': 'Course not found'}, status=404)
-        
-        # Get fees for this course
-        fees = Fees.objects.filter(course=course)
-        
-        # Get query parameters
-        academic_year = request.GET.get('academic_year')
-        if academic_year:
-            fees = fees.filter(academic_year=academic_year)
-        
-        serializer = FeesSerializer(fees, many=True)
-        return Response(serializer.data, status=200)
-        
-    except Exception as e:
-        print(f"Error in get_course_fees: {str(e)}")
-        return Response({'error': str(e)}, status=500)
-
-
 @api_view(['GET'])
 def get_fee_detail(request, fee_id):
     """Get a single fee record by ID"""
@@ -164,91 +102,6 @@ def get_fee_detail(request, fee_id):
         return Response({'error': 'Fee record not found'}, status=404)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
-
-
-# Optional: Add a new endpoint for hostel room type filtering
-@api_view(['GET'])
-def get_hostel_options(request, college_id):
-    """Get all hostel options for a college's fees"""
-    try:
-        college = College.objects.filter(college_id=college_id).first()
-        if not college:
-            return Response({'error': 'College not found'}, status=404)
-        
-        fees = Fees.objects.filter(college=college)
-        
-        # Collect all unique hostel options across all fee records
-        all_hostel_options = []
-        for fee in fees:
-            if fee.hostel_fees:
-                for room_type, data in fee.hostel_fees.items():
-                    option = {
-                        'college_id': college.college_id,
-                        'college_name': college.college_name,
-                        'academic_year': fee.academic_year,
-                        'room_type': int(room_type),
-                        'room_type_display': dict(Fees.HOSTEL_ROOM_TYPE_CHOICES).get(int(room_type)),
-                        'hostel_fee': data.get('fee', 0),
-                        'available_seats': data.get('available_seats', 0),
-                        'course_id': fee.course.course_id if fee.course else None,
-                        'course_name': fee.course.course_name if fee.course else 'All Courses'
-                    }
-                    all_hostel_options.append(option)
-        
-        return Response(all_hostel_options, status=200)
-        
-    except Exception as e:
-        return Response({'error': str(e)}, status=500)
-
-
-# Optional: Add a filtered fee endpoint
-
-@api_view(['GET'])
-def get_filtered_fees(request):
-    """Get fees with advanced filtering including hostel room type"""
-    try:
-        fees = Fees.objects.all()
-        
-        # Basic filters
-        college_id = request.GET.get('college_id')
-        if college_id:
-            fees = fees.filter(college_id=college_id)
-        
-        course_id = request.GET.get('course_id')
-        if course_id:
-            fees = fees.filter(course_id=course_id)
-        
-        academic_year = request.GET.get('academic_year')
-        if academic_year:
-            fees = fees.filter(academic_year=academic_year)
-        
-        # Hostel room type filter (handled in serializer)
-        hostel_room_type = request.GET.get('hostel_room_type')
-        
-        # Serialize data
-        serializer = FeesSerializer(fees, many=True)
-        data = serializer.data
-        
-        # Apply hostel room type filtering on serialized data
-        if hostel_room_type:
-            hostel_room_type = int(hostel_room_type)
-            filtered_data = []
-            for fee_data in data:
-                if 'hostel_options' in fee_data:
-                    for option in fee_data['hostel_options']:
-                        if option['room_type'] == hostel_room_type:
-                            filtered_data.append(fee_data)
-                            break
-                else:
-                    filtered_data.append(fee_data)
-            data = filtered_data
-        
-        return Response(data, status=200)
-        
-    except Exception as e:
-        print(f"Error in get_filtered_fees: {str(e)}")
-        return Response({'error': str(e)}, status=500)
-
 
 @api_view(['GET'])
 def get_courses(request):
@@ -318,6 +171,7 @@ def get_courses(request):
 
     serializer = CourseSerializer(courses, many=True)
     return Response(serializer.data)
+
 @api_view(['GET'])
 def get_course_detail(request, course_id):
     """Get a single course by ID"""
@@ -327,7 +181,6 @@ def get_course_detail(request, course_id):
         return Response(serializer.data)
     except Course.DoesNotExist:
         return Response({'error': 'Course not found'}, status=404)
-
 
 @api_view(['GET'])
 def suggest_colleges(request):
@@ -364,135 +217,6 @@ def suggest_colleges(request):
     serializer = CollegeListSerializer(colleges, many=True)
     return Response(serializer.data)
 
-
-@api_view(['GET'])
-def get_fee_comparison(request):
-    """Compare fees across multiple colleges/courses with quota support"""
-    college_ids = request.GET.getlist('college_ids')
-    course_id = request.GET.get('course_id')
-    academic_year = request.GET.get('academic_year', '2024-2025')
-    quota_type = request.GET.get('quota_type', 'management')  # 'management' or 'government'
-    
-    if not college_ids:
-        return Response({'error': 'college_ids parameter is required'}, status=400)
-    
-    comparison_data = []
-    
-    for college_id in college_ids:
-        try:
-            college = College.objects.get(college_id=college_id)
-            
-            # Get fees for this college and course
-            fees_query = Fees.objects.filter(college=college, academic_year=academic_year)
-            if course_id:
-                fees_query = fees_query.filter(course_id=course_id)
-            else:
-                fees_query = fees_query.filter(course__isnull=True)  # Default fees
-            
-            fees = fees_query.first()
-            
-            if fees and fees.course:
-                # Get tuition fee based on quota type
-                if quota_type == 'management':
-                    tuition_fee = float(fees.course.tuition_fee_management) if fees.course.tuition_fee_management else 0
-                else:  # government
-                    tuition_fee = float(fees.course.tuition_fee_government) if fees.course.tuition_fee_government else 0
-                
-                # Get hostel options from JSON field
-                hostel_options = []
-                if fees.hostel_fees:
-                    for room_type, fee_data in fees.hostel_fees.items():
-                        hostel_options.append({
-                            'room_type': int(room_type),
-                            'room_type_display': dict(Fees.HOSTEL_ROOM_TYPE_CHOICES).get(int(room_type)),
-                            'fee': float(fee_data.get('fee', 0)),
-                            'available_seats': fee_data.get('available_seats', 0)
-                        })
-                
-                # Calculate total fee using tuition from course
-                total_fee = tuition_fee + float(fees.admission_fee or 0)
-                
-                comparison_data.append({
-                    'college_id': college.college_id,
-                    'college_name': college.college_name,
-                    'quota_type': quota_type,
-                    'tuition_fee': tuition_fee,
-                    'admission_fee': float(fees.admission_fee),
-                    'transport_fee_min': float(fees.transport_fee_min),
-                    'transport_fee_max': float(fees.transport_fee_max),
-                    'hostel_options': hostel_options,
-                    'total_fee_min': total_fee + float(fees.transport_fee_min or 0),
-                    'total_fee_max': total_fee + float(fees.transport_fee_max or 0),
-                    'academic_year': fees.academic_year
-                })
-            elif fees and not fees.course:
-                # Handle case where fee exists but no course (default fees)
-                comparison_data.append({
-                    'college_id': college.college_id,
-                    'college_name': college.college_name,
-                    'quota_type': quota_type,
-                    'tuition_fee': 0,
-                    'admission_fee': float(fees.admission_fee),
-                    'transport_fee_min': float(fees.transport_fee_min),
-                    'transport_fee_max': float(fees.transport_fee_max),
-                    'hostel_options': [],
-                    'total_fee_min': float(fees.admission_fee or 0),
-                    'total_fee_max': float(fees.admission_fee or 0),
-                    'academic_year': fees.academic_year,
-                    'note': 'No specific course found'
-                })
-        except College.DoesNotExist:
-            continue
-        except Exception as e:
-            print(f"Error processing college {college_id}: {str(e)}")
-            continue
-    
-    return Response(comparison_data)
-
-@api_view(['GET'])
-def get_fee_statistics(request):
-    """Get fee statistics across all colleges with quota support"""
-    academic_year = request.GET.get('academic_year', '2024-2025')
-    quota_type = request.GET.get('quota_type', 'management')  # 'management' or 'government'
-    
-    fees = Fees.objects.filter(academic_year=academic_year)
-    
-    # Calculate tuition fee statistics from related courses based on quota type
-    tuition_fees = []
-    for fee in fees:
-        if fee.course:
-            if quota_type == 'management':
-                if fee.course.tuition_fee_management:
-                    tuition_fees.append(float(fee.course.tuition_fee_management))
-            else:  # government
-                if fee.course.tuition_fee_government:
-                    tuition_fees.append(float(fee.course.tuition_fee_government))
-    
-    # Calculate average hostel fee from JSON data
-    all_hostel_fees = []
-    for fee in fees:
-        if fee.hostel_fees:
-            for room_data in fee.hostel_fees.values():
-                if room_data.get('fee', 0) > 0:
-                    all_hostel_fees.append(room_data['fee'])
-    
-    avg_hostel_fee = sum(all_hostel_fees) / len(all_hostel_fees) if all_hostel_fees else 0
-    min_hostel_fee = min(all_hostel_fees) if all_hostel_fees else 0
-    max_hostel_fee = max(all_hostel_fees) if all_hostel_fees else 0
-    
-    stats = {
-        'quota_type': quota_type,
-        'average_tuition_fee': sum(tuition_fees) / len(tuition_fees) if tuition_fees else 0,
-        'min_tuition_fee': min(tuition_fees) if tuition_fees else 0,
-        'max_tuition_fee': max(tuition_fees) if tuition_fees else 0,
-        'average_hostel_fee': avg_hostel_fee,
-        'min_hostel_fee': min_hostel_fee,
-        'max_hostel_fee': max_hostel_fee,
-        'total_fees_records': fees.count(),
-        'academic_year': academic_year
-    }
-    
-    return Response(stats)
 @api_view(['GET', 'POST'])
 def user_profiles(request):
     """GET: List all user profiles, POST: Create a user profile"""
@@ -506,7 +230,6 @@ def user_profiles(request):
             serializer.save()
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
-
 
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 def user_profile_detail(request, profile_id):
@@ -1112,3 +835,282 @@ class UserProfileView(APIView):
             return Response(serializer.errors, status=400)
         except UserProfile.DoesNotExist:
             return Response({'error': 'Profile not found'}, status=404)
+        
+
+@api_view(['GET'])
+def get_college_fees(request, college_id):
+    """Get all fee structures for a specific college"""
+    try:
+        # Check if college exists
+        college = College.objects.filter(college_id=college_id).first()
+        if not college:
+            return Response({'error': 'College not found'}, status=404)
+        
+        # Get fees for this college
+        fees = Fees.objects.filter(college=college)
+        
+        # Get query parameters for filtering
+        academic_year = request.GET.get('academic_year')
+        
+        if academic_year:
+            fees = fees.filter(academic_year=academic_year)
+        
+        # Note: course_id and hostel_room_type filtering is handled on the frontend
+        # since fees are now per college, not per course
+        
+        serializer = FeesSerializer(fees, many=True)
+        return Response(serializer.data, status=200)
+        
+    except Exception as e:
+        print(f"Error in get_college_fees: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+def get_course_fees(request, course_id):
+    """Get fee structure for a specific course (if it exists)"""
+    try:
+        # Check if course exists
+        course = Course.objects.filter(course_id=course_id).first()
+        if not course:
+            return Response({'error': 'Course not found'}, status=404)
+        
+        # Since fees are now per college, we need to get the college's fees
+        # and include course-specific information from the course model
+        college = course.college
+        fees = Fees.objects.filter(college=college)
+        
+        # Get query parameters
+        academic_year = request.GET.get('academic_year')
+        if academic_year:
+            fees = fees.filter(academic_year=academic_year)
+        
+        serializer = FeesSerializer(fees, many=True)
+        data = serializer.data
+        
+        # Add course-specific fees from the Course model
+        for fee_data in data:
+            fee_data['course_specific_fees'] = {
+                'course_id': course.course_id,
+                'course_name': course.course_name,
+                'tuition_fee_management': float(course.tuition_fee_management) if course.tuition_fee_management else 0,
+                'tuition_fee_government': float(course.tuition_fee_government) if course.tuition_fee_government else 0,
+                'course_duration': course.duration_years,
+                'course_type': course.course_type
+            }
+        
+        return Response(data, status=200)
+        
+    except Exception as e:
+        print(f"Error in get_course_fees: {str(e)}")
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+def get_filtered_fees(request):
+    """Get fees with advanced filtering including hostel room type"""
+    try:
+        fees = Fees.objects.all()
+        
+        # Basic filters
+        college_id = request.GET.get('college_id')
+        if college_id:
+            fees = fees.filter(college_id=college_id)
+        
+        academic_year = request.GET.get('academic_year')
+        if academic_year:
+            fees = fees.filter(academic_year=academic_year)
+        
+        # Hostel room type filter (handled in serializer)
+        hostel_room_type = request.GET.get('hostel_room_type')
+        
+        # Serialize data
+        serializer = FeesSerializer(fees, many=True)
+        data = serializer.data
+        
+        # Apply hostel room type filtering on serialized data
+        if hostel_room_type:
+            hostel_room_type = int(hostel_room_type)
+            filtered_data = []
+            for fee_data in data:
+                if 'hostel_options' in fee_data:
+                    for option in fee_data['hostel_options']:
+                        if option['room_type'] == hostel_room_type:
+                            filtered_data.append(fee_data)
+                            break
+                else:
+                    filtered_data.append(fee_data)
+            data = filtered_data
+        
+        return Response(data, status=200)
+        
+    except Exception as e:
+        print(f"Error in get_filtered_fees: {str(e)}")
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+def get_fee_comparison(request):
+    """Compare fees across multiple colleges/courses with quota support"""
+    college_ids = request.GET.getlist('college_ids')
+    course_id = request.GET.get('course_id')
+    academic_year = request.GET.get('academic_year', '2024-2025')
+    quota_type = request.GET.get('quota_type', 'management')  # 'management' or 'government'
+    
+    if not college_ids:
+        return Response({'error': 'college_ids parameter is required'}, status=400)
+    
+    comparison_data = []
+    
+    for college_id in college_ids:
+        try:
+            college = College.objects.get(college_id=college_id)
+            
+            # Get fees for this college
+            fees = Fees.objects.filter(college=college, academic_year=academic_year).first()
+            
+            # Get course information if course_id is provided
+            course = None
+            tuition_fee = 0
+            if course_id:
+                course = Course.objects.filter(course_id=course_id, college=college).first()
+                if course:
+                    if quota_type == 'management':
+                        tuition_fee = float(course.tuition_fee_management) if course.tuition_fee_management else 0
+                    else:  # government
+                        tuition_fee = float(course.tuition_fee_government) if course.tuition_fee_government else 0
+            
+            if fees:
+                # Get hostel options from JSON field
+                hostel_options = []
+                if fees.hostel_fees:
+                    for room_type, fee_data in fees.hostel_fees.items():
+                        hostel_options.append({
+                            'room_type': int(room_type),
+                            'room_type_display': dict(Fees.HOSTEL_ROOM_TYPE_CHOICES).get(int(room_type)),
+                            'fee': float(fee_data.get('fee', 0)),
+                            'available_seats': fee_data.get('available_seats', 0)
+                        })
+                
+                # Calculate total fee
+                total_fee = tuition_fee + float(fees.admission_fee or 0)
+                
+                comparison_item = {
+                    'college_id': college.college_id,
+                    'college_name': college.college_name,
+                    'quota_type': quota_type,
+                    'tuition_fee': tuition_fee,
+                    'admission_fee': float(fees.admission_fee),
+                    'transport_fee_min': float(fees.transport_fee_min),
+                    'transport_fee_max': float(fees.transport_fee_max),
+                    'hostel_options': hostel_options,
+                    'total_fee_min': total_fee + float(fees.transport_fee_min or 0),
+                    'total_fee_max': total_fee + float(fees.transport_fee_max or 0),
+                    'academic_year': fees.academic_year
+                }
+                
+                # Add course info if available
+                if course:
+                    comparison_item['course'] = {
+                        'course_id': course.course_id,
+                        'course_name': course.course_name,
+                        'course_code': course.course_code
+                    }
+                else:
+                    comparison_item['note'] = 'No course selected'
+                
+                comparison_data.append(comparison_item)
+            
+        except College.DoesNotExist:
+            continue
+        except Exception as e:
+            print(f"Error processing college {college_id}: {str(e)}")
+            continue
+    
+    return Response(comparison_data)
+
+
+@api_view(['GET'])
+def get_fee_statistics(request):
+    """Get fee statistics across all colleges with quota support"""
+    academic_year = request.GET.get('academic_year', '2024-2025')
+    quota_type = request.GET.get('quota_type', 'management')  # 'management' or 'government'
+    
+    fees = Fees.objects.filter(academic_year=academic_year)
+    
+    # Since fees are now college-based, get tuition fees from courses
+    # We need to calculate average across all courses in all colleges
+    all_tuition_fees = []
+    
+    for fee in fees:
+        # Get all courses for this college
+        courses = Course.objects.filter(college=fee.college)
+        for course in courses:
+            if quota_type == 'management':
+                if course.tuition_fee_management:
+                    all_tuition_fees.append(float(course.tuition_fee_management))
+            else:  # government
+                if course.tuition_fee_government:
+                    all_tuition_fees.append(float(course.tuition_fee_government))
+    
+    # Calculate average hostel fee from JSON data
+    all_hostel_fees = []
+    for fee in fees:
+        if fee.hostel_fees:
+            for room_data in fee.hostel_fees.values():
+                if room_data.get('fee', 0) > 0:
+                    all_hostel_fees.append(room_data['fee'])
+    
+    avg_hostel_fee = sum(all_hostel_fees) / len(all_hostel_fees) if all_hostel_fees else 0
+    min_hostel_fee = min(all_hostel_fees) if all_hostel_fees else 0
+    max_hostel_fee = max(all_hostel_fees) if all_hostel_fees else 0
+    
+    stats = {
+        'quota_type': quota_type,
+        'average_tuition_fee': sum(all_tuition_fees) / len(all_tuition_fees) if all_tuition_fees else 0,
+        'min_tuition_fee': min(all_tuition_fees) if all_tuition_fees else 0,
+        'max_tuition_fee': max(all_tuition_fees) if all_tuition_fees else 0,
+        'average_hostel_fee': avg_hostel_fee,
+        'min_hostel_fee': min_hostel_fee,
+        'max_hostel_fee': max_hostel_fee,
+        'total_fees_records': fees.count(),
+        'total_colleges': fees.values('college').distinct().count(),
+        'academic_year': academic_year
+    }
+    
+    return Response(stats)
+
+
+@api_view(['GET'])
+def get_hostel_options(request, college_id):
+    """Get all hostel options for a college's fees"""
+    try:
+        college = College.objects.filter(college_id=college_id).first()
+        if not college:
+            return Response({'error': 'College not found'}, status=404)
+        
+        fees = Fees.objects.filter(college=college)
+        
+        # Collect all unique hostel options across all fee records
+        all_hostel_options = []
+        for fee in fees:
+            if fee.hostel_fees:
+                for room_type, data in fee.hostel_fees.items():
+                    option = {
+                        'college_id': college.college_id,
+                        'college_name': college.college_name,
+                        'academic_year': fee.academic_year,
+                        'room_type': int(room_type),
+                        'room_type_display': dict(Fees.HOSTEL_ROOM_TYPE_CHOICES).get(int(room_type)),
+                        'hostel_fee': data.get('fee', 0),
+                        'available_seats': data.get('available_seats', 0),
+                        'total_seats': data.get('total_seats', 0)
+                    }
+                    all_hostel_options.append(option)
+        
+        return Response(all_hostel_options, status=200)
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
