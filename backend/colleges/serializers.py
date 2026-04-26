@@ -287,7 +287,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             last_name=validated_data.get('last_name', '')
         )
         
-        UserProfile.objects.create(
+        profile = UserProfile.objects.create(
             user=user,
             first_name=validated_data.get('first_name', ''),
             last_name=validated_data.get('last_name', ''),
@@ -304,19 +304,21 @@ class RegisterSerializer(serializers.ModelSerializer):
             subject = 'Welcome to ICE Foundation - Registration Successful'
             message = render_to_string('emails/welcome_email.html', {
                 'user': user,
-                'profile': user.userprofile,
+                'profile': profile,
             })
             send_mail(
                 subject,
-                '',  # Plain text version can be empty if using HTML
+                f'Welcome {user.first_name}! Your account has been created.',
                 settings.DEFAULT_FROM_EMAIL,
                 [user.email],
                 html_message=message,
-                fail_silently=True
+                fail_silently=False
             )
         except Exception as e:
             # Log the error but don't fail registration
-            print(f"Failed to send welcome email: {e}")
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send welcome email to {user.email}: {str(e)}")
         
         return user
 
