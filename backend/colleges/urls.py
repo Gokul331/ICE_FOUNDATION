@@ -4,7 +4,8 @@ from .views import (
     get_courses, get_course_detail, get_filtered_fees, get_fee_detail, 
     get_fee_statistics, get_fee_comparison, suggest_colleges,
     get_college_hostels, get_hostel_by_room_type, get_available_hostels, get_hostel_detail,
-    user_profiles, user_profile_detail, timeline_events, timeline_event_detail
+    user_profiles, user_profile_detail, timeline_events, timeline_event_detail,
+    password_reset_request, password_reset_confirm
 )
 from . import views
 from django.conf import settings
@@ -52,6 +53,10 @@ urlpatterns = [
     # ==================== TIMELINE EVENTS ====================
     path('timeline/', timeline_events, name='timeline_events'),
     path('timeline/<int:event_id>/', timeline_event_detail, name='timeline_event_detail'),
+
+    # ==================== PASSWORD RESET ====================
+    path('password-reset/', password_reset_request, name='password_reset_request'),
+    path('password-reset-confirm/', password_reset_confirm, name='password_reset_confirm'),
 ]
 
 # Add media URL configuration for development

@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.conf import settings
 from .models import College, Course, UserProfile, TimelineEvent, Fees, Hostel
 
 
@@ -294,7 +297,27 @@ class RegisterSerializer(serializers.ModelSerializer):
             city='',
             state='Tamil Nadu',
             pincode='000000'
-        )    
+        )
+        
+        # Send welcome email
+        try:
+            subject = 'Welcome to ICE Foundation - Registration Successful'
+            message = render_to_string('emails/welcome_email.html', {
+                'user': user,
+                'profile': user.userprofile,
+            })
+            send_mail(
+                subject,
+                '',  # Plain text version can be empty if using HTML
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                html_message=message,
+                fail_silently=True
+            )
+        except Exception as e:
+            # Log the error but don't fail registration
+            print(f"Failed to send welcome email: {e}")
+        
         return user
 
 
