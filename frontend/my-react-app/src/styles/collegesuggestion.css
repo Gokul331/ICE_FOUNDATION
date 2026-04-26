@@ -154,6 +154,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  position: relative;
 }
 
 .form-label {
@@ -185,6 +186,156 @@
 
 .form-input::placeholder {
   color: #cbd5e1;
+}
+
+/* Autocomplete Container */
+.autocomplete-container {
+  position: relative;
+  width: 100%;
+}
+
+/* Autocomplete Dropdown */
+.autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 1000;
+  animation: dropdownFadeIn 0.2s ease;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Autocomplete Item */
+.autocomplete-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-item:hover {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.05), rgba(124, 58, 237, 0.05));
+}
+
+.autocomplete-item .course-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dark);
+  line-height: 1.4;
+}
+
+.autocomplete-item .course-code {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+
+.autocomplete-item .course-degree {
+  font-size: 11px;
+  color: var(--primary-dark);
+  font-weight: 500;
+}
+
+/* Highlighted item (keyboard navigation) */
+.autocomplete-item.highlighted,
+.autocomplete-item:active {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(124, 58, 237, 0.1));
+}
+
+/* Loading state in autocomplete */
+.autocomplete-loading {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.autocomplete-loading::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(14, 165, 233, 0.2);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+/* No results state */
+.autocomplete-no-results {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  z-index: 1000;
+}
+
+/* Scrollbar styling for dropdown */
+.autocomplete-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.autocomplete-dropdown::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.autocomplete-dropdown::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 10px;
+}
+
+.autocomplete-dropdown::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-dark);
+}
+
+/* Form hint text */
+.form-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  display: block;
 }
 
 /* CTA Row */
@@ -246,17 +397,56 @@
   to { transform: rotate(360deg); }
 }
 
+/* Error Message */
+.error-message {
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 20px auto;
+  max-width: 600px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #dc2626;
+}
+
+.error-icon {
+  font-size: 20px;
+}
+
+.error-message p {
+  margin: 0;
+  font-size: 14px;
+  flex: 1;
+}
+
 /* Suggestions Container */
 .suggestions-container {
   margin-top: 36px;
+}
+
+.suggestions-header {
+  text-align: center;
+  margin-bottom: 24px;
 }
 
 .suggestions-title {
   font-size: clamp(1.5rem, 4vw, 2rem);
   font-weight: 800;
   color: var(--text-dark);
-  margin-bottom: 24px;
-  text-align: center;
+  margin-bottom: 12px;
+}
+
+.filter-badge {
+  display: inline-block;
+  background: rgba(14, 165, 233, 0.1);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary-dark);
+  margin: 0 4px;
 }
 
 /* Suggestion Card */
@@ -358,7 +548,37 @@
   font-weight: 500;
 }
 
-.scholarship-badge {
+.detail-item.location {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.detail-item.type {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+}
+
+.detail-item.naac {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.detail-item.placement {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.detail-item.nirf {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.detail-item.hostel {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0ea5e9;
+}
+
+.detail-item.scholarship {
   background: linear-gradient(135deg, #10b981, #059669);
   color: #fff;
 }
@@ -372,6 +592,28 @@
   background: rgba(255, 255, 255, 0.5);
   border-radius: 20px;
   margin-top: 20px;
+}
+
+.no-results-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.no-results h3 {
+  color: var(--text-dark);
+  margin-bottom: 12px;
+  font-size: 20px;
+}
+
+.no-results ul {
+  list-style: none;
+  padding: 0;
+  margin-top: 16px;
+}
+
+.no-results li {
+  padding: 6px 0;
+  font-size: 14px;
 }
 
 /* Responsive Design */
@@ -407,6 +649,14 @@
 
   .suggestion-details {
     gap: 8px;
+  }
+  
+  .autocomplete-dropdown {
+    max-height: 240px;
+  }
+  
+  .autocomplete-item {
+    padding: 10px 14px;
   }
 }
 
@@ -470,6 +720,19 @@
   .suggestions-title {
     font-size: 1.5rem;
     margin-bottom: 20px;
+  }
+  
+  .autocomplete-dropdown {
+    max-height: 200px;
+  }
+  
+  .autocomplete-item .course-name {
+    font-size: 13px;
+  }
+  
+  .autocomplete-item .course-code,
+  .autocomplete-item .course-degree {
+    font-size: 10px;
   }
 }
 
@@ -535,5 +798,13 @@
   .no-results {
     padding: 40px 20px;
     font-size: 14px;
+  }
+  
+  .autocomplete-dropdown {
+    max-height: 180px;
+  }
+  
+  .autocomplete-item {
+    padding: 8px 12px;
   }
 }

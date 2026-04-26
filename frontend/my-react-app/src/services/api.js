@@ -38,7 +38,28 @@ API.interceptors.response.use(
   }
 );
 
-// ==================== PUBLIC ENDPOINTS (No Auth Required) ====================
+// ==================== AUTHENTICATION ====================
+
+// Password reset
+export const requestPasswordReset = async (email) => {
+  try {
+    const response = await API.post("password-reset/", { email });
+    return response.data;
+  } catch (error) {
+    console.error("Error requesting password reset:", error);
+    throw error;
+  }
+};
+
+export const confirmPasswordReset = async (resetData) => {
+  try {
+    const response = await API.post("password-reset-confirm/", resetData);
+    return response.data;
+  } catch (error) {
+    console.error("Error confirming password reset:", error);
+    throw error;
+  }
+};
 
 // Colleges - Public
 export const getColleges = async (params) => {

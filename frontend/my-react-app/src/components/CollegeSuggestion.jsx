@@ -18,6 +18,7 @@ function CollegeSuggestion() {
 
   // Autocomplete state
   const [courses, setCourses] = useState([]);
+  const [uniqueCourses, setUniqueCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [showCourseDropdown, setShowCourseDropdown] = useState(false);
   const [courseSearchTerm, setCourseSearchTerm] = useState('');
@@ -27,44 +28,14 @@ function CollegeSuggestion() {
 
   // All districts of Tamil Nadu
   const tamilNaduDistricts = [
-    "Ariyalur",
-    "Chengalpattu",
-    "Chennai",
-    "Coimbatore",
-    "Cuddalore",
-    "Dharmapuri",
-    "Dindigul",
-    "Erode",
-    "Kallakurichi",
-    "Kancheepuram",
-    "Kanyakumari",
-    "Karur",
-    "Krishnagiri",
-    "Madurai",
-    "Mayiladuthurai",
-    "Nagapattinam",
-    "Kanniyakumari",
-    "Namakkal",
-    "Perambalur",
-    "Pudukkottai",
-    "Ramanathapuram",
-    "Ranipet",
-    "Salem",
-    "Sivaganga",
-    "Tenkasi",
-    "Thanjavur",
-    "Theni",
-    "Thoothukkudi",
-    "Tiruchirappalli",
-    "Tirunelveli",
-    "Tirupathur",
-    "Tiruppur",
-    "Tiruvallur",
-    "Tiruvannamalai",
-    "Tiruvarur",
-    "Vellore",
-    "Viluppuram",
-    "Virudhunagar"
+    "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore",
+    "Dharmapuri", "Dindigul", "Erode", "Kallakurichi", "Kancheepuram",
+    "Kanyakumari", "Karur", "Krishnagiri", "Madurai", "Mayiladuthurai",
+    "Nagapattinam", "Kanniyakumari", "Namakkal", "Perambalur", "Pudukkottai",
+    "Ramanathapuram", "Ranipet", "Salem", "Sivaganga", "Tenkasi",
+    "Thanjavur", "Theni", "Thoothukkudi", "Tiruchirappalli", "Tirunelveli",
+    "Tirupathur", "Tiruppur", "Tiruvallur", "Tiruvannamalai", "Tiruvarur",
+    "Vellore", "Viluppuram", "Virudhunagar"
   ];
 
   useEffect(() => {
@@ -91,13 +62,29 @@ function CollegeSuggestion() {
     setLoadingCourses(true);
     try {
       const response = await getCourses();
-      const coursesData = response?.data || [];
+      // Handle both response formats
+      const coursesData = Array.isArray(response) ? response : (response?.data || []);
       setCourses(coursesData);
-      setFilteredCourses(coursesData);
+      
+      // Extract unique course names
+      const uniqueCourseMap = new Map();
+      coursesData.forEach(course => {
+        if (course && course.course_name && !uniqueCourseMap.has(course.course_name)) {
+          uniqueCourseMap.set(course.course_name, {
+            course_id: course.course_id,
+            course_name: course.course_name
+          });
+        }
+      });
+      
+      const uniqueCoursesList = Array.from(uniqueCourseMap.values());
+      setUniqueCourses(uniqueCoursesList);
+      setFilteredCourses(uniqueCoursesList);
     } catch (err) {
       console.error('Error fetching courses:', err);
       setError('Failed to load courses. Please refresh the page.');
       setCourses([]);
+      setUniqueCourses([]);
       setFilteredCourses([]);
     } finally {
       setLoadingCourses(false);
@@ -126,19 +113,17 @@ function CollegeSuggestion() {
       preferredCourse: searchValue
     }));
 
-    const coursesArray = Array.isArray(courses) ? courses : [];
+    const coursesArray = Array.isArray(uniqueCourses) ? uniqueCourses : [];
 
     if (searchValue.trim() === '') {
-      setFilteredCourses(coursesArray);
+      setFilteredCourses(coursesArray.slice(0, 20));
       setShowCourseDropdown(true);
     } else {
       const filtered = coursesArray.filter(course =>
-        course && (
-          (course.course_name && course.course_name.toLowerCase().includes(searchValue.toLowerCase())) ||
-          (course.course_code && course.course_code.toLowerCase().includes(searchValue.toLowerCase()))
-        )
+        course && course.course_name && 
+        course.course_name.toLowerCase().includes(searchValue.toLowerCase())
       );
-      setFilteredCourses(filtered);
+      setFilteredCourses(filtered.slice(0, 20));
       setShowCourseDropdown(true);
     }
   };
@@ -159,19 +144,42 @@ function CollegeSuggestion() {
     setLoading(true);
     setError(null);
 
+    // Validate required fields
+    if (!formData.cutoffMark) {
+      setError('Please enter your cutoff mark');
+      setLoading(false);
+      return;
+    }
+    
+    if (!formData.communityCategory) {
+      setError('Please select your community category');
+      setLoading(false);
+      return;
+    }
+
     try {
       const params = {
         cutoff_mark: formData.cutoffMark,
         community: formData.communityCategory.toLowerCase(),
-        preferred_course: formData.preferredCourse,
-        preferred_district: formData.preferredDistrict
+        preferred_course: formData.preferredCourse || '',
+        preferred_district: formData.preferredDistrict || ''
       };
 
+      console.log('Sending params:', params); // Debug log
+
       const response = await suggestColleges(params);
-      setSuggestions(response?.data || []);
+      console.log('Response:', response); // Debug log
+      
+      // Handle response correctly
+      const suggestionsData = Array.isArray(response) ? response : (response?.data || []);
+      setSuggestions(suggestionsData);
+      
+      if (suggestionsData.length === 0) {
+        setError('No colleges found matching your criteria. Try adjusting your preferences.');
+      }
     } catch (err) {
       console.error('Error fetching suggestions:', err);
-      setError('Failed to fetch college suggestions. Please try again.');
+      setError(err.response?.data?.error || 'Failed to fetch college suggestions. Please try again.');
       setSuggestions([]);
     } finally {
       setLoading(false);
@@ -192,18 +200,13 @@ function CollegeSuggestion() {
       .toUpperCase();
   };
 
-  // Get college colors - Black & White theme
-  const getCollegeColors = (name) => {
-    if (!name) return { bg: "#f5f5f5", fg: "#000000" };
-    const colors = [
-      { bg: "#f5f5f5", fg: "#000000" },
-      { bg: "#fafafa", fg: "#1a1a1a" },
-      { bg: "#f0f0f0", fg: "#000000" },
-      { bg: "#f5f5f5", fg: "#111111" },
-      { bg: "#fafafa", fg: "#222222" }
-    ];
-    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return colors[hash % colors.length];
+  // Get placement color based on percentage
+  const getPlacementColor = (percentage) => {
+    if (!percentage) return '#666';
+    if (percentage >= 90) return '#2ecc71';
+    if (percentage >= 75) return '#27ae60';
+    if (percentage >= 60) return '#f39c12';
+    return '#e74c3c';
   };
 
   return (
@@ -306,12 +309,6 @@ function CollegeSuggestion() {
                           onClick={() => selectCourse(course)}
                         >
                           <div className="course-name">{course?.course_name || 'Unknown Course'}</div>
-                          {course?.course_code && (
-                            <div className="course-code">{course.course_code}</div>
-                          )}
-                          {course?.duration && (
-                            <div className="course-duration">{course.duration}</div>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -322,7 +319,7 @@ function CollegeSuggestion() {
                     </div>
                   )}
                 </div>
-                <small className="form-hint">Start typing to search for courses</small>
+                <small className="form-hint">Start typing to search for courses (optional)</small>
               </div>
 
               <div className="form-field">
@@ -354,72 +351,103 @@ function CollegeSuggestion() {
 
         {loading && (
           <div className="loading">
-            Analyzing your preferences...
+            <div className="spinner"></div>
+            <p>Analyzing your preferences...</p>
           </div>
         )}
 
-        {error && (
+        {error && !loading && (
           <div className="error-message">
-            {error}
+            <span className="error-icon">⚠️</span>
+            <p>{error}</p>
           </div>
         )}
 
         {Array.isArray(suggestions) && suggestions.length > 0 && !loading && (
           <div className="suggestions-container">
-            <h2 className="suggestions-title">
-              Recommended Colleges ({suggestions.length})
-            </h2>
-            {suggestions.map((college, index) => {
-              const colors = getCollegeColors(college?.college_name);
-              return (
-                <div key={college?.college_id || index} className="suggestion-card" style={{ borderLeftColor: '#000000' }}>
-                  <div className="suggestion-header">
-                    <div className="suggestion-logo">
-                      {getLogoLetters(college?.college_name)}
-                    </div>
-                    <div className="suggestion-info">
-                      <div className="suggestion-name">{college?.college_name || 'Unknown College'}</div>
-                      <div className="suggestion-meta">{college?.location_city || 'N/A'}, {college?.location_state || 'N/A'}</div>
-                    </div>
-                    <Link to={`/colleges/${college?.college_id}`} className="suggestion-link">
-                      View Details
-                    </Link>
-                  </div>
-                  {college?.description && (
-                    <div className="suggestion-desc">{college.description.substring(0, 150)}...</div>
-                  )}
-                  <div className="suggestion-details">
-                    <span className="detail-item">{college?.location_city || 'N/A'}</span>
-                    {college?.type && (
-                      <span className="detail-item">
-                        {college.type.replace('_', ' ')}
-                      </span>
-                    )}
-                    {college?.scholarship_available && (
-                      <span className="detail-item scholarship-badge">Scholarship Available</span>
-                    )}
-                    {college?.naac_grade && (
-                      <span className="detail-item">NAAC: {college.naac_grade}</span>
-                    )}
-                    {college?.placement_percentage && (
-                      <span className="detail-item">Placement: {college.placement_percentage}%</span>
-                    )}
-                    {college?.nirf_rank && (
-                      <span className="detail-item">NIRF Rank: #{college.nirf_rank}</span>
-                    )}
-                    {college?.hostel_available && (
-                      <span className="detail-item">Hostel Available</span>
-                    )}
-                  </div>
+            <div className="suggestions-header">
+              <h2 className="suggestions-title">
+                Recommended Colleges ({suggestions.length})
+              </h2>
+              {formData.preferredCourse && (
+                <div className="filter-badge">
+                  Course: {formData.preferredCourse}
                 </div>
-              );
-            })}
+              )}
+              {formData.preferredDistrict && (
+                <div className="filter-badge">
+                  District: {formData.preferredDistrict}
+                </div>
+              )}
+            </div>
+            
+            {suggestions.map((college, index) => (
+              <div key={college?.college_id || index} className="suggestion-card" style={{ borderLeftColor: '#000000' }}>
+                <div className="suggestion-header">
+                  <div className="suggestion-logo">
+                    {getLogoLetters(college?.college_name)}
+                  </div>
+                  <div className="suggestion-info">
+                    <div className="suggestion-name">{college?.college_name || 'Unknown College'}</div>
+                    <div className="suggestion-meta">{college?.location_city || 'N/A'}, {college?.location_state || 'N/A'}</div>
+                  </div>
+                  <Link to={`/colleges/${college?.college_id}`} className="suggestion-link">
+                    View Details →
+                  </Link>
+                </div>
+                
+                {college?.description && (
+                  <div className="suggestion-desc">{college.description.substring(0, 150)}...</div>
+                )}
+                
+                <div className="suggestion-details">
+                  {college?.location_city && (
+                    <span className="detail-item location">
+                      📍 {college.location_city}
+                    </span>
+                  )}
+                  {college?.type && (
+                    <span className="detail-item type">
+                      🏛️ {college.type.replace('_', ' ')}
+                    </span>
+                  )}
+                  {college?.naac_grade && (
+                    <span className="detail-item naac">
+                      ⭐ NAAC: {college.naac_grade}
+                    </span>
+                  )}
+                  {college?.placement_percentage && (
+                    <span className="detail-item placement" style={{ color: getPlacementColor(college.placement_percentage) }}>
+                      💼 Placement: {college.placement_percentage}%
+                    </span>
+                  )}
+                  {college?.nirf_rank && (
+                    <span className="detail-item nirf">
+                      🏆 NIRF Rank: #{college.nirf_rank}
+                    </span>
+                  )}
+                  {college?.hostel_available && (
+                    <span className="detail-item hostel">
+                      🏠 Hostel Available
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
-        {(Array.isArray(suggestions) && suggestions.length === 0 && !loading && formData.cutoffMark) && (
+        {Array.isArray(suggestions) && suggestions.length === 0 && !loading && formData.cutoffMark && !error && (
           <div className="no-results">
-            No colleges found matching your criteria. Try adjusting your preferences.
+            <div className="no-results-icon">🔍</div>
+            <h3>No colleges found</h3>
+            <p>No colleges found matching your criteria. Try adjusting your preferences:</p>
+            <ul>
+              <li>Lower your cutoff mark</li>
+              <li>Select a different community category</li>
+              <li>Remove or change the preferred course</li>
+              <li>Select "All Districts" for broader results</li>
+            </ul>
           </div>
         )}
       </div>
