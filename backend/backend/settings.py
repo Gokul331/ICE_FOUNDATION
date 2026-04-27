@@ -3,11 +3,13 @@ import dj_database_url
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = Path(__file__).resolve().parent.parent  # Changed to Path object
 
+# ==================== CREATE DIRECTORIES ====================
 # Create saved_applications directory if not exists
-SAVED_APPLICATIONS_DIR = os.path.join(BASE_DIR, 'saved_applications')
+SAVED_APPLICATIONS_DIR = BASE_DIR / 'saved_applications'
 os.makedirs(SAVED_APPLICATIONS_DIR, exist_ok=True)
+
 # ==================== SECURITY ====================
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-&z+ca)$#0^a(l^nve5dhf0y*8c32om^-$ey#oij06cst@1cpy8')
 DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
@@ -52,7 +54,7 @@ ROOT_URLCONF = 'backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [str(BASE_DIR / 'templates')],  # Changed to string
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -76,7 +78,7 @@ else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+            'NAME': str(BASE_DIR / 'db.sqlite3'),  # Changed to string
         }
     }
 
@@ -136,11 +138,11 @@ USE_TZ = True
 
 # ==================== STATIC & MEDIA FILES ====================
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = str(BASE_DIR / 'staticfiles')  # Changed to string
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = str(BASE_DIR / 'media')  # Changed to string for compatibility
 
 # ==================== FILE UPLOAD SETTINGS ====================
 # Maximum file size for uploads (5MB)
@@ -188,6 +190,11 @@ SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://icefoundation.vercel.app')
 
 # ==================== LOGGING (Optional but recommended) ====================
+# Create logs directory if it doesn't exist
+LOGS_DIR = BASE_DIR / 'logs'
+if not DEBUG:
+    os.makedirs(LOGS_DIR, exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -208,7 +215,7 @@ LOGGING = {
         },
         'file': {
             'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'django.log',
+            'filename': str(LOGS_DIR / 'django.log'),  # Changed to string
             'formatter': 'verbose',
         },
     },
@@ -229,11 +236,6 @@ LOGGING = {
         },
     },
 }
-
-# Create logs directory if it doesn't exist
-if not DEBUG:
-    import logging
-    os.makedirs(BASE_DIR / 'logs', exist_ok=True)
 
 # ==================== DEFAULT PRIMARY KEY FIELD ====================
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

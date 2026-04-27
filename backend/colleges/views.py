@@ -1,3 +1,8 @@
+import os
+import json
+import zipfile
+from io import BytesIO
+from django.http import HttpResponse
 from datetime import datetime
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -26,7 +31,12 @@ from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.tokens import default_token_generator
 from django.conf import settings
 import re
+import os
+import json
+import zipfile
+from io import BytesIO
 from django.core.files.base import ContentFile
+from django.http import HttpResponse
 from .utils.pdf_generator import generate_application_pdf
 from .utils.local_save import save_application_locally, save_application_media_files
 
@@ -912,17 +922,13 @@ def password_reset_request(request):
     try:
         user = User.objects.get(email=email)
     except User.DoesNotExist:
-        # Don't reveal if email exists or not for security
         return Response({'message': 'If an account with this email exists, a password reset link has been sent.'}, status=status.HTTP_200_OK)
     
-    # Generate token
     token = default_token_generator.make_token(user)
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     
-    # Create reset link (assuming frontend has a reset page)
     reset_link = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}/"
     
-    # Send email
     try:
         subject = 'Password Reset Request - ICE Foundation'
         message = render_to_string('emails/password_reset_email.html', {
@@ -967,7 +973,6 @@ def password_reset_confirm(request):
     if not default_token_generator.check_token(user, token):
         return Response({'error': 'Invalid or expired reset token'}, status=status.HTTP_400_BAD_REQUEST)
     
-    # Validate password
     try:
         validate_password(new_password, user)
     except ValidationError as e:
@@ -991,7 +996,6 @@ def get_application_form_data(request):
             profile = None
 
         data = {
-            # From User model
             'username': user.username,
             'email': user.email,
             'first_name': user.first_name or '',
@@ -999,7 +1003,6 @@ def get_application_form_data(request):
         }
 
         if profile:
-            # From UserProfile - map to application form fields
             data.update({
                 'date_of_birth': profile.date_of_birth.isoformat() if profile.date_of_birth else None,
                 'gender': profile.gender or '',
@@ -1017,7 +1020,9 @@ def get_application_form_data(request):
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# views.py - Updated submit_application
+
+# ==================== APPLICATION SUBMISSION VIEW ====================
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def submit_application(request):
@@ -1099,7 +1104,7 @@ def submit_application(request):
             'declaration_accepted': request.data.get('declaration_accepted') in [True, 'true', 'True', '1', 1],
         }
 
-        # Handle diploma and UG fields
+        # Handle diploma fields
         if application_data['has_diploma']:
             application_data['diploma_college_name'] = request.data.get('diploma_college_name', '')
             application_data['diploma_board_university'] = request.data.get('diploma_board_university', '')
@@ -1107,6 +1112,7 @@ def submit_application(request):
             application_data['diploma_result_status'] = request.data.get('diploma_result_status', '')
             application_data['diploma_marks_percentage'] = request.data.get('diploma_marks_percentage') or None
 
+        # Handle UG fields
         if application_data['has_ug']:
             application_data['ug_college_name'] = request.data.get('ug_college_name', '')
             application_data['ug_board_university'] = request.data.get('ug_board_university', '')
@@ -1133,26 +1139,31 @@ def submit_application(request):
         if serializer.is_valid():
             application = serializer.save()
             
-            # Save files to database and local folder
+            # Save files
             for field in file_fields:
                 if field in request.FILES:
                     setattr(application, field, request.FILES[field])
             
             # Generate and save PDF
-            pdf_buffer = generate_application_pdf(application)
-            pdf_filename = f"{application.application_id}_application.pdf"
-            application.pdf_copy.save(pdf_filename, ContentFile(pdf_buffer.getvalue()))
+            try:
+                pdf_buffer = generate_application_pdf(application)
+                pdf_filename = f"{application.application_id}_application.pdf"
+                application.pdf_copy.save(pdf_filename, ContentFile(pdf_buffer.getvalue()))
+            except Exception as pdf_error:
+                print(f"PDF generation error: {pdf_error}")
             
             # Save the application with files
             application.save()
             
-            # ===== IMPORTANT: Save to local folder =====
-            local_save_result = save_application_locally(application)
+            # Save to local folder
+            try:
+                local_save_result = save_application_locally(application)
+                print(f"Application saved locally at: {local_save_result['folder_path']}")
+                print(f"Files saved: {local_save_result['files_count']} files")
+            except Exception as local_error:
+                print(f"Local save error: {local_error}")
             
-            print(f"Application saved locally at: {local_save_result['folder_path']}")
-            print(f"Files saved: {local_save_result['files_count']} files")
-            
-            # Send confirmation email (optional)
+            # Send confirmation email
             try:
                 send_mail(
                     subject='Application Submitted Successfully - ICE Foundation',
@@ -1189,8 +1200,7 @@ ICE Foundation Team
                 'college_id': college.college_id,
                 'course_id': int(course_id),
                 'quota_type': quota_type,
-                'status': 'submitted',
-                'local_save_path': local_save_result['folder_path']
+                'status': 'submitted'
             }, status=201)
         else:
             print("Serializer errors:", serializer.errors)
@@ -1209,6 +1219,8 @@ ICE Foundation Team
             'trace': traceback.format_exc()
         }, status=500)
 
+
+# ==================== APPLICATION RETRIEVAL VIEWS ====================
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -1234,3 +1246,480 @@ def get_application_detail(request, application_id):
         return Response({'error': 'Application not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ==================== SYNC APPLICATIONS FOR LOCAL BACKUP ====================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def sync_applications_to_local(request):
+    """Download all applications as a ZIP file for local backup"""
+    try:
+        # Check if user is admin
+        if not request.user.is_staff:
+            return Response({'error': 'Admin access required'}, status=403)
+        
+        applications = StudentApplication.objects.all().order_by('-submitted_at')
+        
+        if not applications:
+            return Response({'error': 'No applications found'}, status=404)
+        
+        # Create ZIP in memory
+        zip_buffer = BytesIO()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            
+            # Create manifest
+            manifest = {
+                'total_applications': applications.count(),
+                'exported_at': datetime.now().isoformat(),
+                'applications': []
+            }
+            
+            for app in applications:
+                # Create folder name: ApplicationID_Name
+                folder_name = f"{app.application_id}_{app.first_name}_{app.last_name}".replace(' ', '_')
+                
+                # Add application info to manifest
+                app_info = {
+                    'application_id': app.application_id,
+                    'folder_name': folder_name,
+                    'name': f"{app.first_name} {app.last_name}",
+                    'email': app.email_id,
+                    'submitted_at': app.submitted_at.isoformat() if app.submitted_at else None,
+                    'college': app.college.college_name if app.college else 'N/A',
+                    'course_id': app.course_id,
+                    'quota': app.quota_type,
+                    'status': app.status
+                }
+                manifest['applications'].append(app_info)
+                
+                # 1. Add PDF if exists
+                if app.pdf_copy and app.pdf_copy.name:
+                    try:
+                        pdf_content = app.pdf_copy.read()
+                        zip_file.writestr(f"{folder_name}/{app.application_id}_Application_Form.pdf", pdf_content)
+                        app_info['has_pdf'] = True
+                    except Exception as e:
+                        print(f"Error adding PDF for {app.application_id}: {e}")
+                
+                # 2. Add uploaded files
+                file_mapping = {
+                    'photo': '01_Photo',
+                    'aadhar_card': '02_Aadhar_Card',
+                    'tenth_marksheet': '03_10th_Marksheet',
+                    'twelfth_marksheet': '04_12th_Marksheet',
+                    'diploma_marksheet': '05_Diploma_Marksheet',
+                    'ug_marksheet': '06_UG_Marksheet',
+                    'community_marksheet': '07_Community_Certificate'
+                }
+                
+                for field_name, display_name in file_mapping.items():
+                    file_obj = getattr(app, field_name)
+                    if file_obj and file_obj.name:
+                        try:
+                            file_content = file_obj.read()
+                            # Get file extension
+                            original_name = os.path.basename(file_obj.name)
+                            ext = os.path.splitext(original_name)[1]
+                            filename = f"{display_name}{ext}"
+                            zip_file.writestr(f"{folder_name}/{filename}", file_content)
+                            # Reset file pointer
+                            file_obj.seek(0)
+                        except Exception as e:
+                            print(f"Error adding {field_name} for {app.application_id}: {e}")
+                
+                # 3. Add JSON summary
+                summary_data = {
+                    'application_id': app.application_id,
+                    'submitted_at': str(app.submitted_at) if app.submitted_at else None,
+                    'status': app.status,
+                    'personal_info': {
+                        'name': f"{app.first_name} {app.last_name}",
+                        'gender': app.gender,
+                        'date_of_birth': str(app.date_of_birth) if app.date_of_birth else None,
+                        'mobile': app.mobile_number,
+                        'email': app.email_id,
+                        'community': app.community,
+                        'aadhar_number': app.aadhar_number
+                    },
+                    'parents': {
+                        'father': app.father_name,
+                        'father_mobile': app.father_mobile,
+                        'mother': app.mother_name,
+                        'mother_mobile': app.mother_mobile,
+                        'annual_income': app.family_annual_income
+                    },
+                    'address': {
+                        'line1': app.address_line1,
+                        'line2': app.address_line2,
+                        'city': app.city,
+                        'state': app.state,
+                        'pincode': app.pincode
+                    },
+                    'education': {
+                        '10th': {
+                            'school': app.tenth_school_name,
+                            'percentage': str(app.tenth_marks_percentage) if app.tenth_marks_percentage else None,
+                            'year': app.tenth_year_of_passing
+                        },
+                        '12th': {
+                            'school': app.twelfth_school_name,
+                            'percentage': str(app.twelfth_marks_percentage) if app.twelfth_marks_percentage else None,
+                            'year': app.twelfth_year_of_passing
+                        }
+                    },
+                    'course_info': {
+                        'college': app.college.college_name if app.college else 'N/A',
+                        'course_id': app.course_id,
+                        'quota': app.quota_type
+                    }
+                }
+                
+                zip_file.writestr(f"{folder_name}/application_data.json", json.dumps(summary_data, indent=2))
+                
+                # 4. Add text summary
+                text_summary = f"""
+{'='*60}
+STUDENT APPLICATION - {app.application_id}
+{'='*60}
+
+Submitted: {app.submitted_at}
+Status: {app.status}
+
+PERSONAL INFORMATION:
+----------------------
+Name: {app.first_name} {app.last_name}
+Gender: {app.gender}
+DOB: {app.date_of_birth}
+Mobile: {app.mobile_number}
+Email: {app.email_id}
+Community: {app.community}
+Aadhar: {app.aadhar_number}
+
+PARENT DETAILS:
+---------------
+Father: {app.father_name} (M: {app.father_mobile})
+Mother: {app.mother_name} (M: {app.mother_mobile})
+Annual Income: ₹{app.family_annual_income:,}
+
+ADDRESS:
+--------
+{app.address_line1}
+{app.address_line2}
+{app.city}, {app.state} - {app.pincode}
+
+EDUCATION:
+----------
+10th: {app.tenth_school_name} - {app.tenth_marks_percentage}% ({app.tenth_year_of_passing})
+12th: {app.twelfth_school_name} - {app.twelfth_marks_percentage}% ({app.twelfth_year_of_passing})
+
+COURSE DETAILS:
+---------------
+College: {app.college.college_name if app.college else 'N/A'}
+Course ID: {app.course_id}
+Quota: {app.quota_type}
+
+{'='*60}
+"""
+                zip_file.writestr(f"{folder_name}/STUDENT_DETAILS.txt", text_summary)
+            
+            # Add manifest file
+            zip_file.writestr("MANIFEST.json", json.dumps(manifest, indent=2))
+            
+            # Add README
+            readme = f"""
+{'='*60}
+ICE FOUNDATION - APPLICATIONS BACKUP
+{'='*60}
+
+Backup created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Total Applications: {applications.count()}
+
+FOLDER STRUCTURE:
+-----------------
+Each application folder is named: [Application_ID]_[Student_Name]
+
+Inside each folder:
+├── [Application_ID]_Application_Form.pdf
+├── 01_Photo.*
+├── 02_Aadhar_Card.*
+├── 03_10th_Marksheet.*
+├── 04_12th_Marksheet.*
+├── 05_Diploma_Marksheet.* (if applicable)
+├── 06_UG_Marksheet.* (if applicable)
+├── 07_Community_Certificate.* (if applicable)
+├── application_data.json (Complete data in JSON format)
+└── STUDENT_DETAILS.txt (Human-readable summary)
+
+To restore or view any application, extract the ZIP and open the corresponding folder.
+
+{'='*60}
+"""
+            zip_file.writestr("README.txt", readme)
+        
+        zip_buffer.seek(0)
+        
+        # Create response
+        response = HttpResponse(zip_buffer, content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="all_applications_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip"'
+        return response
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({'error': str(e)}, status=500)
+    
+
+# Add this to your views.py file (at the end, before any existing closing brackets)
+
+# ==================== SYNC APPLICATIONS FOR LOCAL BACKUP ====================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def sync_applications_to_local(request):
+    """Download all applications as a ZIP file for local backup"""
+    try:
+        # Check if user is admin
+        if not request.user.is_staff:
+            return Response({'error': 'Admin access required. Only staff users can download all applications.'}, status=403)
+        
+        applications = StudentApplication.objects.all().order_by('-submitted_at')
+        
+        if not applications:
+            return Response({'error': 'No applications found'}, status=404)
+        
+        # Create ZIP in memory
+        zip_buffer = BytesIO()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            
+            # Create manifest
+            manifest = {
+                'total_applications': applications.count(),
+                'exported_at': datetime.now().isoformat(),
+                'applications': []
+            }
+            
+            for app in applications:
+                # Create folder name: ApplicationID_Name
+                folder_name = f"{app.application_id}_{app.first_name}_{app.last_name}".replace(' ', '_')
+                
+                # Add application info to manifest
+                app_info = {
+                    'application_id': app.application_id,
+                    'folder_name': folder_name,
+                    'name': f"{app.first_name} {app.last_name}",
+                    'email': app.email_id,
+                    'submitted_at': app.submitted_at.isoformat() if app.submitted_at else None,
+                    'college': app.college.college_name if app.college else 'N/A',
+                    'course_id': app.course_id,
+                    'quota': app.quota_type,
+                    'status': app.status
+                }
+                manifest['applications'].append(app_info)
+                
+                # 1. Add PDF if exists
+                if app.pdf_copy and app.pdf_copy.name:
+                    try:
+                        # Reset file pointer
+                        app.pdf_copy.seek(0)
+                        pdf_content = app.pdf_copy.read()
+                        zip_file.writestr(f"{folder_name}/{app.application_id}_Application_Form.pdf", pdf_content)
+                        app_info['has_pdf'] = True
+                    except Exception as e:
+                        print(f"Error adding PDF for {app.application_id}: {e}")
+                
+                # 2. Add uploaded files
+                file_mapping = {
+                    'photo': '01_Photo',
+                    'aadhar_card': '02_Aadhar_Card',
+                    'tenth_marksheet': '03_10th_Marksheet',
+                    'twelfth_marksheet': '04_12th_Marksheet',
+                    'diploma_marksheet': '05_Diploma_Marksheet',
+                    'ug_marksheet': '06_UG_Marksheet',
+                    'community_marksheet': '07_Community_Certificate'
+                }
+                
+                for field_name, display_name in file_mapping.items():
+                    file_obj = getattr(app, field_name)
+                    if file_obj and file_obj.name:
+                        try:
+                            # Reset file pointer
+                            file_obj.seek(0)
+                            file_content = file_obj.read()
+                            # Get file extension
+                            original_name = os.path.basename(file_obj.name)
+                            ext = os.path.splitext(original_name)[1]
+                            filename = f"{display_name}{ext}"
+                            zip_file.writestr(f"{folder_name}/{filename}", file_content)
+                        except Exception as e:
+                            print(f"Error adding {field_name} for {app.application_id}: {e}")
+                
+                # 3. Add JSON summary
+                summary_data = {
+                    'application_id': app.application_id,
+                    'submitted_at': str(app.submitted_at) if app.submitted_at else None,
+                    'status': app.status,
+                    'personal_info': {
+                        'name': f"{app.first_name} {app.last_name}",
+                        'gender': app.gender,
+                        'date_of_birth': str(app.date_of_birth) if app.date_of_birth else None,
+                        'mobile': app.mobile_number,
+                        'email': app.email_id,
+                        'community': app.community,
+                        'aadhar_number': app.aadhar_number
+                    },
+                    'parents': {
+                        'father': app.father_name,
+                        'father_mobile': app.father_mobile,
+                        'mother': app.mother_name,
+                        'mother_mobile': app.mother_mobile,
+                        'annual_income': app.family_annual_income
+                    },
+                    'address': {
+                        'line1': app.address_line1,
+                        'line2': app.address_line2,
+                        'city': app.city,
+                        'state': app.state,
+                        'pincode': app.pincode
+                    },
+                    'education': {
+                        '10th': {
+                            'school': app.tenth_school_name,
+                            'percentage': str(app.tenth_marks_percentage) if app.tenth_marks_percentage else None,
+                            'year': app.tenth_year_of_passing
+                        },
+                        '12th': {
+                            'school': app.twelfth_school_name,
+                            'percentage': str(app.twelfth_marks_percentage) if app.twelfth_marks_percentage else None,
+                            'year': app.twelfth_year_of_passing
+                        }
+                    },
+                    'course_info': {
+                        'college': app.college.college_name if app.college else 'N/A',
+                        'course_id': app.course_id,
+                        'quota': app.quota_type
+                    }
+                }
+                
+                # Add diploma if exists
+                if app.has_diploma:
+                    summary_data['education']['diploma'] = {
+                        'college': app.diploma_college_name,
+                        'percentage': str(app.diploma_marks_percentage) if app.diploma_marks_percentage else None,
+                        'year': app.diploma_year_of_passing
+                    }
+                
+                # Add UG if exists
+                if app.has_ug:
+                    summary_data['education']['ug'] = {
+                        'college': app.ug_college_name,
+                        'percentage': str(app.ug_marks_percentage) if app.ug_marks_percentage else None,
+                        'year': app.ug_year_of_passing
+                    }
+                
+                zip_file.writestr(f"{folder_name}/application_data.json", json.dumps(summary_data, indent=2))
+                
+                # 4. Add text summary
+                text_summary = f"""
+{'='*60}
+STUDENT APPLICATION - {app.application_id}
+{'='*60}
+
+Submitted: {app.submitted_at}
+Status: {app.status}
+
+PERSONAL INFORMATION:
+----------------------
+Name: {app.first_name} {app.last_name}
+Gender: {app.gender}
+DOB: {app.date_of_birth}
+Mobile: {app.mobile_number}
+Email: {app.email_id}
+Community: {app.community}
+Aadhar: {app.aadhar_number}
+
+PARENT DETAILS:
+---------------
+Father: {app.father_name} (M: {app.father_mobile})
+Mother: {app.mother_name} (M: {app.mother_mobile})
+Annual Income: ₹{app.family_annual_income:,}
+
+ADDRESS:
+--------
+{app.address_line1}
+{app.address_line2 if app.address_line2 else ''}
+{app.city}, {app.state} - {app.pincode}
+
+EDUCATION:
+----------
+10th: {app.tenth_school_name} - {app.tenth_marks_percentage}% ({app.tenth_year_of_passing})
+12th: {app.twelfth_school_name} - {app.twelfth_marks_percentage}% ({app.twelfth_year_of_passing})
+"""
+                if app.has_diploma:
+                    text_summary += f"Diploma: {app.diploma_college_name} - {app.diploma_marks_percentage}% ({app.diploma_year_of_passing})\n"
+                if app.has_ug:
+                    text_summary += f"UG: {app.ug_college_name} - {app.ug_marks_percentage}% ({app.ug_year_of_passing})\n"
+                
+                text_summary += f"""
+COURSE DETAILS:
+---------------
+College: {app.college.college_name if app.college else 'N/A'}
+Course ID: {app.course_id}
+Quota: {app.quota_type}
+
+{'='*60}
+"""
+                zip_file.writestr(f"{folder_name}/STUDENT_DETAILS.txt", text_summary)
+            
+            # Add manifest file
+            zip_file.writestr("MANIFEST.json", json.dumps(manifest, indent=2))
+            
+            # Add README
+            readme = f"""
+{'='*60}
+ICE FOUNDATION - APPLICATIONS BACKUP
+{'='*60}
+
+Backup created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Total Applications: {applications.count()}
+
+FOLDER STRUCTURE:
+-----------------
+Each application folder is named: [Application_ID]_[Student_Name]
+
+Inside each folder:
+├── [Application_ID]_Application_Form.pdf
+├── 01_Photo.*
+├── 02_Aadhar_Card.*
+├── 03_10th_Marksheet.*
+├── 04_12th_Marksheet.*
+├── 05_Diploma_Marksheet.* (if applicable)
+├── 06_UG_Marksheet.* (if applicable)
+├── 07_Community_Certificate.* (if applicable)
+├── application_data.json (Complete data in JSON format)
+└── STUDENT_DETAILS.txt (Human-readable summary)
+
+HOW TO USE:
+-----------
+1. Extract the ZIP file
+2. Navigate to any application folder
+3. Open the PDF or text files to view application details
+4. Use the JSON file for programmatic access
+
+{'='*60}
+"""
+            zip_file.writestr("README.txt", readme)
+        
+        zip_buffer.seek(0)
+        
+        # Create response
+        response = HttpResponse(zip_buffer, content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="all_applications_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip"'
+        return response
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({'error': str(e)}, status=500)
