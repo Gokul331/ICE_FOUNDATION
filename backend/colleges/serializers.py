@@ -568,20 +568,29 @@ class StudentApplicationSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentApplication
         fields = '__all__'
-        read_only_fields = ['application_id', 'user', 'submitted_at', 'updated_at']
+        read_only_fields = ['application_id', 'submitted_at', 'updated_at']
 
-    def validate_file_size(file):
-        """Validate file size is within limit (5MB)"""
-        max_size = 5 * 1024 * 1024  # 5MB in bytes
-        if file.size > max_size:
-            raise serializers.ValidationError("File size must be less than 5MB.")
-        return file
+    def validate_photo(self, value):
+        """Validate photo file"""
+        if value and value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("Photo size must be less than 5MB")
+        return value
 
-    def validate(self, attrs):
-        """Validate that required documents are provided"""
-        # For file validation, we need to check in the view after serialization
-        return attrs
+    def validate_aadhar_card(self, value):
+        """Validate aadhar card file"""
+        if value and value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("Aadhar card size must be less than 5MB")
+        return value
 
+    def validate_tenth_marksheet(self, value):
+        if value and value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("10th marksheet size must be less than 5MB")
+        return value
+
+    def validate_twelfth_marksheet(self, value):
+        if value and value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("12th marksheet size must be less than 5MB")
+        return value
 
 class StudentApplicationListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for listing applications"""
