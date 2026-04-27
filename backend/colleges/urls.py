@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (
-    get_colleges, get_college_detail, get_college_courses, get_college_fees,
+    download_application_pdf, get_colleges, get_college_detail, get_college_courses, get_college_fees,
     get_courses, get_course_detail, get_filtered_fees, get_fee_detail,
     get_fee_statistics, get_fee_comparison, suggest_colleges,
     get_college_hostels, get_hostel_by_room_type, get_available_hostels, get_hostel_detail,
@@ -67,7 +67,7 @@ urlpatterns = [
     path('my-applications/<str:application_id>/', get_application_detail, name='get_application_detail'),
     
     path('sync-applications/', views.sync_applications_to_local, name='sync-applications'),
-
+    path('download-application-pdf/<str:application_id>/', download_application_pdf, name='download_application_pdf'),
 ]
 
 # Add media URL configuration for development

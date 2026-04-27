@@ -1760,3 +1760,139 @@ HOW TO USE:
         import traceback
         traceback.print_exc()
         return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_application_pdf(request, application_id):
+    """Download PDF for a specific application"""
+    try:
+        # Get the application
+        application = StudentApplication.objects.get(
+            application_id=application_id, 
+            user=request.user
+        )
+        
+        # Check if PDF exists in database
+        if application.pdf_copy and application.pdf_copy.name:
+            try:
+                # Try to read from database storage
+                pdf_content = application.pdf_copy.read()
+                response = HttpResponse(pdf_content, content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="application_{application_id}.pdf"'
+                return response
+            except Exception as e:
+                print(f"Error reading PDF from database: {e}")
+        
+        # If PDF doesn't exist, generate it
+        from .utils.pdf_generator import generate_application_pdf
+        pdf_buffer = generate_application_pdf(application)
+        
+        # Save it for future use
+        application.pdf_copy.save(f"{application.application_id}_application.pdf", ContentFile(pdf_buffer.getvalue()))
+        application.save()
+        
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="application_{application_id}.pdf"'
+        return response
+        
+    except StudentApplication.DoesNotExist:
+        return Response({'error': 'Application not found'}, status=404)
+    except Exception as e:
+        print(f"Error in download_application_pdf: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_application_detail_page(request, application_id):
+    """Get detailed application data for view page"""
+    try:
+        application = StudentApplication.objects.get(
+            application_id=application_id, 
+            user=request.user
+        )
+        
+        # Serialize all application data
+        data = {
+            'application_id': application.application_id,
+            'status': application.status,
+            'submitted_at': application.submitted_at,
+            'college_name': application.college.college_name if application.college else 'N/A',
+            'college_id': application.college.college_id if application.college else None,
+            'course_id': application.course_id,
+            'quota_type': application.quota_type,
+            
+            # Personal Info
+            'first_name': application.first_name,
+            'last_name': application.last_name,
+            'gender': application.gender,
+            'date_of_birth': application.date_of_birth,
+            'mobile_number': application.mobile_number,
+            'email_id': application.email_id,
+            'blood_group': application.blood_group,
+            'nationality': application.nationality,
+            'community': application.community,
+            'sub_caste': application.sub_caste,
+            'marital_status': application.marital_status,
+            'mother_tongue': application.mother_tongue,
+            'aadhar_number': application.aadhar_number,
+            'first_graduation': application.first_graduation,
+            
+            # Parents Info
+            'father_name': application.father_name,
+            'father_mobile': application.father_mobile,
+            'father_occupation': application.father_occupation,
+            'mother_name': application.mother_name,
+            'mother_mobile': application.mother_mobile,
+            'mother_occupation': application.mother_occupation,
+            'family_annual_income': application.family_annual_income,
+            
+            # Address
+            'address_line1': application.address_line1,
+            'address_line2': application.address_line2,
+            'city': application.city,
+            'state': application.state,
+            'pincode': application.pincode,
+            
+            # Education
+            'tenth_school_name': application.tenth_school_name,
+            'tenth_board': application.tenth_board,
+            'tenth_year_of_passing': application.tenth_year_of_passing,
+            'tenth_result_status': application.tenth_result_status,
+            'tenth_marks_percentage': application.tenth_marks_percentage,
+            
+            'twelfth_school_name': application.twelfth_school_name,
+            'twelfth_board': application.twelfth_board,
+            'twelfth_year_of_passing': application.twelfth_year_of_passing,
+            'twelfth_result_status': application.twelfth_result_status,
+            'twelfth_marks_percentage': application.twelfth_marks_percentage,
+            
+            # Diploma
+            'has_diploma': application.has_diploma,
+            'diploma_college_name': application.diploma_college_name,
+            'diploma_board_university': application.diploma_board_university,
+            'diploma_year_of_passing': application.diploma_year_of_passing,
+            'diploma_result_status': application.diploma_result_status,
+            'diploma_marks_percentage': application.diploma_marks_percentage,
+            
+            # UG
+            'has_ug': application.has_ug,
+            'ug_college_name': application.ug_college_name,
+            'ug_board_university': application.ug_board_university,
+            'ug_year_of_passing': application.ug_year_of_passing,
+            'ug_result_status': application.ug_result_status,
+            'ug_marks_percentage': application.ug_marks_percentage,
+            
+            # Declaration
+            'declaration_accepted': application.declaration_accepted,
+        }
+        
+        return Response(data, status=200)
+        
+    except StudentApplication.DoesNotExist:
+        return Response({'error': 'Application not found'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
