@@ -1032,23 +1032,22 @@ def submit_application(request):
         # Generate unique application ID
         application_id = f'APP-{user.id}-{datetime.now().strftime("%Y%m%d%H%M%S")}'
 
-        # Get college object
-        college_id = request.data.get('college_id') or request.data.get('college')
-        if not college_id:
+        # Get college object - FIX: Don't try to access .id attribute
+        college_id_value = request.data.get('college_id') or request.data.get('college')
+        if not college_id_value:
             return Response({
                 'error': 'College ID is required'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Try to find college
+        # Try to find college - College model uses college_id as primary key
         try:
-            college = College.objects.filter(college_id=college_id).first()
-            if not college:
-                college = College.objects.filter(id=college_id).first()
+            # Try to find by college_id (which is likely the primary key)
+            college = College.objects.filter(college_id=college_id_value).first()
             if not college:
                 return Response({
-                    'error': f'College not found with identifier: {college_id}'
+                    'error': f'College not found with college_id: {college_id_value}'
                 }, status=status.HTTP_404_NOT_FOUND)
-            print(f"Found college: {college.id} - {college.college_name}")
+            print(f"Found college: {college.college_id} - {college.college_name}")
         except Exception as e:
             return Response({
                 'error': f'Error finding college: {str(e)}'
@@ -1073,10 +1072,11 @@ def submit_application(request):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # Prepare data for StudentApplication model
+        # IMPORTANT: Use college.college_id (not college.id) since college_id is the primary key
         application_data = {
             'application_id': application_id,
             'user': user.id,
-            'college': college.id,
+            'college': college.college_id,  # Use college_id as the value for the college foreign key
             'course_id': int(course_id),
             'quota_type': quota_type,
             'status': 'submitted',
@@ -1161,7 +1161,8 @@ def submit_application(request):
                     }, status=status.HTTP_400_BAD_REQUEST)
 
         # Debug: Print the data being sent
-        print("Application Data:", {k: v for k, v in application_data.items() if not k.startswith('_')})
+        print("Application Data Keys:", list(application_data.keys()))
+        print(f"College ID being set: {application_data['college']}")
 
         # Create the application using StudentApplicationSerializer
         serializer = StudentApplicationSerializer(data=application_data)
@@ -1237,8 +1238,6 @@ ICE Foundation Team
             'error': str(e),
             'trace': traceback.format_exc()
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_my_applications(request):
