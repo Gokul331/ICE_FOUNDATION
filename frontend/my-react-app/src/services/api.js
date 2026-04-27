@@ -579,4 +579,31 @@ export const clearAuthData = () => {
   localStorage.removeItem('user');
 };
 
+// Get all applications for current user
+export const getMyApplications = async () => {
+  const token = localStorage.getItem('token');
+  const response = await axios.get(`${API_URL}/api/my-applications/`, {
+    headers: { Authorization: `Token ${token}` }
+  });
+  return response.data;
+};
+
+// Download PDF for a specific application
+export const downloadApplicationPDF = async (applicationId) => {
+  const token = localStorage.getItem('token');
+  const response = await axios.get(`${API_URL}/api/download-application-pdf/${applicationId}/`, {
+    headers: { Authorization: `Token ${token}` },
+    responseType: 'blob'
+  });
+  return response.data;
+};
+
+// Get single application details
+export const getApplicationDetail = async (applicationId) => {
+  const token = localStorage.getItem('token');
+  const response = await axios.get(`${API_URL}/api/my-applications/${applicationId}/`, {
+    headers: { Authorization: `Token ${token}` }
+  });
+  return response.data;
+};
 export default API;

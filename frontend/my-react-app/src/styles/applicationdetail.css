@@ -1,0 +1,269 @@
+/* Simple Application Detail Page CSS */
+
+.detail-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  background: #f5f5f5;
+  min-height: 100vh;
+}
+
+/* Navigation */
+.detail-nav {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.nav-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.home-btn {
+  background: #000000;
+  color: white;
+}
+
+.home-btn:hover {
+  background: #333333;
+}
+
+.back-btn {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.back-btn:hover {
+  background: #cccccc;
+}
+
+/* Header */
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.detail-header h1 {
+  font-size: 1.8rem;
+  color: #000;
+  margin: 0;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status-badge.submitted {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.status-badge.approved {
+  background: #e8f5e9;
+  color: #388e3c;
+}
+
+.status-badge.rejected {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
+.status-badge.pending {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+/* Main Card */
+.detail-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Sections */
+.detail-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.detail-section:last-child {
+  border-bottom: none;
+}
+
+.detail-section h3 {
+  font-size: 1.2rem;
+  color: #000;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.sub-section {
+  margin-bottom: 1rem;
+  padding-left: 1rem;
+  border-left: 3px solid #ddd;
+}
+
+.sub-section strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #555;
+}
+
+/* Rows */
+.detail-row {
+  display: flex;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.detail-row .label {
+  width: 140px;
+  font-weight: 500;
+  color: #666;
+}
+
+.detail-row .value {
+  flex: 1;
+  color: #333;
+}
+
+/* Action Buttons */
+.detail-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+}
+
+.btn-download, .btn-print {
+  flex: 1;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-download {
+  background: #000000;
+  color: white;
+}
+
+.btn-download:hover:not(:disabled) {
+  background: #333333;
+}
+
+.btn-download:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-print {
+  background: #f0f0f0;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.btn-print:hover {
+  background: #e0e0e0;
+}
+
+/* Loading State */
+.detail-loading {
+  text-align: center;
+  padding: 3rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e0e0e0;
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error State */
+.detail-error {
+  text-align: center;
+  padding: 3rem;
+}
+
+.detail-error button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background: #000;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* Print Styles */
+@media print {
+  .detail-nav, .detail-actions {
+    display: none;
+  }
+  
+  .detail-container {
+    padding: 0;
+    background: white;
+  }
+  
+  .detail-card {
+    box-shadow: none;
+    padding: 0;
+  }
+  
+  .status-badge {
+    border: 1px solid #ccc;
+  }
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .detail-container {
+    padding: 1rem;
+  }
+  
+  .detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .detail-row {
+    flex-direction: column;
+  }
+  
+  .detail-row .label {
+    width: 100%;
+    margin-bottom: 0.25rem;
+  }
+  
+  .detail-actions {
+    flex-direction: column;
+  }
+}

@@ -12,6 +12,8 @@ import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import Contact from './components/Contact';
 import './App.css';
+import MyApplications from './components/MyApplications';
+import ApplicationDetail from './components/ApplicationDetail';
 
 function App() {
   return (
@@ -29,6 +31,8 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:uid/:token/" element={<ResetPassword />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/my-applications" element={<MyApplications />} />
+        <Route path="/applications/:id" element={<ApplicationDetail />} />
       </Routes>
   
   );

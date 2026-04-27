@@ -138,6 +138,14 @@ function Navbar() {
                     </svg>
                     My Profile
                   </Link>
+                  <Link to="/my-applications" className={`dropdown-item ${isActive('/my-applications') ? 'active' : ''}`} onClick={() => setDropdownOpen(false)}>
+                    <svg fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                      <path d="M9 17v-6a2 2 0 012-2h4"/>
+                      <polyline points="12 15 9 12 12 9"/>
+                      <line x1="15" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    My Applications
+                  </Link>
                   <Link 
                     to="/colleges" 
                     className={`dropdown-item ${isActive('/colleges') ? 'active' : ''}`} 
@@ -231,6 +239,7 @@ function Navbar() {
                 </svg>
                 My Profile
               </Link>
+              <Link to="/my-applications">My Applications</Link>
               <Link 
                 to="/colleges" 
                 className={`mobile-nav-link ${isActive('/colleges') ? 'active' : ''}`} 
