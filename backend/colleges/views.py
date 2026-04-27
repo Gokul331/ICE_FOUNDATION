@@ -1058,7 +1058,7 @@ def submit_application(request):
         application_data = {
             'application_id': application_id,
             'user': user.id,
-            'college': college.id,
+            'college': college.college_id,
             'course_id': int(course_id),
             'quota_type': quota_type,
             'status': 'submitted',
