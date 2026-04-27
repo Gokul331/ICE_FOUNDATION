@@ -10,6 +10,7 @@ import Navbar from "./Navbar";
 import "../styles/collegedetails.css";
 
 function CollegeDetail() {
+  const navigate = useNavigate(); 
   const { id } = useParams();
   const [college, setCollege] = useState(null);
   const [courses, setCourses] = useState([]);

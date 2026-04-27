@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const API_URL = "https://ice-foundation-1.onrender.com";
+
 const API = axios.create({
-  baseURL: "https://ice-foundation-1.onrender.com/api",
+  baseURL: `${API_URL}/api`,
 });
 
 // Add a request interceptor to add token to every request
@@ -508,6 +510,45 @@ export const applyForHostel = async (applicationData) => {
   }
 };
 
+// ==================== APPLICATION FORM ====================
+
+export const getApplicationFormData = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await API.get('application-form-data/', {
+      headers: { Authorization: `Token ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching application form data:', error);
+    throw error;
+  }
+};
+
+// FIXED: Submit Application Function
+export const submitApplication = async (formData) => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      throw new Error('No authentication token found. Please login again.');
+    }
+    
+    const response = await API.post('/submit-application/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Token ${token}`,
+      },
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error submitting application:', error);
+    console.error('Error response:', error.response?.data);
+    throw error;
+  }
+};
+
 // ==================== HELPER FUNCTIONS ====================
 
 // Helper function to get user data from localStorage
@@ -538,32 +579,4 @@ export const clearAuthData = () => {
   localStorage.removeItem('user');
 };
 
-// ==================== APPLICATION FORM ====================
-
-export const getApplicationFormData = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await API.get('application-form-data/', {
-      headers: { Authorization: `Token ${token}` }
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching application form data:', error);
-    throw error;
-  }
-};
-
-export const submitApplication = async (applicationData) => {
-  try {
-    const token = localStorage.getItem('token');
-    // Don't set Content-Type header manually when using FormData
-    // The browser will set it with the proper multipart boundary
-    const response = await API.post('submit-application/', applicationData, {
-      headers: { Authorization: `Token ${token}` }
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error submitting application:', error);
-    throw error;
-  }
-};
+export default API;
