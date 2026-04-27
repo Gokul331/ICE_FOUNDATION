@@ -26,6 +26,9 @@ from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.tokens import default_token_generator
 from django.conf import settings
 import re
+from django.core.files.base import ContentFile
+from .utils.pdf_generator import generate_application_pdf
+from .utils.local_save import save_application_locally, save_application_media_files
 
 # ==================== COLLEGE VIEWS ====================
 
@@ -1014,74 +1017,47 @@ def get_application_form_data(request):
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+# views.py - Updated submit_application
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def submit_application(request):
     """Submit student application form with file uploads"""
     try:
-        # Get the authenticated user
         user = request.user
-        print(f"Processing application for user: {user.id} - {user.username} - {user.email}")
+        print(f"Processing application for user: {user.id} - {user.username}")
 
-        # Check if user is authenticated
         if not user.is_authenticated:
-            return Response({
-                'error': 'User not authenticated'
-            }, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': 'User not authenticated'}, status=401)
 
         # Generate unique application ID
         application_id = f'APP-{user.id}-{datetime.now().strftime("%Y%m%d%H%M%S")}'
 
-        # Get college object - FIX: Don't try to access .id attribute
-        college_id_value = request.data.get('college_id') or request.data.get('college')
-        if not college_id_value:
-            return Response({
-                'error': 'College ID is required'
-            }, status=status.HTTP_400_BAD_REQUEST)
+        # Get college object
+        college_id = request.data.get('college_id') or request.data.get('college')
+        if not college_id:
+            return Response({'error': 'College ID is required'}, status=400)
 
-        # Try to find college - College model uses college_id as primary key
-        try:
-            # Try to find by college_id (which is likely the primary key)
-            college = College.objects.filter(college_id=college_id_value).first()
-            if not college:
-                return Response({
-                    'error': f'College not found with college_id: {college_id_value}'
-                }, status=status.HTTP_404_NOT_FOUND)
-            print(f"Found college: {college.college_id} - {college.college_name}")
-        except Exception as e:
-            return Response({
-                'error': f'Error finding college: {str(e)}'
-            }, status=status.HTTP_400_BAD_REQUEST)
+        college = College.objects.filter(college_id=college_id).first()
+        if not college:
+            college = College.objects.filter(id=college_id).first()
+        if not college:
+            return Response({'error': 'College not found'}, status=404)
 
         # Get course_id
         course_id = request.data.get('course_id') or request.data.get('course')
         if not course_id:
-            return Response({
-                'error': 'Course ID is required'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Course ID is required'}, status=400)
 
-        # Get quota_type
         quota_type = request.data.get('quota_type', 'management')
 
-        # Validate required fields
-        required_fields = ['first_name', 'email_id', 'mobile_number', 'declaration_accepted']
-        missing_fields = [field for field in required_fields if not request.data.get(field)]
-        if missing_fields:
-            return Response({
-                'error': f'Missing required fields: {", ".join(missing_fields)}'
-            }, status=status.HTTP_400_BAD_REQUEST)
-
         # Prepare data for StudentApplication model
-        # IMPORTANT: Use college.college_id (not college.id) since college_id is the primary key
         application_data = {
             'application_id': application_id,
             'user': user.id,
-            'college': college.college_id,  # Use college_id as the value for the college foreign key
+            'college': college.id,
             'course_id': int(course_id),
             'quota_type': quota_type,
             'status': 'submitted',
-            
-            # Bio-data
             'first_name': request.data.get('first_name', ''),
             'last_name': request.data.get('last_name', ''),
             'gender': request.data.get('gender', ''),
@@ -1096,8 +1072,6 @@ def submit_application(request):
             'mother_tongue': request.data.get('mother_tongue', ''),
             'aadhar_number': request.data.get('aadhar_number', ''),
             'first_graduation': request.data.get('first_graduation', ''),
-            
-            # Parent's details
             'father_name': request.data.get('father_name', ''),
             'father_mobile': request.data.get('father_mobile', ''),
             'father_occupation': request.data.get('father_occupation', ''),
@@ -1105,50 +1079,43 @@ def submit_application(request):
             'mother_mobile': request.data.get('mother_mobile', ''),
             'mother_occupation': request.data.get('mother_occupation', ''),
             'family_annual_income': request.data.get('family_annual_income') or None,
-            
-            # Address details
             'address_line1': request.data.get('address_line1', ''),
             'address_line2': request.data.get('address_line2', ''),
             'city': request.data.get('city', ''),
             'state': request.data.get('state', ''),
             'pincode': request.data.get('pincode', ''),
-            
-            # 10th details
             'tenth_school_name': request.data.get('tenth_school_name', ''),
             'tenth_board': request.data.get('tenth_board', ''),
             'tenth_year_of_passing': request.data.get('tenth_year_of_passing') or None,
             'tenth_result_status': request.data.get('tenth_result_status', ''),
             'tenth_marks_percentage': request.data.get('tenth_marks_percentage') or None,
-            
-            # 12th details
             'twelfth_school_name': request.data.get('twelfth_school_name', ''),
             'twelfth_board': request.data.get('twelfth_board', ''),
             'twelfth_year_of_passing': request.data.get('twelfth_year_of_passing') or None,
             'twelfth_result_status': request.data.get('twelfth_result_status', ''),
             'twelfth_marks_percentage': request.data.get('twelfth_marks_percentage') or None,
-            
-            # Diploma details
             'has_diploma': request.data.get('has_diploma') in [True, 'true', 'True', '1', 1],
-            'diploma_college_name': request.data.get('diploma_college_name', ''),
-            'diploma_board_university': request.data.get('diploma_board_university', ''),
-            'diploma_year_of_passing': request.data.get('diploma_year_of_passing') or None,
-            'diploma_result_status': request.data.get('diploma_result_status', ''),
-            'diploma_marks_percentage': request.data.get('diploma_marks_percentage') or None,
-            
-            # UG details
             'has_ug': request.data.get('has_ug') in [True, 'true', 'True', '1', 1],
-            'ug_college_name': request.data.get('ug_college_name', ''),
-            'ug_board_university': request.data.get('ug_board_university', ''),
-            'ug_year_of_passing': request.data.get('ug_year_of_passing') or None,
-            'ug_result_status': request.data.get('ug_result_status', ''),
-            'ug_marks_percentage': request.data.get('ug_marks_percentage') or None,
-            
-            # Declaration
             'declaration_accepted': request.data.get('declaration_accepted') in [True, 'true', 'True', '1', 1],
         }
 
+        # Handle diploma and UG fields
+        if application_data['has_diploma']:
+            application_data['diploma_college_name'] = request.data.get('diploma_college_name', '')
+            application_data['diploma_board_university'] = request.data.get('diploma_board_university', '')
+            application_data['diploma_year_of_passing'] = request.data.get('diploma_year_of_passing') or None
+            application_data['diploma_result_status'] = request.data.get('diploma_result_status', '')
+            application_data['diploma_marks_percentage'] = request.data.get('diploma_marks_percentage') or None
+
+        if application_data['has_ug']:
+            application_data['ug_college_name'] = request.data.get('ug_college_name', '')
+            application_data['ug_board_university'] = request.data.get('ug_board_university', '')
+            application_data['ug_year_of_passing'] = request.data.get('ug_year_of_passing') or None
+            application_data['ug_result_status'] = request.data.get('ug_result_status', '')
+            application_data['ug_marks_percentage'] = request.data.get('ug_marks_percentage') or None
+
         # Validate file sizes
-        max_size = 5 * 1024 * 1024  # 5MB
+        max_size = 5 * 1024 * 1024
         file_fields = ['photo', 'aadhar_card', 'tenth_marksheet', 'twelfth_marksheet',
                       'diploma_marksheet', 'ug_marksheet', 'community_marksheet']
 
@@ -1157,47 +1124,51 @@ def submit_application(request):
                 file = request.FILES[field]
                 if file.size > max_size:
                     return Response({
-                        'error': f'{field} size must be less than 5MB. Current size: {file.size / (1024*1024):.2f}MB'
-                    }, status=status.HTTP_400_BAD_REQUEST)
+                        'error': f'{field} size must be less than 5MB.'
+                    }, status=400)
 
-        # Debug: Print the data being sent
-        print("Application Data Keys:", list(application_data.keys()))
-        print(f"College ID being set: {application_data['college']}")
-
-        # Create the application using StudentApplicationSerializer
+        # Create application
         serializer = StudentApplicationSerializer(data=application_data)
         
         if serializer.is_valid():
-            # Save the application
             application = serializer.save()
             
-            # Handle file uploads after saving
+            # Save files to database and local folder
             for field in file_fields:
                 if field in request.FILES:
                     setattr(application, field, request.FILES[field])
             
+            # Generate and save PDF
+            pdf_buffer = generate_application_pdf(application)
+            pdf_filename = f"{application.application_id}_application.pdf"
+            application.pdf_copy.save(pdf_filename, ContentFile(pdf_buffer.getvalue()))
+            
             # Save the application with files
             application.save()
             
-            print(f"Application saved successfully: {application_id}")
+            # ===== IMPORTANT: Save to local folder =====
+            local_save_result = save_application_locally(application)
+            
+            print(f"Application saved locally at: {local_save_result['folder_path']}")
+            print(f"Files saved: {local_save_result['files_count']} files")
             
             # Send confirmation email (optional)
             try:
                 send_mail(
                     subject='Application Submitted Successfully - ICE Foundation',
-                    message=f'''Dear {application_data.get("first_name")},
+                    message=f'''Dear {application.first_name},
 
 Your application has been submitted successfully.
 
 Application Details:
 ----------------------
-Application ID: {application_id}
+Application ID: {application.application_id}
 College: {college.college_name}
 Course ID: {course_id}
 Quota: {quota_type}
 Submitted Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
-We will review your application and get back to you soon.
+Your application has been saved locally. A copy has been stored in our records.
 
 Thank you for choosing ICE Foundation.
 
@@ -1205,30 +1176,29 @@ Best Regards,
 ICE Foundation Team
 ''',
                     from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[application_data.get('email_id')],
+                    recipient_list=[application.email_id],
                     fail_silently=True,
                 )
-                print(f"Confirmation email sent to {application_data.get('email_id')}")
             except Exception as email_error:
                 print(f"Email send failed: {email_error}")
             
             return Response({
                 'success': True,
                 'message': 'Application submitted successfully',
-                'application_id': application_id,
+                'application_id': application.application_id,
                 'college_id': college.college_id,
                 'course_id': int(course_id),
                 'quota_type': quota_type,
-                'status': 'submitted'
-            }, status=status.HTTP_201_CREATED)
+                'status': 'submitted',
+                'local_save_path': local_save_result['folder_path']
+            }, status=201)
         else:
-            # Return validation errors
-            print("Serializer validation errors:", serializer.errors)
+            print("Serializer errors:", serializer.errors)
             return Response({
                 'success': False,
                 'error': 'Validation failed',
                 'details': serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+            }, status=400)
         
     except Exception as e:
         import traceback
@@ -1237,7 +1207,9 @@ ICE Foundation Team
             'success': False,
             'error': str(e),
             'trace': traceback.format_exc()
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        }, status=500)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_my_applications(request):

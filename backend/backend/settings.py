@@ -3,8 +3,11 @@ import dj_database_url
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Create saved_applications directory if not exists
+SAVED_APPLICATIONS_DIR = os.path.join(BASE_DIR, 'saved_applications')
+os.makedirs(SAVED_APPLICATIONS_DIR, exist_ok=True)
 # ==================== SECURITY ====================
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-&z+ca)$#0^a(l^nve5dhf0y*8c32om^-$ey#oij06cst@1cpy8')
 DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
@@ -137,7 +140,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # ==================== FILE UPLOAD SETTINGS ====================
 # Maximum file size for uploads (5MB)

@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
+from django.utils import timezone
+from datetime import datetime
 
 # ==================== COLLEGE MODEL ====================
 class College(models.Model):
@@ -600,7 +602,7 @@ class StudentApplication(models.Model):
     diploma_marksheet = models.FileField(upload_to=student_applications_directory_path, null=True, blank=True)
     ug_marksheet = models.FileField(upload_to=student_applications_directory_path, null=True, blank=True)
     community_marksheet = models.FileField(upload_to=student_applications_directory_path, null=True, blank=True)
-
+    pdf_copy = models.FileField(upload_to='applications/pdfs/', null=True, blank=True)
     # Declaration
     declaration_accepted = models.BooleanField(default=False)
 
@@ -611,7 +613,12 @@ class StudentApplication(models.Model):
         verbose_name = 'Student Application'
         verbose_name_plural = 'Student Applications'
         ordering = ['-submitted_at']
-
+    
+    def save(self, *args, **kwargs):
+        if not self.application_id:
+            # Generate application ID if not set
+            self.application_id = f'APP-{self.user.id}-{datetime.now().strftime("%Y%m%d%H%M%S")}'
+        super().save(*args, **kwargs)
 
 # ==================== TIMELINE EVENT MODEL (Company Removed) ====================
 class TimelineEvent(models.Model):
