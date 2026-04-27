@@ -1,18 +1,31 @@
 import os
 import json
 import zipfile
+import re
+import logging
 from io import BytesIO
-from django.http import HttpResponse
 from datetime import datetime
+from django.http import HttpResponse
+from django.core.files.base import ContentFile
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
+from rest_framework.authtoken.models import Token
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.db.models import Q, F, Sum, Avg, Min, Max, Count
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.core.exceptions import ValidationError
-from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.conf import settings
 from .models import College, Course, UserProfile, TimelineEvent, Fees, Hostel, StudentApplication
 from .serializers import (
     CollegeSerializer, CollegeListSerializer, CourseSerializer,
@@ -20,25 +33,11 @@ from .serializers import (
     FeesSerializer, FeesListSerializer, HostelSerializer, ApplicationFormSerializer,
     StudentApplicationSerializer, StudentApplicationListSerializer
 )
-from django.contrib.auth.models import User
-from django.contrib.auth import authenticate, login, logout 
-from rest_framework.authtoken.models import Token
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
-from django.contrib.auth.tokens import default_token_generator
-from django.conf import settings
-import re
-import os
-import json
-import zipfile
-from io import BytesIO
-from django.core.files.base import ContentFile
-from django.http import HttpResponse
 from .utils.pdf_generator import generate_application_pdf
 from .utils.local_save import save_application_locally, save_application_media_files
+
+# Set up logger
+logger = logging.getLogger(__name__)
 
 # ==================== COLLEGE VIEWS ====================
 
@@ -1163,34 +1162,74 @@ def submit_application(request):
             except Exception as local_error:
                 print(f"Local save error: {local_error}")
             
-            # Send confirmation email
+            # Send confirmation email with PDF attachment
             try:
-                send_mail(
-                    subject='Application Submitted Successfully - ICE Foundation',
-                    message=f'''Dear {application.first_name},
+                # Prepare email context
+                submission_date = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+                
+                email_context = {
+                    'first_name': application.first_name,
+                    'application_id': application.application_id,
+                    'college_name': college.college_name,
+                    'course_id': course_id,
+                    'quota_type': quota_type.upper(),
+                    'submission_date': submission_date,
+                }
+                
+                # Render HTML email template
+                html_message = render_to_string('emails/application_submitted_email.html', email_context)
+                
+                # Create plain text version
+                text_message = f'''Dear {application.first_name},
 
 Your application has been submitted successfully.
 
 Application Details:
-----------------------
-Application ID: {application.application_id}
-College: {college.college_name}
-Course ID: {course_id}
-Quota: {quota_type}
-Submitted Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+- Application ID: {application.application_id}
+- College: {college.college_name}
+- Course ID: {course_id}
+- Quota: {quota_type.upper()}
+- Submission Date: {submission_date}
 
-Your application has been saved locally. A copy has been stored in our records.
+A copy of your application PDF has been attached to this email.
+Your application has been saved securely in our records.
 
 Thank you for choosing ICE Foundation.
 
 Best Regards,
-ICE Foundation Team
-''',
+The ICE Foundation Team'''
+                
+                # Create email with attachment
+                email = EmailMultiAlternatives(
+                    subject='Application Submitted Successfully - ICE Foundation',
+                    body=text_message,
                     from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[application.email_id],
-                    fail_silently=True,
+                    to=[application.email_id],
+                    reply_to=[settings.DEFAULT_FROM_EMAIL]
                 )
+                
+                # Attach HTML version
+                email.attach_alternative(html_message, "text/html")
+                
+                # Attach PDF file
+                if application.pdf_copy and application.pdf_copy.path:
+                    try:
+                        with open(application.pdf_copy.path, 'rb') as pdf_file:
+                            pdf_content = pdf_file.read()
+                            email.attach(
+                                filename=f'{application.application_id}_application.pdf',
+                                content=pdf_content,
+                                mimetype='application/pdf'
+                            )
+                    except Exception as pdf_attach_error:
+                        logger.error(f"Failed to attach PDF for application {application.application_id}: {pdf_attach_error}")
+                
+                # Send email
+                email.send(fail_silently=False)
+                logger.info(f"Application submission email sent successfully to {application.email_id} for application {application.application_id}")
+                
             except Exception as email_error:
+                logger.error(f"Email send failed for application {application.application_id}: {email_error}", exc_info=True)
                 print(f"Email send failed: {email_error}")
             
             return Response({

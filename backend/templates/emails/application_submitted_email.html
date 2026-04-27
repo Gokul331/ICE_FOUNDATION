@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Application Submitted Successfully - ICE Foundation</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #000; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background-color: #f9f9f9; }
+        .application-details { background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid #000; }
+        .application-details p { margin: 8px 0; }
+        .label { font-weight: bold; color: #000; }
+        .success-badge { display: inline-block; background-color: #28a745; color: white; padding: 10px 15px; border-radius: 5px; margin: 10px 0; }
+        .footer { background-color: #333; color: white; padding: 15px; text-align: center; font-size: 12px; }
+        .button { display: inline-block; background-color: #000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 15px 0; }
+        ul { margin: 10px 0; padding-left: 20px; }
+        li { margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Application Submitted Successfully</h1>
+            <p>ICE Foundation</p>
+        </div>
+        <div class="content">
+            <h2>Hello {{ first_name }}!</h2>
+            
+            <div class="success-badge">✓ Your application has been successfully submitted</div>
+            
+            <h3>Application Details</h3>
+            <div class="application-details">
+                <p><span class="label">Application ID:</span> {{ application_id }}</p>
+                <p><span class="label">College Name:</span> {{ college_name }}</p>
+                <p><span class="label">Course ID:</span> {{ course_id }}</p>
+                <p><span class="label">Quota Type:</span> {{ quota_type }}</p>
+                <p><span class="label">Submission Date:</span> {{ submission_date }}</p>
+                <p><span class="label">Status:</span> <strong style="color: #28a745;">Submitted</strong></p>
+            </div>
+            
+            <h3>What's Next?</h3>
+            <ul>
+                <li>A copy of your application PDF has been attached to this email</li>
+                <li>You can download your application details and documents from your dashboard</li>
+                <li>Keep your Application ID safe for future reference</li>
+                <li>Check your email regularly for admission updates</li>
+                <li>Contact our support team if you need to modify your application</li>
+            </ul>
+            
+            <h3>Important Information</h3>
+            <ul>
+                <li>All your uploaded documents have been securely stored</li>
+                <li>The college will review your application within 5-7 business days</li>
+                <li>You will receive an email notification once the college reviews your application</li>
+                <li>Please keep all required documents ready for verification</li>
+            </ul>
+            
+            <h3>Attached Files</h3>
+            <ul>
+                <li>📄 {{ application_id }}_application.pdf - Your complete application form</li>
+            </ul>
+            
+            <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
+            
+            <p>Best regards,<br><strong>The ICE Foundation Team</strong></p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2024 ICE Foundation. All rights reserved.</p>
+            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>For support, contact: support@icefoundation.in</p>
+        </div>
+    </div>
+</body>
+</html>

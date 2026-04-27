@@ -1,0 +1,18 @@
+============================================================
+STUDENT APPLICATION SUMMARY
+============================================================
+
+Application ID: APP-7-20260427172046
+Submitted Date: 2026-04-27 11:50:46
+Status: Submitted
+
+Personal Information:
+  Name: Test Student
+  Email: test@example.com
+  Mobile: 9876543210
+  College: Anna University
+  Course ID: 1
+  Quota: Management Quota
+
+Files Included:
+  - APP-7-20260427172046_application.pdf

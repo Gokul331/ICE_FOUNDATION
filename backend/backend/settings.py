@@ -5,8 +5,8 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent  # Changed to Path object
 
-# ==================== CREATE DIRECTORIES ====================
-# Create saved_applications directory if not exists
+# ==================== CREATE REQUIRED DIRECTORIES ====================
+# Create saved_applications directory if it doesn't exist (for storing submitted applications)
 SAVED_APPLICATIONS_DIR = BASE_DIR / 'saved_applications'
 os.makedirs(SAVED_APPLICATIONS_DIR, exist_ok=True)
 
@@ -190,11 +190,6 @@ SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://icefoundation.vercel.app')
 
 # ==================== LOGGING (Optional but recommended) ====================
-# Create logs directory if it doesn't exist
-LOGS_DIR = BASE_DIR / 'logs'
-if not DEBUG:
-    os.makedirs(LOGS_DIR, exist_ok=True)
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -213,11 +208,6 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
         },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': str(LOGS_DIR / 'django.log'),  # Changed to string
-            'formatter': 'verbose',
-        },
     },
     'root': {
         'handlers': ['console'],
@@ -229,7 +219,7 @@ LOGGING = {
             'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
             'propagate': False,
         },
-        'backend': {
+        'colleges': {
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': False,
