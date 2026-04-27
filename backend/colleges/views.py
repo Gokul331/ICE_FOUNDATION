@@ -1514,9 +1514,7 @@ To restore or view any application, extract the ZIP and open the corresponding f
 
 # ==================== SYNC APPLICATIONS FOR LOCAL BACKUP ====================
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def sync_applications_to_local(request):
+
     """Download all applications as a ZIP file for local backup"""
     try:
         # Check if user is admin
