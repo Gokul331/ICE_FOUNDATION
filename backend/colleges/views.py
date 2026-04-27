@@ -8,11 +8,12 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.core.exceptions import ValidationError
 from django.contrib.auth import update_session_auth_hash
-from .models import College, Course, UserProfile, TimelineEvent, Fees, Hostel
+from .models import College, Course, UserProfile, TimelineEvent, Fees, Hostel, StudentApplication
 from .serializers import (
     CollegeSerializer, CollegeListSerializer, CourseSerializer,
     UserProfileSerializer, TimelineEventSerializer, RegisterSerializer, LoginSerializer,
-    FeesSerializer, FeesListSerializer, HostelSerializer, ApplicationFormSerializer
+    FeesSerializer, FeesListSerializer, HostelSerializer, ApplicationFormSerializer,
+    StudentApplicationSerializer, StudentApplicationListSerializer
 )
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout 
@@ -1017,18 +1018,76 @@ def get_application_form_data(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def submit_application(request):
-    """Submit student application form"""
+    """Submit student application form with file uploads"""
     try:
-        serializer = ApplicationFormSerializer(data=request.data)
+        # Generate unique application ID
+        application_id = f'APP-{request.user.id}-{datetime.now().strftime("%Y%m%d%H%M%S")}'
+
+        # Get college object if college_id is provided
+        college_id = request.data.get('college_id')
+        college = None
+        if college_id:
+            try:
+                college = College.objects.get(college_id=college_id)
+            except College.DoesNotExist:
+                pass
+
+        # Prepare data for model creation
+        data = request.data.copy()
+        data['application_id'] = application_id
+        data['user'] = request.user.id
+        data['college'] = college.id if college else None
+
+        # Create serializer with the model
+        serializer = StudentApplicationSerializer(data=data)
         if serializer.is_valid():
-            # TODO: Save to a StudentApplication model when created
-            # For now, just validate and return success
-            application_data = serializer.validated_data
+            # Check file sizes manually since we're using ModelSerializer
+            max_size = 5 * 1024 * 1024  # 5MB
+            file_fields = ['photo', 'aadhar_card', 'tenth_marksheet', 'twelfth_marksheet',
+                          'diploma_marksheet', 'ug_marksheet', 'community_marksheet']
+
+            for field in file_fields:
+                if field in request.FILES:
+                    file = request.FILES[field]
+                    if file.size > max_size:
+                        return Response({
+                            'error': f'{field} size must be less than 5MB. Current size: {file.size / (1024*1024):.2f}MB'
+                        }, status=status.HTTP_400_BAD_REQUEST)
+
+            serializer.save()
             return Response({
                 'message': 'Application submitted successfully',
-                'application_id': f'APP-{request.user.id}-{datetime.now().strftime("%Y%m%d%H%M%S")}',
-                'data': application_data
+                'application_id': application_id,
+                'data': StudentApplicationSerializer(serializer.instance).data
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_my_applications(request):
+    """Get all applications for the current user"""
+    try:
+        applications = StudentApplication.objects.filter(user=request.user)
+        serializer = StudentApplicationListSerializer(applications, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_application_detail(request, application_id):
+    """Get a specific application by ID"""
+    try:
+        application = StudentApplication.objects.get(application_id=application_id, user=request.user)
+        serializer = StudentApplicationSerializer(application)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except StudentApplication.DoesNotExist:
+        return Response({'error': 'Application not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

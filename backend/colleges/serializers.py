@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
-from .models import College, Course, UserProfile, TimelineEvent, Fees, Hostel
+from .models import College, Course, UserProfile, TimelineEvent, Fees, Hostel, StudentApplication
 import logging
 
 logger = logging.getLogger(__name__)
@@ -558,3 +558,39 @@ class StudentApplicationDataSerializer(serializers.Serializer):
     city = serializers.CharField(allow_null=True, required=False)
     state = serializers.CharField(allow_null=True, required=False)
     pincode = serializers.CharField(allow_null=True, required=False)
+
+
+# ==================== STUDENT APPLICATION MODEL SERIALIZER ====================
+
+class StudentApplicationSerializer(serializers.ModelSerializer):
+    """Serializer for StudentApplication model with file uploads"""
+
+    class Meta:
+        model = StudentApplication
+        fields = '__all__'
+        read_only_fields = ['application_id', 'user', 'submitted_at', 'updated_at']
+
+    def validate_file_size(file):
+        """Validate file size is within limit (5MB)"""
+        max_size = 5 * 1024 * 1024  # 5MB in bytes
+        if file.size > max_size:
+            raise serializers.ValidationError("File size must be less than 5MB.")
+        return file
+
+    def validate(self, attrs):
+        """Validate that required documents are provided"""
+        # For file validation, we need to check in the view after serialization
+        return attrs
+
+
+class StudentApplicationListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for listing applications"""
+    college_name = serializers.CharField(source='college.college_name', read_only=True)
+
+    class Meta:
+        model = StudentApplication
+        fields = [
+            'application_id', 'college_name', 'quota_type', 'status',
+            'first_name', 'last_name', 'email_id', 'mobile_number',
+            'submitted_at', 'updated_at'
+        ]

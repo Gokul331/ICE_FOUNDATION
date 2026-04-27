@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.db.models import Avg
-from .models import College, Course, Fees, Hostel, UserProfile, TeamMember, TimelineEvent
+from .models import College, Course, Fees, Hostel, UserProfile, TeamMember, TimelineEvent, StudentApplication
 
 
 # ==================== COLLEGE ADMIN ====================
@@ -322,3 +322,63 @@ class TimelineEventAdmin(admin.ModelAdmin):
         ('Status', {'fields': ('is_active',)}),
         ('Timestamps', {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)})
     )
+
+
+# ==================== STUDENT APPLICATION ADMIN ====================
+@admin.register(StudentApplication)
+class StudentApplicationAdmin(admin.ModelAdmin):
+    list_display = ('application_id', 'user', 'college', 'quota_type', 'status',
+                   'first_name', 'last_name', 'email_id', 'mobile_number', 'submitted_at')
+    search_fields = ('application_id', 'user__username', 'user__email', 'first_name',
+                    'last_name', 'email_id', 'mobile_number', 'college__college_name')
+    list_filter = ('status', 'quota_type', 'community', 'gender', 'college__location_state')
+    readonly_fields = ('application_id', 'submitted_at', 'updated_at')
+    date_hierarchy = 'submitted_at'
+
+    fieldsets = (
+        ('Application Info', {
+            'fields': ('application_id', 'user', 'college', 'course_id', 'quota_type', 'status')
+        }),
+        ('Bio-data', {
+            'fields': ('first_name', 'last_name', 'gender', 'date_of_birth', 'mobile_number',
+                      'email_id', 'blood_group', 'nationality', 'community', 'sub_caste',
+                      'marital_status', 'mother_tongue', 'aadhar_number', 'first_graduation')
+        }),
+        ("Parent's Details", {
+            'fields': ('father_name', 'father_mobile', 'father_occupation',
+                      'mother_name', 'mother_mobile', 'mother_occupation', 'family_annual_income')
+        }),
+        ('Address', {
+            'fields': ('address_line1', 'address_line2', 'city', 'state', 'pincode')
+        }),
+        ('10th Details', {
+            'fields': ('tenth_school_name', 'tenth_board', 'tenth_year_of_passing',
+                      'tenth_result_status', 'tenth_marks_percentage')
+        }),
+        ('12th Details', {
+            'fields': ('twelfth_school_name', 'twelfth_board', 'twelfth_year_of_passing',
+                      'twelfth_result_status', 'twelfth_marks_percentage')
+        }),
+        ('Diploma Details', {
+            'fields': ('has_diploma', 'diploma_college_name', 'diploma_board_university',
+                      'diploma_year_of_passing', 'diploma_result_status', 'diploma_marks_percentage')
+        }),
+        ('UG Details', {
+            'fields': ('has_ug', 'ug_college_name', 'ug_board_university',
+                      'ug_year_of_passing', 'ug_result_status', 'ug_marks_percentage')
+        }),
+        ('Document Uploads', {
+            'fields': ('photo', 'aadhar_card', 'tenth_marksheet', 'twelfth_marksheet',
+                      'diploma_marksheet', 'ug_marksheet', 'community_marksheet')
+        }),
+        ('Declaration', {
+            'fields': ('declaration_accepted',)
+        }),
+        ('Timestamps', {
+            'fields': ('submitted_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user', 'college')

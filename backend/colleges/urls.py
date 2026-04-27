@@ -6,7 +6,8 @@ from .views import (
     get_college_hostels, get_hostel_by_room_type, get_available_hostels, get_hostel_detail,
     user_profiles, user_profile_detail, timeline_events, timeline_event_detail,
     password_reset_request, password_reset_confirm,
-    get_application_form_data, submit_application
+    get_application_form_data, submit_application,
+    get_my_applications, get_application_detail
 )
 from . import views
 from django.conf import settings
@@ -62,6 +63,8 @@ urlpatterns = [
     # ==================== APPLICATION FORM ====================
     path('application-form-data/', get_application_form_data, name='get_application_form_data'),
     path('submit-application/', submit_application, name='submit_application'),
+    path('my-applications/', get_my_applications, name='get_my_applications'),
+    path('my-applications/<str:application_id>/', get_application_detail, name='get_application_detail'),
 ]
 
 # Add media URL configuration for development

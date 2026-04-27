@@ -468,6 +468,151 @@ class TeamMember(models.Model):
         return f"{self.user.username} - {self.role}"
 
 
+# ==================== STUDENT APPLICATION MODEL ====================
+def student_applications_directory_path(instance, filename):
+    """Generate upload path for student application files"""
+    return f'applications/{instance.application_id}/{filename}'
+
+class StudentApplication(models.Model):
+    APPLICATION_STATUS = [
+        ('draft', 'Draft'),
+        ('submitted', 'Submitted'),
+        ('under_review', 'Under Review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    QUOTA_TYPE = [
+        ('management', 'Management Quota'),
+        ('government', 'Government Quota'),
+    ]
+
+    GENDER_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female'),
+        ('other', 'Other'),
+    ]
+
+    RESULT_STATUS = [
+        ('passed', 'Passed'),
+        ('appearing', 'Appearing'),
+        ('compartment', 'Compartment'),
+    ]
+
+    MARITAL_STATUS = [
+        ('single', 'Single'),
+        ('married', 'Married'),
+        ('divorced', 'Divorced'),
+        ('widowed', 'Widowed'),
+    ]
+
+    BLOOD_GROUP = [
+        ('A+', 'A+'), ('A-', 'A-'),
+        ('B+', 'B+'), ('B-', 'B-'),
+        ('AB+', 'AB+'), ('AB-', 'AB-'),
+        ('O+', 'O+'), ('O-', 'O-'),
+    ]
+
+    COMMUNITY_CHOICES = [
+        ('OC', 'OC'),
+        ('BC', 'BC'),
+        ('MBC', 'MBC'),
+        ('SC', 'SC'),
+        ('ST', 'ST'),
+    ]
+
+    application_id = models.CharField(max_length=50, unique=True, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications')
+    college = models.ForeignKey(College, on_delete=models.SET_NULL, null=True, blank=True)
+    course_id = models.IntegerField(null=True, blank=True)
+    quota_type = models.CharField(max_length=20, choices=QUOTA_TYPE, default='management')
+    status = models.CharField(max_length=20, choices=APPLICATION_STATUS, default='submitted')
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Bio-data
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100, blank=True)
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    mobile_number = models.CharField(max_length=10, blank=True)
+    email_id = models.EmailField()
+    blood_group = models.CharField(max_length=5, choices=BLOOD_GROUP, blank=True)
+    nationality = models.CharField(max_length=50, default='Indian')
+    community = models.CharField(max_length=10, choices=COMMUNITY_CHOICES, blank=True)
+    sub_caste = models.CharField(max_length=50, blank=True)
+    marital_status = models.CharField(max_length=20, choices=MARITAL_STATUS, blank=True)
+    mother_tongue = models.CharField(max_length=30, blank=True)
+    aadhar_number = models.CharField(max_length=14, blank=True)
+    first_graduation = models.CharField(max_length=255, blank=True)
+
+    # Parent's details
+    father_name = models.CharField(max_length=100, blank=True)
+    father_mobile = models.CharField(max_length=10, blank=True)
+    father_occupation = models.CharField(max_length=100, blank=True)
+    mother_name = models.CharField(max_length=100, blank=True)
+    mother_mobile = models.CharField(max_length=10, blank=True)
+    mother_occupation = models.CharField(max_length=100, blank=True)
+    family_annual_income = models.IntegerField(null=True, blank=True)
+
+    # Address details
+    address_line1 = models.TextField(blank=True)
+    address_line2 = models.TextField(blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=100, blank=True)
+    pincode = models.CharField(max_length=6, blank=True)
+
+    # 10th details
+    tenth_school_name = models.CharField(max_length=255, blank=True)
+    tenth_board = models.CharField(max_length=50, blank=True)
+    tenth_year_of_passing = models.IntegerField(null=True, blank=True)
+    tenth_result_status = models.CharField(max_length=20, choices=RESULT_STATUS, blank=True)
+    tenth_marks_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+
+    # 12th details
+    twelfth_school_name = models.CharField(max_length=255, blank=True)
+    twelfth_board = models.CharField(max_length=50, blank=True)
+    twelfth_year_of_passing = models.IntegerField(null=True, blank=True)
+    twelfth_result_status = models.CharField(max_length=20, choices=RESULT_STATUS, blank=True)
+    twelfth_marks_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+
+    # Diploma details
+    has_diploma = models.BooleanField(default=False)
+    diploma_college_name = models.CharField(max_length=255, blank=True)
+    diploma_board_university = models.CharField(max_length=100, blank=True)
+    diploma_year_of_passing = models.IntegerField(null=True, blank=True)
+    diploma_result_status = models.CharField(max_length=20, choices=RESULT_STATUS, blank=True)
+    diploma_marks_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+
+    # UG details
+    has_ug = models.BooleanField(default=False)
+    ug_college_name = models.CharField(max_length=255, blank=True)
+    ug_board_university = models.CharField(max_length=100, blank=True)
+    ug_year_of_passing = models.IntegerField(null=True, blank=True)
+    ug_result_status = models.CharField(max_length=20, choices=RESULT_STATUS, blank=True)
+    ug_marks_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+
+    # File uploads - with file size limit of 5MB each
+    photo = models.ImageField(upload_to=student_applications_directory_path, null=True, blank=True)
+    aadhar_card = models.FileField(upload_to=student_applications_directory_path, null=True, blank=True)
+    tenth_marksheet = models.FileField(upload_to=student_applications_directory_path, null=True, blank=True)
+    twelfth_marksheet = models.FileField(upload_to=student_applications_directory_path, null=True, blank=True)
+    diploma_marksheet = models.FileField(upload_to=student_applications_directory_path, null=True, blank=True)
+    ug_marksheet = models.FileField(upload_to=student_applications_directory_path, null=True, blank=True)
+    community_marksheet = models.FileField(upload_to=student_applications_directory_path, null=True, blank=True)
+
+    # Declaration
+    declaration_accepted = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.application_id} - {self.first_name} {self.last_name}"
+
+    class Meta:
+        verbose_name = 'Student Application'
+        verbose_name_plural = 'Student Applications'
+        ordering = ['-submitted_at']
+
+
 # ==================== TIMELINE EVENT MODEL (Company Removed) ====================
 class TimelineEvent(models.Model):
     EVENT_TYPES = [
