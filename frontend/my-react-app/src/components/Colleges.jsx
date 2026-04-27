@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import { getColleges, getCollegeCourses } from '../services/api';
 import '../styles/colleges.css';
 
 function Colleges() {
+  const navigate = useNavigate();
   const [colleges, setColleges] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({ stream: 'All', type: 'All' });
@@ -63,6 +64,19 @@ function Colleges() {
   const handleLogout = () => {
     localStorage.removeItem('user');
     setUser(null);
+  };
+
+  const handleApplyNow = (college, course = null) => {
+    const token = localStorage.getItem('token');
+    const collegeData = {
+      college_id: college.id || college.college_id,
+      college_name: college.name || college.college_name,
+    };
+    if (!token) {
+      navigate('/login', { state: { from: `/colleges/${college.id || college.college_id}`, course, college: collegeData, quotaType: 'management' } });
+    } else {
+      navigate('/application-form', { state: { college: collegeData, course, quotaType: 'management' } });
+    }
   };
 
   // Fetch courses for a specific college
@@ -261,12 +275,12 @@ function Colleges() {
                   <p className="course-description">{course.description}</p>
                 )}
                 
-                <button 
+                <button
                   className="course-apply-btn"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    alert(`Applied to ${course.course_name || course.name} at ${college.name}!`);
+                    handleApplyNow(college, course);
                   }}
                 >
                   Apply for this course
@@ -344,7 +358,7 @@ function Colleges() {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    alert(`Applied to ${college.name}!`);
+                    handleApplyNow(college);
                   }}
                 >
                   Apply Now
@@ -414,7 +428,7 @@ function Colleges() {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    alert(`Applied to ${college.name}!`);
+                    handleApplyNow(college);
                   }}
                 >
                   Apply Now

@@ -90,8 +90,8 @@ function CollegeDetail() {
   const handleApplyNow = (course) => {
     const token = localStorage.getItem("token");
     if (!token) {
-      // Not logged in - redirect to login with return URL
-      navigate("/login", { state: { from: `/colleges/${id}`, course } });
+      // Not logged in - redirect to login with all data needed to continue
+      navigate("/login", { state: { from: `/colleges/${id}`, course, college, quotaType: selectedQuota } });
     } else {
       // Logged in - redirect to application form with course info
       navigate("/application-form", { state: { college, course, quotaType: selectedQuota } });

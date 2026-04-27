@@ -556,6 +556,8 @@ export const getApplicationFormData = async () => {
 export const submitApplication = async (applicationData) => {
   try {
     const token = localStorage.getItem('token');
+    // Don't set Content-Type header manually when using FormData
+    // The browser will set it with the proper multipart boundary
     const response = await API.post('submit-application/', applicationData, {
       headers: { Authorization: `Token ${token}` }
     });

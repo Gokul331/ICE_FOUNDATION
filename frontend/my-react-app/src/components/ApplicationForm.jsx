@@ -170,12 +170,23 @@ function ApplicationForm() {
       // Create FormData for file uploads
       const submitData = new FormData();
 
+      // File size validation (5MB limit)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      const fileFields = ['photo', 'aadhar_card', 'tenth_marksheet', 'twelfth_marksheet',
+                        'diploma_marksheet', 'ug_marksheet', 'community_marksheet'];
+
       // Add all form fields
       Object.keys(formData).forEach((key) => {
-        if (key === 'photo' || key === 'aadhar_card' || key === 'tenth_marksheet' ||
-            key === 'twelfth_marksheet' || key === 'diploma_marksheet' ||
-            key === 'ug_marksheet' || key === 'community_marksheet') {
+        if (fileFields.includes(key)) {
           if (formData[key]) {
+            // Validate file size
+            if (formData[key].size > maxSize) {
+              const fieldName = key.replace('_', ' ').toUpperCase();
+              setStatusMessage(`${fieldName} size must be less than 5MB.`);
+              setStatusType('error');
+              setSubmitting(false);
+              return;
+            }
             submitData.append(key, formData[key]);
           }
         } else {
