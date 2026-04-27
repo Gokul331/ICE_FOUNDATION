@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { getApplicationFormData, submitApplication } from '../services/api';
+import { getApplicationFormData, submitApplication, getColleges, getCollegeCourses } from '../services/api';
 import '../styles/applicationForm.css';
 
 function ApplicationForm() {
@@ -14,9 +14,19 @@ function ApplicationForm() {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [user, setUser] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [availableColleges, setAvailableColleges] = useState([]);
+  const [availableCourses, setAvailableCourses] = useState([]);
+  const [loadingColleges, setLoadingColleges] = useState(false);
+  const [tempSelectedCollege, setTempSelectedCollege] = useState(null);
+  const [tempSelectedCourse, setTempSelectedCourse] = useState(null);
+  const [tempQuotaType, setTempQuotaType] = useState('');
 
   // Get data from navigation state
-  const { college, course, quotaType } = location.state || {};
+  const { college: initialCollege, course: initialCourse, quotaType: initialQuotaType } = location.state || {};
+  
+  const [college, setCollege] = useState(initialCollege || null);
+  const [quotaType, setQuotaType] = useState(initialQuotaType || 'management');
 
   const [formData, setFormData] = useState({
     // Bio-data
@@ -120,7 +130,7 @@ function ApplicationForm() {
   };
 
   const validateFile = (file, fieldName) => {
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 5 * 1024 * 1024;
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
     
     if (!file) return null;
@@ -140,7 +150,7 @@ function ApplicationForm() {
     const errors = [];
     
     switch(step) {
-      case 1: // Bio-data
+      case 1:
         if (!formData.first_name) errors.push('First Name is required');
         if (!formData.last_name) errors.push('Last Name is required');
         if (!formData.gender) errors.push('Gender is required');
@@ -164,7 +174,7 @@ function ApplicationForm() {
           errors.push('Valid 12-digit Aadhar Number is required');
         }
         break;
-      case 2: // Parents
+      case 2:
         if (!formData.father_name) errors.push("Father's Name is required");
         if (!formData.father_mobile) {
           errors.push("Father's Mobile Number is required");
@@ -174,7 +184,7 @@ function ApplicationForm() {
         if (!formData.mother_name) errors.push("Mother's Name is required");
         if (!formData.family_annual_income) errors.push('Family Annual Income is required');
         break;
-      case 3: // Address
+      case 3:
         if (!formData.address_line1) errors.push('Address Line 1 is required');
         if (!formData.city) errors.push('City is required');
         if (!formData.state) errors.push('State is required');
@@ -184,7 +194,7 @@ function ApplicationForm() {
           errors.push('Valid 6-digit Pincode is required');
         }
         break;
-      case 4: // Education
+      case 4:
         if (!formData.tenth_school_name) errors.push('10th School Name is required');
         if (!formData.tenth_board) errors.push('10th Board is required');
         if (!formData.tenth_year_of_passing) errors.push('10th Year of Passing is required');
@@ -204,7 +214,7 @@ function ApplicationForm() {
           errors.push('12th Marks Percentage must be between 0 and 100');
         }
         break;
-      case 5: // Uploads
+      case 5:
         const requiredFiles = ['photo', 'aadhar_card', 'tenth_marksheet', 'twelfth_marksheet'];
         requiredFiles.forEach(file => {
           if (!formData[file]) {
@@ -222,6 +232,69 @@ function ApplicationForm() {
       return false;
     }
     return true;
+  };
+
+  // Load colleges for edit modal
+  const loadColleges = async () => {
+    setLoadingColleges(true);
+    try {
+      const response = await getColleges({});
+      const collegesList = response.results || response;
+      setAvailableColleges(Array.isArray(collegesList) ? collegesList : []);
+    } catch (error) {
+      console.error('Error loading colleges:', error);
+      setStatusMessage('Failed to load colleges. Please try again.');
+      setStatusType('error');
+    } finally {
+      setLoadingColleges(false);
+    }
+  };
+
+  // Load courses when college is selected in edit modal
+  const loadCoursesForCollege = async (collegeId) => {
+    if (!collegeId) return;
+    try {
+      const coursesData = await getCollegeCourses(collegeId);
+      const coursesList = Array.isArray(coursesData) ? coursesData : (coursesData.results || []);
+      setAvailableCourses(coursesList);
+    } catch (error) {
+      console.error('Error loading courses:', error);
+      setAvailableCourses([]);
+    }
+  };
+
+  // Open edit modal
+  const handleEditSelection = async () => {
+    await loadColleges();
+    setTempSelectedCollege(college);
+    setTempSelectedCourse(selectedCourse);
+    setTempQuotaType(quotaType);
+    if (college) {
+      await loadCoursesForCollege(college.college_id);
+    }
+    setShowEditModal(true);
+  };
+
+  // Save changes from edit modal
+  const handleSaveSelection = async () => {
+    if (!tempSelectedCollege) {
+      setStatusMessage('Please select a college');
+      setStatusType('error');
+      return;
+    }
+    if (!tempSelectedCourse) {
+      setStatusMessage('Please select a course');
+      setStatusType('error');
+      return;
+    }
+    
+    setCollege(tempSelectedCollege);
+    setSelectedCourse(tempSelectedCourse);
+    setQuotaType(tempQuotaType);
+    setShowEditModal(false);
+    setStatusMessage('College and course updated successfully!');
+    setStatusType('success');
+    setTimeout(() => setStatusMessage(null), 3000);
   };
 
   // Check authentication on mount and set user
@@ -242,7 +315,7 @@ function ApplicationForm() {
     if (storedUser) {
       const userData = JSON.parse(storedUser);
       setUser(userData);
-      setLoading(false); // Set loading to false after user is set
+      setLoading(false);
     } else {
       setStatusMessage('User data not found. Please login again.');
       setStatusType('error');
@@ -274,14 +347,8 @@ function ApplicationForm() {
           state: data.state || prev.state,
           pincode: data.pincode || prev.pincode,
         }));
-        setStatusMessage('Profile data loaded successfully.');
-        setStatusType('success');
-        setTimeout(() => setStatusMessage(null), 3000);
       } catch (error) {
         console.error('Error fetching data:', error);
-        setStatusMessage('Could not load profile data. Please fill manually.');
-        setStatusType('error');
-        setTimeout(() => setStatusMessage(null), 3000);
       }
     };
 
@@ -295,22 +362,28 @@ function ApplicationForm() {
         localStorage.setItem('application_form_draft', JSON.stringify({
           data: formData,
           step: currentStep,
+          college: college,
+          selectedCourse: selectedCourse,
+          quotaType: quotaType,
           timestamp: new Date().toISOString()
         }));
       }
     }, 1000);
     
     return () => clearTimeout(saveTimeout);
-  }, [formData, currentStep, submitting, loading, user]);
+  }, [formData, currentStep, submitting, loading, user, college, selectedCourse, quotaType]);
 
   // Load saved draft
   useEffect(() => {
     const savedDraft = localStorage.getItem('application_form_draft');
-    if (savedDraft && !college && !course) {
+    if (savedDraft && !initialCollege && !initialCourse) {
       try {
-        const { data, step } = JSON.parse(savedDraft);
+        const { data, step, college: savedCollege, selectedCourse: savedCourse, quotaType: savedQuota } = JSON.parse(savedDraft);
         setFormData(prev => ({ ...prev, ...data }));
         setCurrentStep(step);
+        if (savedCollege) setCollege(savedCollege);
+        if (savedCourse) setSelectedCourse(savedCourse);
+        if (savedQuota) setQuotaType(savedQuota);
         setStatusMessage('Loaded saved draft. You can continue from where you left off.');
         setStatusType('info');
         setTimeout(() => setStatusMessage(null), 5000);
@@ -321,10 +394,10 @@ function ApplicationForm() {
   }, []);
 
   useEffect(() => {
-    if (course) {
-      setSelectedCourse(course);
+    if (initialCourse) {
+      setSelectedCourse(initialCourse);
     }
-  }, [course]);
+  }, [initialCourse]);
 
   const handleChange = (e) => {
     const { name, value, type, checked, files } = e.target;
@@ -368,7 +441,6 @@ function ApplicationForm() {
   const handleSubmitClick = (e) => {
     e.preventDefault();
     
-    // Check if user is authenticated
     const token = localStorage.getItem('token');
     if (!token || !user) {
       setStatusMessage('Please login to submit your application.');
@@ -377,7 +449,12 @@ function ApplicationForm() {
       return;
     }
     
-    // Validate all steps before showing modal
+    if (!college || !selectedCourse) {
+      setStatusMessage('Please select a college and course before submitting.');
+      setStatusType('error');
+      return;
+    }
+    
     for (let step = 1; step <= 5; step++) {
       if (!validateStep(step)) {
         setCurrentStep(step);
@@ -456,7 +533,6 @@ function ApplicationForm() {
     setSubmitting(true);
     
     try {
-      // Verify authentication again
       const token = localStorage.getItem('token');
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
       
@@ -469,7 +545,6 @@ function ApplicationForm() {
       const fileFields = ['photo', 'aadhar_card', 'tenth_marksheet', 'twelfth_marksheet',
                         'diploma_marksheet', 'ug_marksheet', 'community_marksheet'];
 
-      // Add all form fields
       Object.keys(formData).forEach((key) => {
         if (fileFields.includes(key)) {
           if (formData[key]) {
@@ -480,12 +555,10 @@ function ApplicationForm() {
         }
       });
 
-      // Explicitly add user information
       submitData.append('user_id', currentUser.id);
       submitData.append('user', currentUser.id);
       submitData.append('username', currentUser.username || currentUser.email);
 
-      // Handle college
       if (college) {
         const collegeId = college.college_id || college.id;
         if (collegeId) {
@@ -498,7 +571,6 @@ function ApplicationForm() {
         throw new Error('College information is missing');
       }
       
-      // Handle course
       if (selectedCourse) {
         const courseId = selectedCourse.course_id || selectedCourse.id;
         if (courseId) {
@@ -511,29 +583,15 @@ function ApplicationForm() {
         throw new Error('Course information is missing');
       }
       
-      // Handle quota type
       if (quotaType) {
         submitData.append('quota_type', quotaType);
       }
-
-      // Debug log
-      console.log('Submitting application with data:');
-      for (let pair of submitData.entries()) {
-        if (!(pair[1] instanceof File)) {
-          console.log(pair[0], ':', pair[1]);
-        } else {
-          console.log(pair[0], ':', pair[1].name);
-        }
-      }
-      console.log('User authenticated with ID:', currentUser.id);
-      console.log('Token present:', !!token);
 
       const response = await submitApplication(submitData);
       
       setStatusMessage('Application submitted successfully! You will receive a confirmation email shortly.');
       setStatusType('success');
       
-      // Clear draft on successful submission
       localStorage.removeItem('application_form_draft');
       
       setTimeout(() => {
@@ -542,7 +600,6 @@ function ApplicationForm() {
       }, 3000);
     } catch (error) {
       console.error('Submission error:', error);
-      console.error('Error response:', error.response?.data);
       
       let errorMessage = 'Failed to submit application. ';
       if (error.response?.data?.error) {
@@ -560,7 +617,80 @@ function ApplicationForm() {
     }
   };
 
-  // Show loading spinner while checking authentication
+  // Edit Modal Component
+  const renderEditModal = () => {
+    if (!showEditModal) return null;
+    
+    return (
+      <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+        <div className="modal-content" style={{ maxWidth: '600px' }} onClick={(e) => e.stopPropagation()}>
+          <h3>Edit College & Course Selection</h3>
+          
+          <div className="form-field">
+            <label>Select College *</label>
+            <select 
+              value={tempSelectedCollege?.college_id || ''} 
+              onChange={async (e) => {
+                const collegeId = parseInt(e.target.value);
+                const selected = availableColleges.find(c => (c.college_id || c.id) === collegeId);
+                setTempSelectedCollege(selected);
+                setTempSelectedCourse(null);
+                await loadCoursesForCollege(collegeId);
+              }}
+            >
+              <option value="">-- Select College --</option>
+              {availableColleges.map((col) => (
+                <option key={col.college_id || col.id} value={col.college_id || col.id}>
+                  {col.college_name} - {col.location_city}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="form-field">
+            <label>Select Course *</label>
+            <select 
+              value={tempSelectedCourse?.course_id || tempSelectedCourse?.id || ''} 
+              onChange={(e) => {
+                const courseId = parseInt(e.target.value);
+                const selected = availableCourses.find(c => (c.course_id || c.id) === courseId);
+                setTempSelectedCourse(selected);
+              }}
+              disabled={!tempSelectedCollege}
+            >
+              <option value="">-- Select Course --</option>
+              {availableCourses.map((crs) => (
+                <option key={crs.course_id || crs.id} value={crs.course_id || crs.id}>
+                  {crs.course_name || crs.name} - {crs.degree_type} ({crs.duration_years} years)
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="form-field">
+            <label>Quota Type *</label>
+            <select 
+              value={tempQuotaType} 
+              onChange={(e) => setTempQuotaType(e.target.value)}
+            >
+              <option value="management">Management Quota</option>
+              <option value="government">Government Quota</option>
+            </select>
+          </div>
+          
+          <div className="modal-actions" style={{ marginTop: '20px' }}>
+            <button className="btn-secondary" onClick={() => setShowEditModal(false)}>
+              Cancel
+            </button>
+            <button className="btn-primary" onClick={handleSaveSelection}>
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="application-form-container">
@@ -595,10 +725,26 @@ function ApplicationForm() {
     if (!college && !selectedCourse) return null;
     return (
       <div className="selected-course-info">
-        <h3>Selected Course</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3>Selected Course</h3>
+          <button 
+            onClick={handleEditSelection}
+            style={{
+              background: 'transparent',
+              border: '1px solid white',
+              color: 'white',
+              padding: '5px 12px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            ✎ Edit
+          </button>
+        </div>
         <div className="course-details">
-          <p><strong>College:</strong> {college?.college_name || 'N/A'}</p>
-          <p><strong>Course:</strong> {selectedCourse?.course_name || 'N/A'}</p>
+          <p><strong>College:</strong> {college?.college_name || 'Not selected'}</p>
+          <p><strong>Course:</strong> {selectedCourse?.course_name || 'Not selected'}</p>
           <p><strong>Quota:</strong> {quotaType === 'government' ? 'Government Quota' : 'Management Quota'}</p>
         </div>
       </div>
@@ -1039,6 +1185,7 @@ function ApplicationForm() {
       </div>
       
       {renderConfirmationModal()}
+      {renderEditModal()}
     </div>
   );
 }
