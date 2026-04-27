@@ -1036,7 +1036,7 @@ def submit_application(request):
         data = request.data.copy()
         data['application_id'] = application_id
         data['user'] = request.user.id
-        data['college'] = college.id if college else None
+        data['college'] = college.college_id if college else None
 
         # Create serializer with the model
         serializer = StudentApplicationSerializer(data=data)
