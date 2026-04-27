@@ -1,18 +1,21 @@
 import os
 import dj_database_url
-
 from pathlib import Path
 
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Security - use environment variables
+# ==================== SECURITY ====================
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-&z+ca)$#0^a(l^nve5dhf0y*8c32om^-$ey#oij06cst@1cpy8')
 DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
 # ALLOWED_HOSTS - critical for Render
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,.onrender.com').split(',')
 
-# Application definition - ONLY ONE INSTALLED_APPS
+# CSRF settings for Render
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://*.onrender.com,https://icefoundation.vercel.app').split(',')
+
+# ==================== APPLICATION DEFINITION ====================
 INSTALLED_APPS = [
     'admin_interface',
     'colorfield',
@@ -25,30 +28,24 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
-    'backend',
-    'colleges',
+    'backend',  # Your main app
+    'colleges',  # College app
 ]
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',  # Moved up
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-# CORS settings
-CORS_ALLOW_ALL_ORIGINS = True  # For development
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5179",
-    "http://127.0.0.1:3000",
-    "https://icefoundation.vercel.app",
-    "https://*.onrender.com",
-]
+
 ROOT_URLCONF = 'backend.urls'
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -64,8 +61,10 @@ TEMPLATES = [
         },
     },
 ]
+
 WSGI_APPLICATION = 'backend.wsgi.application'
-# Database - PostgreSQL on Render, SQLite locally
+
+# ==================== DATABASE ====================
 if os.environ.get('DATABASE_URL'):
     DATABASES = {
         'default': dj_database_url.config(conn_max_age=600, ssl_require=True)
@@ -77,7 +76,30 @@ else:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
-# REST Framework
+
+# ==================== CORS SETTINGS ====================
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only in development
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "http://localhost:5176",
+    "http://localhost:5177",
+    "http://localhost:5178",
+    "http://localhost:5179",
+    "http://127.0.0.1:3000",
+    "https://icefoundation.vercel.app",
+] + [origin.strip() for origin in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if origin.strip()]
+
+# For Render.com domains
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.onrender\.com$",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+# ==================== REST FRAMEWORK ====================
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
@@ -86,49 +108,121 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
 }
+
+# ==================== AUTHENTICATION ====================
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
-# Password validation
+
+# ==================== PASSWORD VALIDATION ====================
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
-# Internationalization
+
+# ==================== INTERNATIONALIZATION ====================
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'  # Changed to IST
 USE_I18N = True
 USE_TZ = True
-# Static files
+
+# ==================== STATIC & MEDIA FILES ====================
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-# Media files
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-# CSRF settings for Render
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://*.onrender.com,https://icefoundation.vercel.app').split(',')
-# Security settings for production
+
+# ==================== SECURITY SETTINGS (Production) ====================
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-# Email settings
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+
+# ==================== EMAIL SETTINGS ====================
 if DEBUG:
     # Use console email backend for development
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    print("📧 Using console email backend (development)")
 else:
     # Use SMTP backend for production
     EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
     EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
     EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
     EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+    EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() == 'true'
     EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+    EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 30))
+    
+    # Validate email settings
+    if not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
+        print("⚠️ WARNING: Email credentials not configured. Email functionality will not work.")
 
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@icefoundation.com')
+# Default from email
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'ICE Foundation <noreply@icefoundation.com>')
+SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
+
+# Frontend URL for email links
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://icefoundation.vercel.app')
+
+# ==================== LOGGING (Optional but recommended) ====================
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'django.log',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+        'backend': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
+
+# Create logs directory if it doesn't exist
+if not DEBUG:
+    import logging
+    os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+
+# ==================== DEFAULT PRIMARY KEY FIELD ====================
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

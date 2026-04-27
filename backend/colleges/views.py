@@ -1,3 +1,4 @@
+from datetime import datetime
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
@@ -11,7 +12,7 @@ from .models import College, Course, UserProfile, TimelineEvent, Fees, Hostel
 from .serializers import (
     CollegeSerializer, CollegeListSerializer, CourseSerializer,
     UserProfileSerializer, TimelineEventSerializer, RegisterSerializer, LoginSerializer,
-    FeesSerializer, FeesListSerializer, HostelSerializer
+    FeesSerializer, FeesListSerializer, HostelSerializer, ApplicationFormSerializer
 )
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout 
@@ -970,5 +971,64 @@ def password_reset_confirm(request):
     
     user.set_password(new_password)
     user.save()
-    
+
     return Response({'message': 'Password reset successfully'}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_application_form_data(request):
+    """Fetch existing student data for pre-filling the application form"""
+    try:
+        user = request.user
+        try:
+            profile = UserProfile.objects.get(user=user)
+        except UserProfile.DoesNotExist:
+            profile = None
+
+        data = {
+            # From User model
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name or '',
+            'last_name': user.last_name or '',
+        }
+
+        if profile:
+            # From UserProfile - map to application form fields
+            data.update({
+                'date_of_birth': profile.date_of_birth.isoformat() if profile.date_of_birth else None,
+                'gender': profile.gender or '',
+                'mobile_number': profile.phone_number or '',
+                'email_id': profile.email or user.email,
+                'address_line1': profile.address or '',
+                'address_line2': '',
+                'city': profile.city or '',
+                'state': profile.state or '',
+                'pincode': profile.pincode or '',
+            })
+
+        return Response(data, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def submit_application(request):
+    """Submit student application form"""
+    try:
+        serializer = ApplicationFormSerializer(data=request.data)
+        if serializer.is_valid():
+            # TODO: Save to a StudentApplication model when created
+            # For now, just validate and return success
+            application_data = serializer.validated_data
+            return Response({
+                'message': 'Application submitted successfully',
+                'application_id': f'APP-{request.user.id}-{datetime.now().strftime("%Y%m%d%H%M%S")}',
+                'data': application_data
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -1,11 +1,12 @@
 from django.urls import path
 from .views import (
     get_colleges, get_college_detail, get_college_courses, get_college_fees,
-    get_courses, get_course_detail, get_filtered_fees, get_fee_detail, 
+    get_courses, get_course_detail, get_filtered_fees, get_fee_detail,
     get_fee_statistics, get_fee_comparison, suggest_colleges,
     get_college_hostels, get_hostel_by_room_type, get_available_hostels, get_hostel_detail,
     user_profiles, user_profile_detail, timeline_events, timeline_event_detail,
-    password_reset_request, password_reset_confirm
+    password_reset_request, password_reset_confirm,
+    get_application_form_data, submit_application
 )
 from . import views
 from django.conf import settings
@@ -57,6 +58,10 @@ urlpatterns = [
     # ==================== PASSWORD RESET ====================
     path('password-reset/', password_reset_request, name='password_reset_request'),
     path('password-reset-confirm/', password_reset_confirm, name='password_reset_confirm'),
+
+    # ==================== APPLICATION FORM ====================
+    path('application-form-data/', get_application_form_data, name='get_application_form_data'),
+    path('submit-application/', submit_application, name='submit_application'),
 ]
 
 # Add media URL configuration for development

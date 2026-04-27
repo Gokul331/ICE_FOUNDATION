@@ -1,10 +1,17 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
 from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 from django.conf import settings
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
 from .models import College, Course, UserProfile, TimelineEvent, Fees, Hostel
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class CollegeSerializer(serializers.ModelSerializer):
@@ -35,12 +42,9 @@ class CollegeWithCoursesSerializer(serializers.ModelSerializer):
 
 
 class CourseSerializer(serializers.ModelSerializer):
-    # Add display fields for better readability
     course_code_display = serializers.SerializerMethodField()
     course_name_display = serializers.SerializerMethodField()
     degree_type_display = serializers.SerializerMethodField()
-    
-    # Add formatted fee fields for Management and Government quotas
     tuition_fee_management_formatted = serializers.SerializerMethodField()
     tuition_fee_government_formatted = serializers.SerializerMethodField()
     
@@ -58,13 +62,11 @@ class CourseSerializer(serializers.ModelSerializer):
         return obj.get_degree_type_display()
     
     def get_tuition_fee_management_formatted(self, obj):
-        """Get formatted management quota fee"""
         if obj.tuition_fee_management:
             return f"₹{obj.tuition_fee_management:,.2f}/year"
         return None
     
     def get_tuition_fee_government_formatted(self, obj):
-        """Get formatted government quota fee"""
         if obj.tuition_fee_government:
             return f"₹{obj.tuition_fee_government:,.2f}/year"
         return None
@@ -96,7 +98,6 @@ class HostelSerializer(serializers.ModelSerializer):
 # ==================== FEES SERIALIZER ====================
 
 class FeesSerializer(serializers.ModelSerializer):
-    # Display fields for better readability
     payment_frequency_display = serializers.SerializerMethodField()
     total_fee = serializers.ReadOnlyField()
     total_fee_with_transport_min = serializers.ReadOnlyField()
@@ -106,8 +107,6 @@ class FeesSerializer(serializers.ModelSerializer):
     total_annual_fees = serializers.ReadOnlyField()
     additional_fees_list = serializers.SerializerMethodField()
     fee_breakdown = serializers.SerializerMethodField()
-    
-    # Nested fields for better API response
     college_name = serializers.ReadOnlyField(source='college.college_name')
     college_details = serializers.SerializerMethodField()
     
@@ -136,7 +135,6 @@ class FeesSerializer(serializers.ModelSerializer):
         return obj.get_fee_breakdown()
     
     def get_college_details(self, obj):
-        """Get basic college details"""
         if obj.college:
             return {
                 'college_id': obj.college.college_id,
@@ -150,7 +148,6 @@ class FeesSerializer(serializers.ModelSerializer):
 
 
 class FeesListSerializer(serializers.ModelSerializer):
-    """Simplified serializer for list views"""
     college_name = serializers.ReadOnlyField(source='college.college_name')
     total_fee = serializers.ReadOnlyField()
     transport_fee_range = serializers.ReadOnlyField()
@@ -170,7 +167,6 @@ class FeesListSerializer(serializers.ModelSerializer):
 
 
 class CollegeWithFeesSerializer(serializers.ModelSerializer):
-    """Serializer for college with all fees"""
     fees = serializers.SerializerMethodField()
     courses = serializers.SerializerMethodField()
     hostels = serializers.SerializerMethodField()
@@ -197,7 +193,6 @@ class CollegeWithFeesSerializer(serializers.ModelSerializer):
 
 
 class CourseWithFeesSerializer(serializers.ModelSerializer):
-    """Serializer for course with fees from its college"""
     college_fees = serializers.SerializerMethodField()
     college_hostels = serializers.SerializerMethodField()
     
@@ -206,18 +201,15 @@ class CourseWithFeesSerializer(serializers.ModelSerializer):
         fields = '__all__'
     
     def get_college_fees(self, obj):
-        """Get fees from the college this course belongs to"""
         fees = Fees.objects.filter(college=obj.college).order_by('-academic_year')
         return FeesListSerializer(fees, many=True).data
     
     def get_college_hostels(self, obj):
-        """Get hostels from the college this course belongs to"""
         hostels = Hostel.objects.filter(college=obj.college, is_active=True)
         return HostelSerializer(hostels, many=True).data
 
 
 class FeeRangeSerializer(serializers.Serializer):
-    """Serializer for fee range filter"""
     min_fee = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     max_fee = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     academic_year = serializers.CharField(required=False)
@@ -275,6 +267,92 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Username already exists")
         return value
     
+    def send_welcome_email(self, user, profile):
+        """Send welcome email to new user"""
+        try:
+            subject = f'Welcome to ICE Foundation, {user.first_name or user.username}!'
+            
+            # HTML email template
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background: #000; color: #fff; padding: 20px; text-align: center; }}
+                    .content {{ padding: 20px; }}
+                    .button {{ display: inline-block; padding: 10px 20px; background: #000; color: #fff; text-decoration: none; border-radius: 5px; }}
+                    .footer {{ text-align: center; padding: 20px; font-size: 12px; color: #666; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>ICE Foundation</h1>
+                    </div>
+                    <div class="content">
+                        <h2>Welcome, {user.first_name or user.username}!</h2>
+                        <p>Thank you for registering with ICE Foundation. We're excited to help you find your perfect college!</p>
+                        <p>Your account has been successfully created with the following details:</p>
+                        <ul>
+                            <li><strong>Username:</strong> {user.username}</li>
+                            <li><strong>Email:</strong> {user.email}</li>
+                        </ul>
+                        <p>Here's what you can do next:</p>
+                        <ul>
+                            <li>✅ Complete your profile</li>
+                            <li>🔍 Explore colleges and courses</li>
+                            <li>🎯 Get personalized college suggestions</li>
+                            <li>💰 Discover scholarship opportunities</li>
+                        </ul>
+                        <p style="text-align: center;">
+                            <a href="{settings.FRONTEND_URL}/profile" class="button">Complete Your Profile</a>
+                        </p>
+                        <p>If you have any questions, feel free to contact our support team.</p>
+                    </div>
+                    <div class="footer">
+                        <p>© 2025 ICE Foundation. All rights reserved.</p>
+                        <p>ICE Foundation - Smart College Prediction & Admission Guidance</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            # Plain text version
+            text_content = f"""
+            Welcome to ICE Foundation, {user.first_name or user.username}!
+            
+            Thank you for registering with ICE Foundation. 
+            
+            Your account has been successfully created with:
+            Username: {user.username}
+            Email: {user.email}
+            
+            Next steps:
+            1. Complete your profile at {settings.FRONTEND_URL}/profile
+            2. Explore colleges and courses
+            3. Get personalized college suggestions
+            """
+            
+            email = EmailMultiAlternatives(
+                subject=subject,
+                body=text_content,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[user.email],
+                reply_to=[settings.DEFAULT_FROM_EMAIL],
+            )
+            email.attach_alternative(html_content, "text/html")
+            email.send(fail_silently=False)
+            
+            logger.info(f"Welcome email sent successfully to {user.email}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to send welcome email to {user.email}: {str(e)}")
+            return False
+    
     def create(self, validated_data):
         validated_data.pop('password2')
         phone_number = validated_data.pop('phone_number', '')
@@ -299,26 +377,12 @@ class RegisterSerializer(serializers.ModelSerializer):
             pincode='000000'
         )
         
-        # Send welcome email
+        # Send welcome email asynchronously (non-blocking)
         try:
-            subject = 'Welcome to ICE Foundation - Registration Successful'
-            message = render_to_string('emails/welcome_email.html', {
-                'user': user,
-                'profile': profile,
-            })
-            send_mail(
-                subject,
-                f'Welcome {user.first_name}! Your account has been created.',
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
-                html_message=message,
-                fail_silently=False
-            )
+            self.send_welcome_email(user, profile)
         except Exception as e:
-            # Log the error but don't fail registration
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Failed to send welcome email to {user.email}: {str(e)}")
+            # Log error but don't fail registration
+            logger.error(f"Email sending failed but user was created: {str(e)}")
         
         return user
 
@@ -326,3 +390,171 @@ class RegisterSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
     password = serializers.CharField(required=True, write_only=True)
+
+
+# ==================== PASSWORD RESET SERIALIZER (Optional) ====================
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    
+    def validate_email(self, value):
+        if not User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("No user found with this email address.")
+        return value
+    
+    def send_reset_email(self):
+        email = self.validated_data['email']
+        user = User.objects.get(email=email)
+        
+        # Generate reset token
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        
+        reset_link = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}/"
+        
+        try:
+            subject = 'Password Reset Request - ICE Foundation'
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background: #000; color: #fff; padding: 20px; text-align: center; }}
+                    .button {{ display: inline-block; padding: 10px 20px; background: #000; color: #fff; text-decoration: none; border-radius: 5px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>ICE Foundation</h1>
+                    </div>
+                    <div class="content">
+                        <h2>Password Reset Request</h2>
+                        <p>Hello {user.username},</p>
+                        <p>We received a request to reset your password. Click the button below to create a new password:</p>
+                        <p style="text-align: center;">
+                            <a href="{reset_link}" class="button">Reset Password</a>
+                        </p>
+                        <p>This link will expire in 24 hours.</p>
+                        <p>If you didn't request this, please ignore this email.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            send_mail(
+                subject=subject,
+                message=f'Reset your password using this link: {reset_link}',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                html_message=html_content,
+                fail_silently=False,
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send password reset email to {email}: {str(e)}")
+            return False
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    confirm_password = serializers.CharField(write_only=True, required=True)
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({"confirm_password": "Passwords don't match."})
+        return attrs
+
+
+# ==================== APPLICATION FORM SERIALIZER ====================
+
+class ApplicationFormSerializer(serializers.Serializer):
+    # Bio-data
+    first_name = serializers.CharField(max_length=100)
+    last_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    gender = serializers.ChoiceField(choices=['male', 'female', 'other'], required=False)
+    date_of_birth = serializers.DateField(required=False, allow_null=True)
+    mobile_number = serializers.CharField(max_length=10, required=False)
+    email_id = serializers.EmailField(required=False)
+    blood_group = serializers.CharField(max_length=5, required=False, allow_blank=True)
+    nationality = serializers.CharField(max_length=50, required=False, default='Indian')
+    community = serializers.ChoiceField(choices=['OC', 'BC', 'MBC', 'SC', 'ST'], required=False, allow_blank=True)
+    sub_caste = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    marital_status = serializers.ChoiceField(choices=['single', 'married', 'divorced', 'widowed'], required=False, allow_blank=True)
+    mother_tongue = serializers.CharField(max_length=30, required=False, allow_blank=True)
+    aadhar_number = serializers.CharField(max_length=14, required=False, allow_blank=True)
+    first_graduation = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+    # Parent's details
+    father_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    father_mobile = serializers.CharField(max_length=10, required=False, allow_blank=True)
+    father_occupation = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    mother_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    mother_mobile = serializers.CharField(max_length=10, required=False, allow_blank=True)
+    mother_occupation = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    family_annual_income = serializers.IntegerField(required=False, allow_null=True)
+
+    # Address details
+    address_line1 = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    address_line2 = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    city = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    state = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    pincode = serializers.CharField(max_length=6, required=False, allow_blank=True)
+
+    # 10th details
+    tenth_school_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    tenth_board = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    tenth_year_of_passing = serializers.IntegerField(required=False, allow_null=True)
+    tenth_result_status = serializers.ChoiceField(choices=['passed', 'appearing', 'compartment'], required=False, allow_blank=True)
+    tenth_marks_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
+
+    # 12th details
+    twelfth_school_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    twelfth_board = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    twelfth_year_of_passing = serializers.IntegerField(required=False, allow_null=True)
+    twelfth_result_status = serializers.ChoiceField(choices=['passed', 'appearing', 'compartment'], required=False, allow_blank=True)
+    twelfth_marks_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
+
+    # Diploma details
+    has_diploma = serializers.BooleanField(required=False, default=False)
+    diploma_college_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    diploma_board_university = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    diploma_year_of_passing = serializers.IntegerField(required=False, allow_null=True)
+    diploma_result_status = serializers.ChoiceField(choices=['passed', 'appearing', 'compartment'], required=False, allow_blank=True)
+    diploma_marks_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
+
+    # UG details
+    has_ug = serializers.BooleanField(required=False, default=False)
+    ug_college_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    ug_board_university = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    ug_year_of_passing = serializers.IntegerField(required=False, allow_null=True)
+    ug_result_status = serializers.ChoiceField(choices=['passed', 'appearing', 'compartment'], required=False, allow_blank=True)
+    ug_marks_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
+
+    # Applied course info
+    college_id = serializers.IntegerField(required=False)
+    course_id = serializers.IntegerField(required=False)
+    quota_type = serializers.ChoiceField(choices=['management', 'government'], required=False, default='management')
+
+
+# ==================== STUDENT APPLICATION DATA SERIALIZER ====================
+
+class StudentApplicationDataSerializer(serializers.Serializer):
+    """Serializer to fetch existing student data for pre-filling application form"""
+    # From User model
+    username = serializers.ReadOnlyField()
+    email = serializers.ReadOnlyField()
+    first_name = serializers.ReadOnlyField()
+    last_name = serializers.ReadOnlyField()
+
+    # From UserProfile
+    date_of_birth = serializers.DateField(allow_null=True, required=False)
+    gender = serializers.CharField(allow_null=True, required=False)
+    phone_number = serializers.CharField(allow_null=True, required=False)
+    address = serializers.CharField(allow_null=True, required=False)
+    city = serializers.CharField(allow_null=True, required=False)
+    state = serializers.CharField(allow_null=True, required=False)
+    pincode = serializers.CharField(allow_null=True, required=False)
