@@ -537,3 +537,31 @@ export const clearAuthData = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
 };
+
+// ==================== APPLICATION FORM ====================
+
+export const getApplicationFormData = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await API.get('application-form-data/', {
+      headers: { Authorization: `Token ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching application form data:', error);
+    throw error;
+  }
+};
+
+export const submitApplication = async (applicationData) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await API.post('submit-application/', applicationData, {
+      headers: { Authorization: `Token ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error submitting application:', error);
+    throw error;
+  }
+};

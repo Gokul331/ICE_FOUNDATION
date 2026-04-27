@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   getCollegeDetail,
   getCollegeCourses,
@@ -85,6 +85,17 @@ function CollegeDetail() {
     localStorage.removeItem("user");
     localStorage.removeItem("token");
     setUser(null);
+  };
+
+  const handleApplyNow = (course) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      // Not logged in - redirect to login with return URL
+      navigate("/login", { state: { from: `/colleges/${id}`, course } });
+    } else {
+      // Logged in - redirect to application form with course info
+      navigate("/application-form", { state: { college, course, quotaType: selectedQuota } });
+    }
   };
 
   const getLogoLetters = (collegeName) => {
@@ -466,7 +477,9 @@ function CollegeDetail() {
                       </div>
                     </div>
                   )}
-                  <button className="action-btn">Start Application</button>
+                  {courses && courses.length > 0 && (
+                    <button className="action-btn" onClick={() => handleApplyNow(courses[0])}>Start Application</button>
+                  )}
                   <div className="action-footer">
                     <Link to="/contact" className="action-link">
                       Need help? Contact us →
@@ -539,7 +552,7 @@ function CollegeDetail() {
                                 <td>
                                   <button
                                     className="apply-now-btn"
-                                    onClick={() => alert(`Applied to ${course.course_name} via ${selectedQuota === "management" ? "Management" : "Government"} Quota`)}
+                                    onClick={() => handleApplyNow(course)}
                                   >
                                     Apply
                                   </button>

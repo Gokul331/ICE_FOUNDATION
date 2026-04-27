@@ -15,7 +15,7 @@ const passwordStrength = (value) => {
 
 const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong'];
 
-function Auth({ initialTab = 'login' }) {
+function Auth({ initialTab = 'login', onLoginSuccess } = {}) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -82,7 +82,13 @@ function Auth({ initialTab = 'login' }) {
         localStorage.setItem('user', JSON.stringify(data.user));
         setStatusMessage('Signed in successfully.');
         setStatusType('success');
-        setTimeout(() => navigate('/'), 800);
+        setTimeout(() => {
+          if (onLoginSuccess) {
+            onLoginSuccess();
+          } else {
+            navigate('/');
+          }
+        }, 800);
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -132,7 +138,13 @@ function Auth({ initialTab = 'login' }) {
         localStorage.setItem('user', JSON.stringify(data.user));
         setStatusMessage('Account created successfully! Redirecting...');
         setStatusType('success');
-        setTimeout(() => navigate('/'), 1000);
+        setTimeout(() => {
+          if (onLoginSuccess) {
+            onLoginSuccess();
+          } else {
+            navigate('/');
+          }
+        }, 1000);
       } else {
         let errorMsg = 'Registration failed.';
         if (data.password) errorMsg = data.password[0];
@@ -288,22 +300,9 @@ function Auth({ initialTab = 'login' }) {
               </div>
 
               <div className="forgot-password">
-                <button
-                  type="button"
-                  className="forgot-link"
-                  disabled={loading}
-                  onClick={() => {
-                    if (loginEmail) {
-                      setStatusMessage('Password reset link sent to your email.');
-                      setStatusType('success');
-                    } else {
-                      setStatusMessage('Please enter your email first.');
-                      setStatusType('error');
-                    }
-                  }}
-                >
+                <Link to="/forgot-password" className="forgot-link">
                   Forgot password?
-                </button>
+                </Link>
               </div>
 
               <button type="submit" className="submit-btn" disabled={loading}>
