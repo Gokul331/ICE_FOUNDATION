@@ -62,7 +62,6 @@ class Course(models.Model):
         ('integrated', 'Integrated'),
     ]
 
-    # Course Code Choices (only the code)
     COURSE_CODE_CHOICES = [
         ('AD', 'AD'), ('AE', 'AE'), ('AG', 'AG'), ('AI', 'AI'),
         ('AM', 'AM'), ('AO', 'AO'), ('AP', 'AP'), ('AR', 'AR'),
@@ -90,7 +89,6 @@ class Course(models.Model):
         ('TT', 'TT'), ('TX', 'TX'), ('XC', 'XC'), ('XM', 'XM'), 
     ]
 
-    # Course Name Choices (full names)
     COURSE_NAME_CHOICES = [
         ('Artificial Intelligence and Data Science', 'Artificial Intelligence and Data Science'),
         ('Aeronautical Engineering', 'Aeronautical Engineering'),
@@ -201,7 +199,6 @@ class Course(models.Model):
     
     intake_seats = models.IntegerField(null=True, blank=True)
     
-    # Tuition Fee - MOVED FROM FEES MODEL
     tuition_fee_management = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Annual tuition fee for this course")
     tuition_fee_government = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Annual tuition fee for government quota")
     
@@ -227,6 +224,7 @@ class Course(models.Model):
         ordering = ['college__college_name', 'course_code']
         unique_together = ['college', 'course_code']
 
+
 class Fees(models.Model):
     PAYMENT_FREQUENCY_CHOICES = [
         ('yearly', 'Yearly'),
@@ -238,11 +236,9 @@ class Fees(models.Model):
     college = models.ForeignKey('College', on_delete=models.CASCADE, related_name='fees')
     academic_year = models.CharField(max_length=9)
     
-    # Transport Fee Range
     transport_fee_min = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     transport_fee_max = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
-    # One-time fees
     admission_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="One-time admission fee")
     application_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Application fee for admission")
     book_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Book/library fee")
@@ -250,24 +246,12 @@ class Fees(models.Model):
     lab_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Laboratory fee")
     sports_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Sports facilities fee")
     
-    # Miscellaneous fees
     miscellaneous_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Other miscellaneous charges")
     miscellaneous_description = models.TextField(null=True, blank=True, help_text="Description of miscellaneous fees")
     
-    # Additional JSON field for flexible miscellaneous fees
     additional_fees = models.JSONField(default=dict, blank=True, help_text="Additional fees like: caution_deposit, alumni_fee, etc.")
-    # Example format:
-    # {
-    #     "caution_deposit": {"amount": 5000, "refundable": true, "description": "Library caution deposit"},
-    #     "alumni_fee": {"amount": 1000, "description": "Alumni association fee"},
-    #     "medical_fee": {"amount": 2000, "description": "Medical insurance"},
-    #     "cultural_fee": {"amount": 1500, "description": "Cultural activities fee"}
-    # }
     
-    # Payment settings
     payment_frequency = models.CharField(max_length=20, choices=PAYMENT_FREQUENCY_CHOICES, default='yearly')
-    
-    # Additional notes
     fee_notes = models.TextField(null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -284,36 +268,27 @@ class Fees(models.Model):
     
     @property
     def total_one_time_fees(self):
-        """Calculate all one-time fees"""
-        return (float(self.admission_fee or 0) + 
-                float(self.application_fee or 0))
+        return (float(self.admission_fee or 0) + float(self.application_fee or 0))
     
     @property
     def total_annual_fees(self):
-        """Calculate all annual/recurring fees"""
-        return (float(self.book_fee or 0) + 
-                float(self.exam_fee or 0) + 
-                float(self.lab_fee or 0) + 
-                float(self.sports_fee or 0) +
+        return (float(self.book_fee or 0) + float(self.exam_fee or 0) + 
+                float(self.lab_fee or 0) + float(self.sports_fee or 0) +
                 float(self.miscellaneous_fee or 0))
     
     @property
     def total_fee(self):
-        """Calculate total fee without transport and hostel"""
         return self.total_one_time_fees + self.total_annual_fees
     
     @property
     def total_fee_with_transport_min(self):
-        """Total fee with minimum transport"""
         return self.total_fee + float(self.transport_fee_min or 0)
     
     @property
     def total_fee_with_transport_max(self):
-        """Total fee with maximum transport"""
         return self.total_fee + float(self.transport_fee_max or 0)
     
     def get_additional_fees_list(self):
-        """Get additional fees as a list for API response"""
         fees_list = []
         for key, value in self.additional_fees.items():
             fee_item = {
@@ -326,7 +301,6 @@ class Fees(models.Model):
         return fees_list
     
     def get_fee_breakdown(self):
-        """Get complete fee breakdown"""
         return {
             'one_time_fees': {
                 'admission_fee': float(self.admission_fee),
@@ -349,7 +323,6 @@ class Fees(models.Model):
             'grand_total': self.total_fee
         }
 
-# models.py
 
 class Hostel(models.Model):
     GENDER_CHOICES = [
@@ -365,28 +338,21 @@ class Hostel(models.Model):
         (4, 'AC Room + Attached Bathroom'),
     ]
     
-    # Basic Information
     hostel_id = models.AutoField(primary_key=True)
     college = models.ForeignKey('College', on_delete=models.CASCADE, related_name='hostels')
     name = models.CharField(max_length=100, help_text="Hostel name (e.g., 'Boys Hostel - Block A', 'Ladies Hostel')")
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES, default='boys')
-    
-    # Room Details
     room_type = models.IntegerField(choices=ROOM_TYPE_CHOICES, help_text="Type of room")
     
-    # Fee Structure
     fee_per_semester = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     fee_per_year = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     caution_deposit = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Refundable caution deposit")
     
-    # Capacity
     total_rooms = models.IntegerField(default=1, help_text="Total number of rooms of this type")
     capacity_per_room = models.IntegerField(default=2, help_text="Number of students per room")
     
-    # Status
     is_active = models.BooleanField(default=True)
     
-    # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -402,21 +368,17 @@ class Hostel(models.Model):
     
     @property
     def room_type_display(self):
-        """Get display name for room type"""
         return dict(self.ROOM_TYPE_CHOICES).get(self.room_type)
     
     @property
     def total_capacity(self):
-        """Calculate total capacity"""
         return self.total_rooms * self.capacity_per_room
-    
-   
     
     @property
     def total_fee_with_deposit(self):
-        """Calculate total fee including caution deposit"""
         return self.fee_per_year + self.caution_deposit
-    
+
+
 # ==================== USER PROFILE MODEL ====================
 class UserProfile(models.Model):
     GENDER_CHOICES = [
@@ -475,6 +437,7 @@ def student_applications_directory_path(instance, filename):
     """Generate upload path for student application files"""
     return f'applications/{instance.application_id}/{filename}'
 
+
 class StudentApplication(models.Model):
     APPLICATION_STATUS = [
         ('draft', 'Draft'),
@@ -496,8 +459,8 @@ class StudentApplication(models.Model):
     ]
 
     RESULT_STATUS = [
-       ('declared', 'Declared'),
-       ('awaited', 'Awaited'),
+        ('declared', 'Declared'),
+        ('awaited', 'Awaited'),
     ]
 
     MARITAL_STATUS = [
@@ -594,7 +557,7 @@ class StudentApplication(models.Model):
     ug_result_status = models.CharField(max_length=20, choices=RESULT_STATUS, blank=True)
     ug_marks_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 
-    # File uploads - with file size limit of 5MB each
+    # File uploads
     photo = models.ImageField(upload_to=student_applications_directory_path, null=True, blank=True)
     aadhar_card = models.FileField(upload_to=student_applications_directory_path, null=True, blank=True)
     tenth_marksheet = models.FileField(upload_to=student_applications_directory_path, null=True, blank=True)
@@ -603,6 +566,7 @@ class StudentApplication(models.Model):
     ug_marksheet = models.FileField(upload_to=student_applications_directory_path, null=True, blank=True)
     community_marksheet = models.FileField(upload_to=student_applications_directory_path, null=True, blank=True)
     pdf_copy = models.FileField(upload_to='applications/pdfs/', null=True, blank=True)
+    
     # Declaration
     declaration_accepted = models.BooleanField(default=False)
 
@@ -616,11 +580,11 @@ class StudentApplication(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.application_id:
-            # Generate application ID if not set
             self.application_id = f'APP-{self.user.id}-{datetime.now().strftime("%Y%m%d%H%M%S")}'
         super().save(*args, **kwargs)
 
-# ==================== TIMELINE EVENT MODEL (Company Removed) ====================
+
+# ==================== TIMELINE EVENT MODEL ====================
 class TimelineEvent(models.Model):
     EVENT_TYPES = [
         ('admission', 'Admission'),

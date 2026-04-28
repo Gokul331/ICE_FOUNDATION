@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.db.models import Avg
+from django.utils.html import format_html
 from .models import College, Course, Fees, Hostel, UserProfile, TeamMember, TimelineEvent, StudentApplication
 
 
@@ -124,7 +125,7 @@ class CourseAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('college')
 
 
-# ==================== FEES ADMIN (UPDATED) ====================
+# ==================== FEES ADMIN ====================
 @admin.register(Fees)
 class FeesAdmin(admin.ModelAdmin):
     list_display = ('college', 'academic_year', 'admission_fee_display', 
@@ -197,21 +198,17 @@ class FeesAdmin(admin.ModelAdmin):
     transport_fee_range_display.short_description = 'Transport Fee Range'
     
     def total_fee_calculated(self, obj):
-        """Display detailed fee breakdown in admin panel"""
-        # Get all courses for this college
         courses = Course.objects.filter(college=obj.college, is_active=True)
         breakdown = obj.get_fee_breakdown()
         
         html = '<div style="background: #f8fafc; padding: 12px; border-radius: 6px; border-left: 3px solid #3AAAD4;">'
         html += '<strong style="font-size: 14px;">📊 Fee Breakdown (Academic Year: {})</strong><br/><br/>'.format(obj.academic_year)
         
-        # One-time fees
         html += '<strong>💰 One-time Fees:</strong><br/>'
         html += '• Application Fee: ₹ {:,.2f}<br/>'.format(breakdown['one_time_fees']['application_fee'])
         html += '• Admission Fee: ₹ {:,.2f}<br/>'.format(breakdown['one_time_fees']['admission_fee'])
         html += '<strong>Total One-time: ₹ {:,.2f}</strong><br/><br/>'.format(breakdown['one_time_fees']['total_one_time'])
         
-        # Annual fees
         html += '<strong>📚 Annual Fees:</strong><br/>'
         html += '• Book Fee: ₹ {:,.2f}<br/>'.format(breakdown['annual_fees']['book_fee'])
         html += '• Exam Fee: ₹ {:,.2f}<br/>'.format(breakdown['annual_fees']['exam_fee'])
@@ -221,7 +218,6 @@ class FeesAdmin(admin.ModelAdmin):
             html += '• Miscellaneous: ₹ {:,.2f}<br/>'.format(breakdown['annual_fees']['miscellaneous_fee'])
         html += '<strong>Total Annual: ₹ {:,.2f}</strong><br/><br/>'.format(breakdown['annual_fees']['total_annual'])
         
-        # Additional fees
         if breakdown['additional_fees']:
             html += '<strong>📝 Additional Fees:</strong><br/>'
             for fee in breakdown['additional_fees']:
@@ -229,18 +225,15 @@ class FeesAdmin(admin.ModelAdmin):
                 html += '• {}: ₹ {:,.2f}{}<br/>'.format(fee['name'], fee['amount'], refundable)
             html += '<br/>'
         
-        # Transport fees
         if obj.transport_fee_min == obj.transport_fee_max:
             transport_text = f"₹ {obj.transport_fee_min:,.2f}" if obj.transport_fee_min > 0 else "Not Available"
         else:
             transport_text = f"₹ {obj.transport_fee_min:,.2f} - ₹ {obj.transport_fee_max:,.2f}"
         html += '• <strong>Transport Fee Range:</strong> {}<br/><br/>'.format(transport_text)
         
-        # Grand total
         html += '<hr style="margin: 10px 0; border-color: #e2e8f0;">'
         html += '<strong>🎯 Grand Total: ₹ {:,.2f}</strong><br/>'.format(breakdown['grand_total'])
         
-        # Hostel information note
         hostel_count = Hostel.objects.filter(college=obj.college, is_active=True).count()
         if hostel_count > 0:
             html += '<br/><div style="background: #e3f2fd; padding: 8px; border-radius: 4px; margin-top: 8px;">'
@@ -248,7 +241,6 @@ class FeesAdmin(admin.ModelAdmin):
             html += 'This college has {} hostel option(s) with different room types.'.format(hostel_count)
             html += '</div>'
         
-        # Courses information
         if courses.exists():
             html += '<br/><div style="background: #f1f5f9; padding: 8px; border-radius: 4px; margin-top: 8px;">'
             html += '📚 <strong>Note:</strong> Tuition fees are course-specific. '
@@ -256,22 +248,18 @@ class FeesAdmin(admin.ModelAdmin):
             html += '</div>'
         
         html += '</div>'
-        return html
+        return format_html(html)
     total_fee_calculated.short_description = 'Fee Calculator'
-    total_fee_calculated.allow_tags = True
     
     def save_model(self, request, obj, form, change):
-        # Ensure transport_fee_max is not less than transport_fee_min
         if obj.transport_fee_max < obj.transport_fee_min:
             obj.transport_fee_max = obj.transport_fee_min
         
-        # Set default values if empty
         if obj.transport_fee_min is None:
             obj.transport_fee_min = 0
         if obj.transport_fee_max is None:
             obj.transport_fee_max = 0
         
-        # Ensure additional_fees is a dict
         if obj.additional_fees is None:
             obj.additional_fees = {}
         
@@ -327,17 +315,18 @@ class TimelineEventAdmin(admin.ModelAdmin):
 # ==================== STUDENT APPLICATION ADMIN ====================
 @admin.register(StudentApplication)
 class StudentApplicationAdmin(admin.ModelAdmin):
-    list_display = ('application_id', 'user', 'college', 'quota_type', 'status',
+    list_display = ('application_id', 'user', 'college', 'course_name', 'quota_type', 'status',
                    'first_name', 'last_name', 'email_id', 'mobile_number', 'submitted_at')
     search_fields = ('application_id', 'user__username', 'user__email', 'first_name',
-                    'last_name', 'email_id', 'mobile_number', 'college__college_name')
+                    'last_name', 'email_id', 'mobile_number', 'college__college_name', 'course_name')
     list_filter = ('status', 'quota_type', 'community', 'gender', 'college__location_state')
-    readonly_fields = ('application_id', 'submitted_at', 'updated_at')
+    readonly_fields = ('application_id', 'submitted_at', 'updated_at', 'view_pdf_link')
     date_hierarchy = 'submitted_at'
+    list_per_page = 25
 
     fieldsets = (
         ('Application Info', {
-            'fields': ('application_id', 'user', 'college', 'course_name', 'quota_type', 'status')
+            'fields': ('application_id', 'user', 'college', 'course_name', 'quota_type', 'status', 'view_pdf_link')
         }),
         ('Bio-data', {
             'fields': ('first_name', 'last_name', 'gender', 'date_of_birth', 'mobile_number',
@@ -361,15 +350,18 @@ class StudentApplicationAdmin(admin.ModelAdmin):
         }),
         ('Diploma Details', {
             'fields': ('has_diploma', 'diploma_college_name', 'diploma_board_university',
-                      'diploma_year_of_passing', 'diploma_result_status', 'diploma_marks_percentage')
+                      'diploma_year_of_passing', 'diploma_result_status', 'diploma_marks_percentage'),
+            'classes': ('collapse',)
         }),
         ('UG Details', {
             'fields': ('has_ug', 'ug_college_name', 'ug_board_university',
-                      'ug_year_of_passing', 'ug_result_status', 'ug_marks_percentage')
+                      'ug_year_of_passing', 'ug_result_status', 'ug_marks_percentage'),
+            'classes': ('collapse',)
         }),
         ('Document Uploads', {
             'fields': ('photo', 'aadhar_card', 'tenth_marksheet', 'twelfth_marksheet',
-                      'diploma_marksheet', 'ug_marksheet', 'community_marksheet')
+                      'diploma_marksheet', 'ug_marksheet', 'community_marksheet'),
+            'classes': ('collapse',)
         }),
         ('Declaration', {
             'fields': ('declaration_accepted',)
@@ -380,5 +372,17 @@ class StudentApplicationAdmin(admin.ModelAdmin):
         })
     )
 
+    def view_pdf_link(self, obj):
+        if obj.pdf_copy and obj.pdf_copy.name:
+            return format_html('<a href="{}" target="_blank">📄 View PDF</a>', obj.pdf_copy.url)
+        return "No PDF available"
+    view_pdf_link.short_description = 'Application PDF'
+
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'college')
+
+
+# ==================== CUSTOM ADMIN SITE SETTINGS ====================
+admin.site.site_header = "ICE Foundation Administration"
+admin.site.site_title = "ICE Foundation Admin Portal"
+admin.site.index_title = "Welcome to ICE Foundation Admin Dashboard"

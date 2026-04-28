@@ -4,32 +4,142 @@
     <meta charset="UTF-8">
     <title>Application Submitted Successfully - ICE Foundation</title>
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background-color: #000; color: white; padding: 20px; text-align: center; }
-        .content { padding: 20px; background-color: #f9f9f9; }
-        .application-details { background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid #000; }
-        .application-details p { margin: 8px 0; }
-        .label { font-weight: bold; color: #000; }
-        .success-badge { display: inline-block; background-color: #28a745; color: white; padding: 10px 15px; border-radius: 5px; margin: 10px 0; }
-        .footer { background-color: #333; color: white; padding: 15px; text-align: center; font-size: 12px; }
-        .button { display: inline-block; background-color: #000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 15px 0; }
-        ul { margin: 10px 0; padding-left: 20px; }
-        li { margin: 5px 0; }
+        body { 
+            font-family: Arial, sans-serif; 
+            line-height: 1.6; 
+            color: #333; 
+            margin: 0;
+            padding: 0;
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header { 
+            background-color: #000000; 
+            color: #ffffff; 
+            padding: 30px 20px; 
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+        }
+        .header p {
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .content { 
+            padding: 30px; 
+            background-color: #ffffff;
+            border-radius: 0 0 8px 8px;
+        }
+        .success-badge { 
+            display: inline-block; 
+            background-color: #28a745; 
+            color: white; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            margin: 10px 0 20px 0;
+            font-weight: bold;
+        }
+        .application-details { 
+            background-color: #f9f9f9; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-left: 4px solid #000000;
+            border-radius: 4px;
+        }
+        .application-details p { 
+            margin: 10px 0; 
+        }
+        .label { 
+            font-weight: bold; 
+            color: #000000; 
+            min-width: 120px;
+            display: inline-block;
+        }
+        .section-title {
+            color: #000000;
+            margin: 25px 0 15px 0;
+            font-size: 18px;
+            border-bottom: 2px solid #eeeeee;
+            padding-bottom: 8px;
+        }
+        ul { 
+            margin: 15px 0; 
+            padding-left: 20px; 
+        }
+        li { 
+            margin: 8px 0; 
+        }
+        .button { 
+            display: inline-block; 
+            background-color: #000000; 
+            color: white; 
+            padding: 12px 25px; 
+            text-decoration: none; 
+            border-radius: 5px; 
+            margin: 15px 0;
+            font-weight: bold;
+        }
+        .button:hover {
+            background-color: #333333;
+        }
+        .footer { 
+            background-color: #333333; 
+            color: #ffffff; 
+            padding: 20px; 
+            text-align: center; 
+            font-size: 12px;
+            border-radius: 0 0 8px 8px;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        .footer a {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+        .attachments {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        @media only screen and (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+            .content {
+                padding: 20px;
+            }
+            .label {
+                display: block;
+                margin-bottom: 5px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Application Submitted Successfully</h1>
-            <p>ICE Foundation</p>
+            <h1>ICE Foundation</h1>
+            <p>Application Submitted Successfully</p>
         </div>
+        
         <div class="content">
             <h2>Hello {{ first_name }}!</h2>
             
-            <div class="success-badge">✓ Your application has been successfully submitted</div>
+            <div class="success-badge">
+                ✓ Your application has been successfully submitted
+            </div>
             
-            <h3>Application Details</h3>
+            <h3 class="section-title">Application Details</h3>
             <div class="application-details">
                 <p><span class="label">Application ID:</span> {{ application_id }}</p>
                 <p><span class="label">College Name:</span> {{ college_name }}</p>
@@ -39,36 +149,45 @@
                 <p><span class="label">Status:</span> <strong style="color: #28a745;">Submitted</strong></p>
             </div>
             
-            <h3>What's Next?</h3>
+            <h3 class="section-title">What's Next?</h3>
             <ul>
-                <li>A copy of your application PDF has been attached to this email</li>
-                <li>You can download your application details and documents from your dashboard</li>
-                <li>Keep your Application ID safe for future reference</li>
-                <li>Check your email regularly for admission updates</li>
-                <li>Contact our support team if you need to modify your application</li>
+                <li>✅ A copy of your application PDF has been attached to this email</li>
+                <li>📥 You can download your application details and documents from your dashboard</li>
+                <li>🔑 Keep your Application ID safe for future reference</li>
+                <li>📧 Check your email regularly for admission updates</li>
+                <li>📞 Contact our support team if you need to modify your application</li>
             </ul>
             
-            <h3>Important Information</h3>
+            <h3 class="section-title">Important Information</h3>
             <ul>
-                <li>All your uploaded documents have been securely stored</li>
-                <li>The college will review your application within 5-7 business days</li>
-                <li>You will receive an email notification once the college reviews your application</li>
-                <li>Please keep all required documents ready for verification</li>
+                <li>📁 All your uploaded documents have been securely stored</li>
+                <li>⏰ The college will review your application within 5-7 business days</li>
+                <li>📨 You will receive an email notification once the college reviews your application</li>
+                <li>📋 Please keep all required documents ready for verification</li>
             </ul>
             
-            <h3>Attached Files</h3>
-            <ul>
-                <li>📄 {{ application_id }}_application.pdf - Your complete application form</li>
-            </ul>
+            <div class="attachments">
+                <h3 style="margin: 0 0 10px 0;">Attached Files</h3>
+                <p>📄 <strong>{{ application_id }}_application.pdf</strong> - Your complete application form</p>
+            </div>
             
             <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
             
-            <p>Best regards,<br><strong>The ICE Foundation Team</strong></p>
+            <p style="margin-top: 30px;">
+                Best regards,<br>
+                <strong>The ICE Foundation Team</strong>
+            </p>
+            
+            <div style="text-align: center;">
+                <a href="{{ frontend_url }}" class="button">Go to Dashboard</a>
+            </div>
         </div>
+        
         <div class="footer">
-            <p>&copy; 2024 ICE Foundation. All rights reserved.</p>
+            <p>&copy; 2025 ICE Foundation. All rights reserved.</p>
             <p>This is an automated message. Please do not reply to this email.</p>
-            <p>For support, contact: support@icefoundation.in</p>
+            <p>For support, contact: <a href="mailto:support@icefoundation.in">support@icefoundation.in</a></p>
+            <p><a href="{{ frontend_url }}/unsubscribe" style="color: #ffffff;">Unsubscribe</a> from these notifications</p>
         </div>
     </div>
 </body>

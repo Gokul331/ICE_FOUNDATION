@@ -1,13 +1,34 @@
 from django.urls import path
 from .views import (
-    download_application_pdf, get_colleges, get_college_detail, get_college_courses, get_college_fees,
-    get_courses, get_course_detail, get_filtered_fees, get_fee_detail,
-    get_fee_statistics, get_fee_comparison, suggest_colleges,
-    get_college_hostels, get_hostel_by_room_type, get_available_hostels, get_hostel_detail, update_profile,
-    user_profiles, user_profile_detail, timeline_events, timeline_event_detail,
-    password_reset_request, password_reset_confirm,
-    get_application_form_data, submit_application,
-    get_my_applications, get_application_detail
+    download_application_pdf, 
+    get_colleges, 
+    get_college_detail, 
+    get_college_courses, 
+    get_college_fees,
+    get_courses, 
+    get_course_detail, 
+    get_filtered_fees, 
+    get_fee_detail,
+    get_fee_statistics, 
+    get_fee_comparison, 
+    suggest_colleges,
+    get_college_hostels, 
+    get_hostel_by_room_type, 
+    get_available_hostels, 
+    get_hostel_detail, 
+    update_profile,
+    user_profiles, 
+    user_profile_detail, 
+    timeline_events, 
+    timeline_event_detail,
+    password_reset_request, 
+    password_reset_confirm,
+    get_application_form_data, 
+    submit_application,
+    get_my_applications, 
+    get_application_detail,
+    get_application_detail_page,
+    sync_applications_to_local,
 )
 from . import views
 from django.conf import settings
@@ -51,6 +72,7 @@ urlpatterns = [
     # Profile Management
     path('profile/me/', views.get_current_user_profile, name='current_user_profile'),
     path('change-password/', views.change_password, name='change_password'),
+    path('profile/update/', update_profile, name='update_profile'),
 
     # ==================== TIMELINE EVENTS ====================
     path('timeline/', timeline_events, name='timeline_events'),
@@ -63,13 +85,17 @@ urlpatterns = [
     # ==================== APPLICATION FORM ====================
     path('application-form-data/', get_application_form_data, name='get_application_form_data'),
     path('submit-application/', submit_application, name='submit_application'),
+    
+    # ==================== MY APPLICATIONS ====================
     path('my-applications/', get_my_applications, name='get_my_applications'),
     path('my-applications/<str:application_id>/', get_application_detail, name='get_application_detail'),
+    path('applications/<str:application_id>/', get_application_detail_page, name='application_detail_page'),
     
-  
+    # ==================== PDF DOWNLOAD ====================
     path('download-application-pdf/<str:application_id>/', download_application_pdf, name='download_application_pdf'),
-
-    path('profile/update/', update_profile, name='update_profile'),
+    
+    # ==================== ADMIN BACKUP ====================
+    path('sync-applications/', sync_applications_to_local, name='sync_applications'),
 ]
 
 # Add media URL configuration for development

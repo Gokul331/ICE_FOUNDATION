@@ -46,37 +46,30 @@ def get_colleges(request):
     """Get all colleges with optional filtering"""
     colleges = College.objects.all()
 
-    # Filter by city/district
     district = request.GET.get('district')
     if district:
         colleges = colleges.filter(location_city__icontains=district)
 
-    # Filter by state
     state = request.GET.get('state')
     if state:
         colleges = colleges.filter(location_state__icontains=state)
 
-    # Filter by type
     college_type = request.GET.get('type')
     if college_type:
         colleges = colleges.filter(type=college_type)
 
-    # Filter by affiliation
     affiliation = request.GET.get('affiliation')
     if affiliation:
         colleges = colleges.filter(affiliation=affiliation)
 
-    # Filter by min placement
     min_placement = request.GET.get('min_placement')
     if min_placement:
         colleges = colleges.filter(placement_percentage__gte=int(min_placement))
 
-    # Filter by nirf ranking
     nirf = request.GET.get('nirf')
     if nirf:
         colleges = colleges.filter(nirf_rank__lte=int(nirf))
 
-    # Filter by naac grade
     naac = request.GET.get('naac_grade')
     if naac:
         colleges = colleges.filter(naac_grade=naac)
@@ -139,27 +132,22 @@ def get_courses(request):
     """Get all courses with optional filtering"""
     courses = Course.objects.filter(is_active=True)
 
-    # Filter by college
     college_id = request.GET.get('college_id')
     if college_id:
         courses = courses.filter(college_id=college_id)
 
-    # Filter by course code
     course_code = request.GET.get('course_code')
     if course_code:
         courses = courses.filter(course_code=course_code)
 
-    # Filter by course name
     course_name = request.GET.get('course_name')
     if course_name:
         courses = courses.filter(course_name__icontains=course_name)
 
-    # Filter by degree type
     degree_type = request.GET.get('degree_type')
     if degree_type:
         courses = courses.filter(degree_type=degree_type)
 
-    # Filter by fee range for a specific quota
     min_fee = request.GET.get('min_fee')
     max_fee = request.GET.get('max_fee')
     quota_type = request.GET.get('quota_type', 'management')
@@ -180,7 +168,6 @@ def get_courses(request):
         else:
             courses = courses.filter(tuition_fee_government__lte=max_fee)
 
-    # Filter by min cutoff
     cutoff = request.GET.get('cutoff')
     community = request.GET.get('community')
     if cutoff and community:
@@ -334,7 +321,6 @@ def get_available_hostels(request):
     """Get all hostels with available rooms"""
     hostels = Hostel.objects.filter(is_active=True)
 
-    # Optional filters
     college_id = request.GET.get('college_id')
     if college_id:
         hostels = hostels.filter(college_id=college_id)
@@ -1047,10 +1033,10 @@ def submit_application(request):
         if not college:
             return Response({'error': 'College not found'}, status=404)
 
-        # Get course_name
-        course_name = request.data.get('course')
+        # Get course_name - FIX: Check both 'course_name' and 'course'
+        course_name = request.data.get('course_name') or request.data.get('course')
         if not course_name:
-            return Response({'error': 'Course ID is required'}, status=400)
+            return Response({'error': 'Course name is required'}, status=400)
 
         quota_type = request.data.get('quota_type', 'management')
 
@@ -1128,9 +1114,7 @@ def submit_application(request):
             if field in request.FILES:
                 file = request.FILES[field]
                 if file.size > max_size:
-                    return Response({
-                        'error': f'{field} size must be less than 5MB.'
-                    }, status=400)
+                    return Response({'error': f'{field} size must be less than 5MB.'}, status=400)
 
         # Create application
         serializer = StudentApplicationSerializer(data=application_data)
@@ -1145,7 +1129,6 @@ def submit_application(request):
 
             # Generate and save PDF
             try:
-
                 pdf_buffer = generate_application_pdf(application)
                 pdf_filename = f"{application.application_id}_application.pdf"
                 application.pdf_copy.save(pdf_filename, ContentFile(pdf_buffer.getvalue()))
@@ -1165,22 +1148,8 @@ def submit_application(request):
             
             # Send confirmation email with PDF attachment
             try:
-                # Prepare email context
                 submission_date = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
 
-                email_context = {
-                    'first_name': application.first_name,
-                    'application_id': application.application_id,
-                    'college_name': college.college_name,
-                    'course_name': course_name,
-                    'quota_type': quota_type.upper(),
-                    'submission_date': submission_date,
-                }
-                
-                # Render HTML email template
-                html_message = render_to_string('emails/application_submitted_email.html', email_context)
-                
-                # Create plain text version
                 text_message = f'''Dear {application.first_name},
 
 Your application has been submitted successfully.
@@ -1192,15 +1161,11 @@ Application Details:
 - Quota: {quota_type.upper()}
 - Submission Date: {submission_date}
 
-A copy of your application PDF has been attached to this email.
-Your application has been saved securely in our records.
-
 Thank you for choosing ICE Foundation.
 
 Best Regards,
 The ICE Foundation Team'''
 
-                # Create email with attachment
                 email = EmailMultiAlternatives(
                     subject='Application Submitted Successfully - ICE Foundation',
                     body=text_message,
@@ -1209,14 +1174,11 @@ The ICE Foundation Team'''
                     reply_to=[settings.DEFAULT_FROM_EMAIL]
                 )
 
-                # Attach HTML version
-                email.attach_alternative(html_message, "text/html")
-                
-                # Attach PDF file
+                # Attach PDF file if exists
                 if application.pdf_copy:
                     try:
-                        # Use read() directly instead of opening by path
-                        # since the PDF was saved from ContentFile (in-memory)
+                        if hasattr(application.pdf_copy, 'seek'):
+                            application.pdf_copy.seek(0)
                         pdf_content = application.pdf_copy.read()
                         email.attach(
                             filename=f'{application.application_id}_application.pdf',
@@ -1224,15 +1186,13 @@ The ICE Foundation Team'''
                             mimetype='application/pdf'
                         )
                     except Exception as pdf_attach_error:
-                        logger.error(f"Failed to attach PDF for application {application.application_id}: {pdf_attach_error}")
+                        logger.error(f"Failed to attach PDF: {pdf_attach_error}")
 
-                # Send email
                 email.send(fail_silently=False)
-                logger.info(f"Application submission email sent successfully to {application.email_id} for application {application.application_id}")
+                logger.info(f"Email sent to {application.email_id}")
 
             except Exception as email_error:
-                logger.error(f"Email send failed for application {application.application_id}: {email_error}", exc_info=True)
-                print(f"Email send failed: {email_error}")
+                logger.error(f"Email send failed: {email_error}")
 
             return Response({
                 'success': True,
@@ -1240,7 +1200,7 @@ The ICE Foundation Team'''
                 'application_id': application.application_id,
                 'college_id': college.college_id,
                 'course_name': course_name,
-                'quota_type': quota_type,
+                'quota_type': quota_type.upper(),
                 'status': 'submitted'
             }, status=201)
         else:
@@ -1268,9 +1228,22 @@ The ICE Foundation Team'''
 def get_my_applications(request):
     """Get all applications for the current user"""
     try:
-        applications = StudentApplication.objects.filter(user=request.user)
-        serializer = StudentApplicationListSerializer(applications, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        applications = StudentApplication.objects.filter(user=request.user).order_by('-submitted_at')
+        data = []
+        for app in applications:
+            data.append({
+                'application_id': app.application_id,
+                'college_name': app.college.college_name if app.college else None,
+                'quota_type': app.quota_type,
+                'status': app.status,
+                'first_name': app.first_name,
+                'last_name': app.last_name,
+                'email_id': app.email_id,
+                'mobile_number': app.mobile_number,
+                'submitted_at': app.submitted_at,
+                'updated_at': app.updated_at,
+            })
+        return Response(data, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -1284,7 +1257,6 @@ def download_application_pdf(request, application_id):
 
         if application.pdf_copy and application.pdf_copy.name:
             try:
-                # Reset file pointer if it was read before
                 if hasattr(application.pdf_copy, 'seek'):
                     application.pdf_copy.seek(0)
                 pdf_content = application.pdf_copy.read()
@@ -1293,29 +1265,15 @@ def download_application_pdf(request, application_id):
                 return response
             except Exception as e:
                 print(f"Error reading stored PDF: {e}")
-                import traceback
-                traceback.print_exc()
 
-        # Regenerate PDF if not found or error
-        try:
-            from .utils.pdf_generator import generate_application_pdf
-            pdf_buffer = generate_application_pdf(application)
-        except Exception as pdf_gen_error:
-            print(f"PDF generation failed: {pdf_gen_error}")
-            import traceback
-            traceback.print_exc()
-            return Response({'error': f'PDF generation failed: {str(pdf_gen_error)}'}, status=500)
-
-        # Save for future downloads
-        try:
-            application.pdf_copy.save(f"{application.application_id}_application.pdf", ContentFile(pdf_buffer.getvalue()))
-            application.save()
-        except Exception as save_error:
-            print(f"Error saving PDF: {save_error}")
+        # Regenerate PDF if not found
+        from .utils.pdf_generator import generate_application_pdf
+        pdf_buffer = generate_application_pdf(application)
 
         response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="application_{application_id}.pdf"'
         return response
+        
     except StudentApplication.DoesNotExist:
         return Response({'error': 'Application not found'}, status=404)
     except Exception as e:
@@ -1411,96 +1369,219 @@ def get_application_detail_page(request, application_id):
     except Exception as e:
         return Response({'error': str(e)}, status=500)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# ==================== ADMIN SYNC VIEW ====================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def sync_applications_to_local(request):
+    """Download all applications as a ZIP file for local backup (Admin only)"""
+    try:
+        if not request.user.is_staff:
+            return Response({'error': 'Admin access required'}, status=403)
+        
+        applications = StudentApplication.objects.all().order_by('-submitted_at')
+        
+        if not applications:
+            return Response({'error': 'No applications found'}, status=404)
+        
+        zip_buffer = BytesIO()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            manifest = {
+                'total_applications': applications.count(), 
+                'exported_at': datetime.now().isoformat(), 
+                'applications': []
+            }
+            
+            for app in applications:
+                # Create folder name: ApplicationID_Name
+                folder_name = f"{app.application_id}_{app.first_name}_{app.last_name}".replace(' ', '_')
+                
+                app_info = {
+                    'application_id': app.application_id,
+                    'folder_name': folder_name,
+                    'name': f"{app.first_name} {app.last_name}",
+                    'email': app.email_id,
+                    'submitted_at': app.submitted_at.isoformat() if app.submitted_at else None,
+                    'college': app.college.college_name if app.college else 'N/A',
+                    'course': app.course_name,
+                    'quota': app.quota_type,
+                    'status': app.status,
+                    'submitted_at_formatted': app.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if app.submitted_at else 'N/A'
+                }
+                manifest['applications'].append(app_info)
+                
+                # 1. Add PDF if exists
+                if app.pdf_copy and app.pdf_copy.name:
+                    try:
+                        if hasattr(app.pdf_copy, 'seek'):
+                            app.pdf_copy.seek(0)
+                        pdf_content = app.pdf_copy.read()
+                        zip_file.writestr(f"{folder_name}/{app.application_id}_Application_Form.pdf", pdf_content)
+                    except Exception as e:
+                        print(f"Error adding PDF for {app.application_id}: {e}")
+                
+                # 2. Add uploaded files
+                file_mapping = {
+                    'photo': '01_Photo',
+                    'aadhar_card': '02_Aadhar_Card',
+                    'tenth_marksheet': '03_10th_Marksheet',
+                    'twelfth_marksheet': '04_12th_Marksheet',
+                    'diploma_marksheet': '05_Diploma_Marksheet',
+                    'ug_marksheet': '06_UG_Marksheet',
+                    'community_marksheet': '07_Community_Certificate'
+                }
+                
+                for field_name, display_name in file_mapping.items():
+                    file_obj = getattr(app, field_name)
+                    if file_obj and file_obj.name:
+                        try:
+                            if hasattr(file_obj, 'seek'):
+                                file_obj.seek(0)
+                            file_content = file_obj.read()
+                            original_name = os.path.basename(file_obj.name)
+                            ext = os.path.splitext(original_name)[1]
+                            filename = f"{display_name}{ext}"
+                            zip_file.writestr(f"{folder_name}/{filename}", file_content)
+                        except Exception as e:
+                            print(f"Error adding {field_name}: {e}")
+                
+                # 3. Add JSON data
+                json_data = {
+                    'application_id': app.application_id,
+                    'submitted_at': app.submitted_at.isoformat() if app.submitted_at else None,
+                    'submitted_at_formatted': app.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if app.submitted_at else 'N/A',
+                    'status': app.status,
+                    'quota_type': app.quota_type,
+                    'personal_info': {
+                        'name': f"{app.first_name} {app.last_name}",
+                        'email': app.email_id,
+                        'mobile': app.mobile_number,
+                        'gender': app.gender,
+                        'date_of_birth': app.date_of_birth.isoformat() if app.date_of_birth else None,
+                        'community': app.community,
+                        'aadhar_number': app.aadhar_number
+                    },
+                    'parent_info': {
+                        'father_name': app.father_name,
+                        'father_mobile': app.father_mobile,
+                        'mother_name': app.mother_name,
+                        'mother_mobile': app.mother_mobile,
+                        'family_annual_income': app.family_annual_income
+                    },
+                    'address': {
+                        'line1': app.address_line1,
+                        'line2': app.address_line2,
+                        'city': app.city,
+                        'state': app.state,
+                        'pincode': app.pincode
+                    },
+                    'education': {
+                        '10th': {
+                            'school': app.tenth_school_name,
+                            'board': app.tenth_board,
+                            'year': app.tenth_year_of_passing,
+                            'percentage': str(app.tenth_marks_percentage) if app.tenth_marks_percentage else None
+                        },
+                        '12th': {
+                            'school': app.twelfth_school_name,
+                            'board': app.twelfth_board,
+                            'year': app.twelfth_year_of_passing,
+                            'percentage': str(app.twelfth_marks_percentage) if app.twelfth_marks_percentage else None
+                        }
+                    },
+                    'course_info': {
+                        'college': app.college.college_name if app.college else 'N/A',
+                        'course_name': app.course_name
+                    }
+                }
+                
+                # Add diploma if exists
+                if app.has_diploma:
+                    json_data['education']['diploma'] = {
+                        'college': app.diploma_college_name,
+                        'board': app.diploma_board_university,
+                        'year': app.diploma_year_of_passing,
+                        'percentage': str(app.diploma_marks_percentage) if app.diploma_marks_percentage else None
+                    }
+                
+                # Add UG if exists
+                if app.has_ug:
+                    json_data['education']['ug'] = {
+                        'college': app.ug_college_name,
+                        'board': app.ug_board_university,
+                        'year': app.ug_year_of_passing,
+                        'percentage': str(app.ug_marks_percentage) if app.ug_marks_percentage else None
+                    }
+                
+                zip_file.writestr(f"{folder_name}/application_data.json", json.dumps(json_data, indent=2))
+                
+                # 4. Add README.txt for the application
+                readme_content = f"""
+{'='*60}
+APPLICATION SUMMARY - {app.application_id}
+{'='*60}
+
+Student Name: {app.first_name} {app.last_name}
+Email: {app.email_id}
+Mobile: {app.mobile_number}
+Submitted: {app.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if app.submitted_at else 'N/A'}
+Status: {app.status}
+
+COURSE DETAILS:
+College: {app.college.college_name if app.college else 'N/A'}
+Course: {app.course_name}
+Quota: {app.quota_type}
+
+FILES INCLUDED:
+- Application Form PDF
+- Student Photo
+- Aadhar Card
+- 10th Marksheet
+- 12th Marksheet
+- Other documents (if uploaded)
+
+{'='*60}
+"""
+                zip_file.writestr(f"{folder_name}/README.txt", readme_content)
+            
+            # Add main README
+            main_readme = f"""
+{'='*60}
+ICE FOUNDATION - APPLICATIONS BACKUP
+{'='*60}
+
+Backup created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Total Applications: {applications.count()}
+
+FOLDER STRUCTURE:
+Each application folder is named: [Application_ID]_[Student_Name]
+
+Inside each folder:
+├── [Application_ID]_Application_Form.pdf
+├── 01_Photo.*
+├── 02_Aadhar_Card.*
+├── 03_10th_Marksheet.*
+├── 04_12th_Marksheet.*
+├── 05_Diploma_Marksheet.* (if applicable)
+├── 06_UG_Marksheet.* (if applicable)
+├── 07_Community_Certificate.* (if applicable)
+├── application_data.json (Complete application data)
+└── README.txt (Application summary)
+
+To restore or view any application, extract the ZIP and open the corresponding folder.
+
+{'='*60}
+"""
+            zip_file.writestr("README.md", main_readme)
+            zip_file.writestr("MANIFEST.json", json.dumps(manifest, indent=2))
+        
+        zip_buffer.seek(0)
+        response = HttpResponse(zip_buffer, content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="ice_foundation_applications_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip"'
+        return response
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({'error': str(e), 'trace': traceback.format_exc()}, status=500)

@@ -46,6 +46,7 @@ CONTENT_W = PAGE_W - LM - RM
 # ═══════════════════════════════════════════════════════════════════════════
 
 def _v(value):
+    """Return empty string if value is None or empty"""
     if value is None or value == '':
         return ''
     return str(value)
@@ -53,16 +54,16 @@ def _v(value):
 
 def _format_percentage(value):
     """Safely format a percentage value"""
-    if value is None:
+    if value is None or value == '':
         return ''
     try:
         return f"{float(value)}%"
     except (ValueError, TypeError):
         return str(value)
-    return str(value)
 
 
 def _age(dob):
+    """Calculate age from date of birth"""
     if not dob:
         return ''
     today = datetime.now().date()
@@ -73,49 +74,70 @@ def _age(dob):
     if months < 0:
         years -= 1
         months += 12
-    return f"{years} YEARS, {months} MONTH{'S' if months != 1 else ''}"
+    
+    if years == 0:
+        return f"{months} MONTH{'S' if months != 1 else ''}"
+    elif months == 0:
+        return f"{years} YEAR{'S' if years != 1 else ''}"
+    else:
+        return f"{years} YEARS, {months} MONTH{'S' if months != 1 else ''}"
 
 
 def _resize_photo(file_field, max_w=90, max_h=110):
+    """Resize photo for PDF embedding"""
     if not PIL_AVAILABLE or not file_field or not file_field.name:
         return None
     try:
-        path = file_field.path if hasattr(file_field, 'path') else None
-        if not path or not os.path.exists(path):
-            return None
+        # Try to get file path
+        if hasattr(file_field, 'path') and file_field.path and os.path.exists(file_field.path):
+            path = file_field.path
+        else:
+            # For in-memory files, save temporarily
+            file_field.seek(0)
+            tmp = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
+            tmp.write(file_field.read())
+            tmp.close()
+            file_field.seek(0)
+            path = tmp.name
+        
         with PILImage.open(path) as img:
             if img.mode in ('RGBA', 'LA', 'P'):
                 bg = PILImage.new('RGB', img.size, (255, 255, 255))
-                mask = img.split()[-1] if img.mode == 'RGBA' else None
-                bg.paste(img.convert('RGBA'), mask=mask)
+                if img.mode == 'P':
+                    img = img.convert('RGBA')
+                bg.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
                 img = bg
             img.thumbnail((max_w, max_h), PILImage.Resampling.LANCZOS)
-            tmp = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
-            img.save(tmp.name, 'JPEG', quality=85)
-            return tmp.name
+            tmp_resized = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
+            img.save(tmp_resized.name, 'JPEG', quality=85)
+            return tmp_resized.name
     except Exception as e:
+        print(f"[pdf_generator] photo resize error: {e}")
         return None
 
 
 def _get_display_name(value):
     """Convert enum values to display names"""
-    if value == 'Yes':
+    if not value:
+        return ''
+    value_lower = str(value).lower()
+    if value_lower in ['yes', 'true', '1']:
         return 'YES'
-    if value == 'No':
+    if value_lower in ['no', 'false', '0']:
         return 'NO'
-    if value == 'single':
+    if value_lower == 'single':
         return 'SINGLE'
-    if value == 'married':
+    if value_lower == 'married':
         return 'MARRIED'
-    if value == 'male':
+    if value_lower == 'male':
         return 'MALE'
-    if value == 'female':
+    if value_lower == 'female':
         return 'FEMALE'
-    if value == 'other':
+    if value_lower == 'other':
         return 'OTHER'
-    if value == 'declared':
+    if value_lower == 'declared':
         return 'DECLARED'
-    if value == 'awaited':
+    if value_lower == 'awaited':
         return 'AWAITED'
     return _v(value)
 
@@ -145,6 +167,7 @@ def P(text, style=S_NORMAL):
 
 
 def _section_bar(title):
+    """Black full-width section title bar"""
     t = Table([[P(title, S_SEC)]], colWidths=[CONTENT_W])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), HEADER_BG),
@@ -156,6 +179,7 @@ def _section_bar(title):
 
 
 def _sub_bar(title):
+    """Light grey sub-section bar"""
     t = Table([[P(title, S_BOLD)]], colWidths=[CONTENT_W])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), LABEL_BG),
@@ -168,6 +192,10 @@ def _sub_bar(title):
 
 
 def _grid(rows, col_widths):
+    """Create a label-value grid table with alternating backgrounds"""
+    if not rows:
+        return Spacer(1, 0)
+    
     t = Table(rows, colWidths=col_widths)
     styles = [
         ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
@@ -191,6 +219,7 @@ def _grid(rows, col_widths):
 
 
 def _footer(canvas, doc):
+    """Footer on every page"""
     canvas.saveState()
     canvas.setFont('Helvetica', 7)
     canvas.setFillColor(GREY_MID)
@@ -213,7 +242,7 @@ def generate_application_pdf(application):
 
     story = []
 
-    # Header
+    # ==================== HEADER ====================
     college_name = application.college.college_name.upper() if application.college and application.college.college_name else "ICE FOUNDATION"
     app_id = _v(application.application_id)
     sub_date = application.submitted_at.strftime('%d/%m/%Y') if application.submitted_at else datetime.now().strftime('%d/%m/%Y')
@@ -278,7 +307,7 @@ def generate_application_pdf(application):
 
     story.append(_sub_bar("Family Details"))
     income = application.family_annual_income
-    income_str = f"₹{income:,}" if income else ''
+    income_str = f"₹{int(income):,}" if income and str(income).isdigit() else (income if income else '')
     fam_rows = [
         [P("Family Annual Income (INR)", S_LABEL), P(income_str),
          P("", S_LABEL), P(""),
@@ -305,33 +334,35 @@ def generate_application_pdf(application):
     story.append(_section_bar("Education Details"))
 
     # 10th Standard
-    story.append(_sub_bar("10th Standard"))
-    tenth_rows = [
-        [P("School Name", S_LABEL), P(application.tenth_school_name or ''),
-         P("Board", S_LABEL), P(application.tenth_board or ''),
-         P("Year of Passing", S_LABEL), P(_v(application.tenth_year_of_passing))],
-        [P("Result Status", S_LABEL), P(_get_display_name(application.tenth_result_status)),
-         P("Marks Scored (%)", S_LABEL), P(_format_percentage(application.tenth_marks_percentage)),
-         P("", S_LABEL), P("")],
-    ]
-    story.append(_grid(tenth_rows, CW6))
-    story.append(Spacer(1, 2))
+    if application.tenth_school_name:
+        story.append(_sub_bar("10th Standard"))
+        tenth_rows = [
+            [P("School Name", S_LABEL), P(application.tenth_school_name or ''),
+             P("Board", S_LABEL), P(application.tenth_board or ''),
+             P("Year of Passing", S_LABEL), P(_v(application.tenth_year_of_passing))],
+            [P("Result Status", S_LABEL), P(_get_display_name(application.tenth_result_status)),
+             P("Marks Scored (%)", S_LABEL), P(_format_percentage(application.tenth_marks_percentage)),
+             P("", S_LABEL), P("")],
+        ]
+        story.append(_grid(tenth_rows, CW6))
+        story.append(Spacer(1, 2))
 
     # 12th Standard
-    story.append(_sub_bar("12th Standard"))
-    twelfth_rows = [
-        [P("School Name", S_LABEL), P(application.twelfth_school_name or ''),
-         P("Board", S_LABEL), P(application.twelfth_board or ''),
-         P("Year of Passing", S_LABEL), P(_v(application.twelfth_year_of_passing))],
-        [P("Result Status", S_LABEL), P(_get_display_name(application.twelfth_result_status)),
-         P("Marks Scored (%)", S_LABEL), P(_format_percentage(application.twelfth_marks_percentage)),
-         P("", S_LABEL), P("")],
-    ]
-    story.append(_grid(twelfth_rows, CW6))
-    story.append(Spacer(1, 2))
+    if application.twelfth_school_name:
+        story.append(_sub_bar("12th Standard"))
+        twelfth_rows = [
+            [P("School Name", S_LABEL), P(application.twelfth_school_name or ''),
+             P("Board", S_LABEL), P(application.twelfth_board or ''),
+             P("Year of Passing", S_LABEL), P(_v(application.twelfth_year_of_passing))],
+            [P("Result Status", S_LABEL), P(_get_display_name(application.twelfth_result_status)),
+             P("Marks Scored (%)", S_LABEL), P(_format_percentage(application.twelfth_marks_percentage)),
+             P("", S_LABEL), P("")],
+        ]
+        story.append(_grid(twelfth_rows, CW6))
+        story.append(Spacer(1, 2))
 
     # Diploma Details (conditional)
-    if application.has_diploma:
+    if application.has_diploma and application.diploma_college_name:
         story.append(_sub_bar("Diploma Details"))
         diploma_rows = [
             [P("College Name", S_LABEL), P(application.diploma_college_name or ''),
@@ -345,7 +376,7 @@ def generate_application_pdf(application):
         story.append(Spacer(1, 2))
 
     # UG Details (conditional)
-    if application.has_ug:
+    if application.has_ug and application.ug_college_name:
         story.append(_sub_bar("Undergraduate (UG) Details"))
         ug_rows = [
             [P("College Name", S_LABEL), P(application.ug_college_name or ''),
@@ -397,17 +428,18 @@ def generate_application_pdf(application):
             current_row.append(P(""))
         doc_rows.append(current_row)
 
-    doc_table = Table(doc_rows, colWidths=[CONTENT_W * 0.25, CONTENT_W * 0.25, CONTENT_W * 0.25, CONTENT_W * 0.25])
-    doc_table.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 8),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('LEFTPADDING', (0, 0), (-1, -1), 7),
-        ('GRID', (0, 0), (-1, -1), 0.4, BORDER),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-    ]))
-    story.append(doc_table)
+    if doc_rows:
+        doc_table = Table(doc_rows, colWidths=[CONTENT_W * 0.25, CONTENT_W * 0.25, CONTENT_W * 0.25, CONTENT_W * 0.25])
+        doc_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING', (0, 0), (-1, -1), 7),
+            ('GRID', (0, 0), (-1, -1), 0.4, BORDER),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        story.append(doc_table)
     story.append(Spacer(1, 4))
 
     # ==================== DECLARATION ====================
@@ -429,7 +461,7 @@ def generate_application_pdf(application):
 
     # Signature
     sig_rows = [[
-        P(f"Applicant's Name: {application.first_name} {application.last_name}", S_BOLD),
+        P(f"Applicant's Name: {application.first_name} {application.last_name}".strip(), S_BOLD),
         P(f"Date: {datetime.now().strftime('%d/%m/%Y')}", S_NORMAL),
     ]]
     sig_table = Table(sig_rows, colWidths=[CONTENT_W * 0.5, CONTENT_W * 0.5])

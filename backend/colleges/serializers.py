@@ -272,7 +272,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         try:
             subject = f'Welcome to ICE Foundation, {user.first_name or user.username}!'
             
-            # HTML email template
             html_content = f"""
             <!DOCTYPE html>
             <html>
@@ -320,7 +319,6 @@ class RegisterSerializer(serializers.ModelSerializer):
             </html>
             """
             
-            # Plain text version
             text_content = f"""
             Welcome to ICE Foundation, {user.first_name or user.username}!
             
@@ -377,11 +375,9 @@ class RegisterSerializer(serializers.ModelSerializer):
             pincode='',
         )
         
-        # Send welcome email asynchronously (non-blocking)
         try:
             self.send_welcome_email(user, profile)
         except Exception as e:
-            # Log error but don't fail registration
             logger.error(f"Email sending failed but user was created: {str(e)}")
         
         return user
@@ -392,7 +388,7 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(required=True, write_only=True)
 
 
-# ==================== PASSWORD RESET SERIALIZER (Optional) ====================
+# ==================== PASSWORD RESET SERIALIZERS ====================
 
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
@@ -406,10 +402,8 @@ class PasswordResetRequestSerializer(serializers.Serializer):
         email = self.validated_data['email']
         user = User.objects.get(email=email)
         
-        # Generate reset token
         token = default_token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
-        
         reset_link = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}/"
         
         try:
@@ -469,7 +463,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         return attrs
 
 
-# ==================== APPLICATION FORM SERIALIZER ====================
+# ==================== APPLICATION FORM SERIALIZER (UPDATED) ====================
 
 class ApplicationFormSerializer(serializers.Serializer):
     # Bio-data
@@ -481,9 +475,9 @@ class ApplicationFormSerializer(serializers.Serializer):
     email_id = serializers.EmailField(required=False)
     blood_group = serializers.CharField(max_length=5, required=False, allow_blank=True)
     nationality = serializers.CharField(max_length=50, required=False, default='Indian')
-    community = serializers.ChoiceField(choices=['OC', 'BC', 'MBC', 'SC', 'ST'], required=False, allow_blank=True)
+    community = serializers.ChoiceField(choices=['OC', 'BC', 'MBC', 'SC', 'ST', 'SCA', 'BCM', 'DNC'], required=False, allow_blank=True)
     sub_caste = serializers.CharField(max_length=50, required=False, allow_blank=True)
-    marital_status = serializers.ChoiceField(choices=['single', 'married', 'divorced', 'widowed'], required=False, allow_blank=True)
+    marital_status = serializers.ChoiceField(choices=['single', 'married'], required=False, allow_blank=True)
     mother_tongue = serializers.CharField(max_length=30, required=False, allow_blank=True)
     aadhar_number = serializers.CharField(max_length=14, required=False, allow_blank=True)
     first_graduation = serializers.CharField(max_length=255, required=False, allow_blank=True)
@@ -495,7 +489,7 @@ class ApplicationFormSerializer(serializers.Serializer):
     mother_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
     mother_mobile = serializers.CharField(max_length=10, required=False, allow_blank=True)
     mother_occupation = serializers.CharField(max_length=100, required=False, allow_blank=True)
-    family_annual_income = serializers.IntegerField(required=False, allow_null=True)
+    family_annual_income = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
 
     # Address details
     address_line1 = serializers.CharField(max_length=255, required=False, allow_blank=True)
@@ -508,14 +502,14 @@ class ApplicationFormSerializer(serializers.Serializer):
     tenth_school_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     tenth_board = serializers.CharField(max_length=50, required=False, allow_blank=True)
     tenth_year_of_passing = serializers.IntegerField(required=False, allow_null=True)
-    tenth_result_status = serializers.ChoiceField(choices=['passed', 'appearing', 'compartment'], required=False, allow_blank=True)
+    tenth_result_status = serializers.ChoiceField(choices=['declared', 'awaited'], required=False, allow_blank=True)
     tenth_marks_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
 
     # 12th details
     twelfth_school_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     twelfth_board = serializers.CharField(max_length=50, required=False, allow_blank=True)
     twelfth_year_of_passing = serializers.IntegerField(required=False, allow_null=True)
-    twelfth_result_status = serializers.ChoiceField(choices=['passed', 'appearing', 'compartment'], required=False, allow_blank=True)
+    twelfth_result_status = serializers.ChoiceField(choices=['declared', 'awaited'], required=False, allow_blank=True)
     twelfth_marks_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
 
     # Diploma details
@@ -523,7 +517,7 @@ class ApplicationFormSerializer(serializers.Serializer):
     diploma_college_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     diploma_board_university = serializers.CharField(max_length=100, required=False, allow_blank=True)
     diploma_year_of_passing = serializers.IntegerField(required=False, allow_null=True)
-    diploma_result_status = serializers.ChoiceField(choices=['passed', 'appearing', 'compartment'], required=False, allow_blank=True)
+    diploma_result_status = serializers.ChoiceField(choices=['declared', 'awaited'], required=False, allow_blank=True)
     diploma_marks_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
 
     # UG details
@@ -531,12 +525,12 @@ class ApplicationFormSerializer(serializers.Serializer):
     ug_college_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     ug_board_university = serializers.CharField(max_length=100, required=False, allow_blank=True)
     ug_year_of_passing = serializers.IntegerField(required=False, allow_null=True)
-    ug_result_status = serializers.ChoiceField(choices=['passed', 'appearing', 'compartment'], required=False, allow_blank=True)
+    ug_result_status = serializers.ChoiceField(choices=['declared', 'awaited'], required=False, allow_blank=True)
     ug_marks_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
 
-    # Applied course info
+    # Applied course info (updated to match model)
     college_id = serializers.IntegerField(required=False)
-    course_id = serializers.IntegerField(required=False)
+    course_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     quota_type = serializers.ChoiceField(choices=['management', 'government'], required=False, default='management')
 
 
@@ -544,13 +538,11 @@ class ApplicationFormSerializer(serializers.Serializer):
 
 class StudentApplicationDataSerializer(serializers.Serializer):
     """Serializer to fetch existing student data for pre-filling application form"""
-    # From User model
     username = serializers.ReadOnlyField()
     email = serializers.ReadOnlyField()
     first_name = serializers.ReadOnlyField()
     last_name = serializers.ReadOnlyField()
 
-    # From UserProfile
     date_of_birth = serializers.DateField(allow_null=True, required=False)
     gender = serializers.CharField(allow_null=True, required=False)
     phone_number = serializers.CharField(allow_null=True, required=False)
@@ -564,6 +556,7 @@ class StudentApplicationDataSerializer(serializers.Serializer):
 
 class StudentApplicationSerializer(serializers.ModelSerializer):
     """Serializer for StudentApplication model with file uploads"""
+    college_name = serializers.CharField(source='college.college_name', read_only=True)
 
     class Meta:
         model = StudentApplication
@@ -571,13 +564,11 @@ class StudentApplicationSerializer(serializers.ModelSerializer):
         read_only_fields = ['application_id', 'submitted_at', 'updated_at']
 
     def validate_photo(self, value):
-        """Validate photo file"""
         if value and value.size > 5 * 1024 * 1024:
             raise serializers.ValidationError("Photo size must be less than 5MB")
         return value
 
     def validate_aadhar_card(self, value):
-        """Validate aadhar card file"""
         if value and value.size > 5 * 1024 * 1024:
             raise serializers.ValidationError("Aadhar card size must be less than 5MB")
         return value
@@ -591,6 +582,7 @@ class StudentApplicationSerializer(serializers.ModelSerializer):
         if value and value.size > 5 * 1024 * 1024:
             raise serializers.ValidationError("12th marksheet size must be less than 5MB")
         return value
+
 
 class StudentApplicationListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for listing applications"""
