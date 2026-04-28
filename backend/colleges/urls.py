@@ -66,7 +66,7 @@ urlpatterns = [
     path('my-applications/', get_my_applications, name='get_my_applications'),
     path('my-applications/<str:application_id>/', get_application_detail, name='get_application_detail'),
     
-    path('sync-applications/', views.sync_applications_to_local, name='sync-applications'),
+  
     path('download-application-pdf/<str:application_id>/', download_application_pdf, name='download_application_pdf'),
 
     path('profile/update/', update_profile, name='update_profile'),
