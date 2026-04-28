@@ -370,11 +370,11 @@ class RegisterSerializer(serializers.ModelSerializer):
             first_name=validated_data.get('first_name', ''),
             last_name=validated_data.get('last_name', ''),
             email=validated_data['email'],
-            phone_number=phone_number or '0000000000',
+            phone_number=phone_number or '',
             address='',
             city='',
             state='Tamil Nadu',
-            pincode='000000'
+            pincode='',
         )
         
         # Send welcome email asynchronously (non-blocking)

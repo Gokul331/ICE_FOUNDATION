@@ -496,16 +496,13 @@ class StudentApplication(models.Model):
     ]
 
     RESULT_STATUS = [
-        ('passed', 'Passed'),
-        ('appearing', 'Appearing'),
-        ('compartment', 'Compartment'),
+       ('declared', 'Declared'),
+       ('awaited', 'Awaited'),
     ]
 
     MARITAL_STATUS = [
         ('single', 'Single'),
-        ('married', 'Married'),
-        ('divorced', 'Divorced'),
-        ('widowed', 'Widowed'),
+        ('married', 'Married')
     ]
 
     BLOOD_GROUP = [
@@ -521,12 +518,15 @@ class StudentApplication(models.Model):
         ('MBC', 'MBC'),
         ('SC', 'SC'),
         ('ST', 'ST'),
+        ('SCA', 'SCA'),
+        ('BCM', 'BCM'),
+        ('DNC', 'DNC'),
     ]
 
     application_id = models.CharField(max_length=50, unique=True, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications')
     college = models.ForeignKey(College, on_delete=models.SET_NULL, null=True, blank=True)
-    course_id = models.IntegerField(null=True, blank=True)
+    course_name = models.CharField(max_length=255, null=True, blank=True)
     quota_type = models.CharField(max_length=20, choices=QUOTA_TYPE, default='management')
     status = models.CharField(max_length=20, choices=APPLICATION_STATUS, default='submitted')
     submitted_at = models.DateTimeField(auto_now_add=True)
@@ -555,7 +555,7 @@ class StudentApplication(models.Model):
     mother_name = models.CharField(max_length=100, blank=True)
     mother_mobile = models.CharField(max_length=10, blank=True)
     mother_occupation = models.CharField(max_length=100, blank=True)
-    family_annual_income = models.IntegerField(null=True, blank=True)
+    family_annual_income = models.CharField(max_length=100, null=True, blank=True)
 
     # Address details
     address_line1 = models.TextField(blank=True)

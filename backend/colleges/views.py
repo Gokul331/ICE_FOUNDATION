@@ -1047,10 +1047,10 @@ def submit_application(request):
         if not college:
             return Response({'error': 'College not found'}, status=404)
 
-        # Get course_id
-        course_id = request.data.get('course_id') or request.data.get('course')
-        if not course_id:
-            return Response({'error': 'Course ID is required'}, status=400)
+        # Get course name
+        course_name = request.data.get('course_name') or request.data.get('course')
+        if not course_name:
+            return Response({'error': 'Course name is required'}, status=400)
 
         quota_type = request.data.get('quota_type', 'management')
 
@@ -1059,7 +1059,7 @@ def submit_application(request):
             'application_id': application_id,
             'user': user.id,
             'college': college.college_id,
-            'course_id': int(course_id),
+            'course_name': course_name,
             'quota_type': quota_type,
             'status': 'submitted',
             'first_name': request.data.get('first_name', ''),
@@ -1145,6 +1145,7 @@ def submit_application(request):
             
             # Generate and save PDF
             try:
+                from .utils.pdf_generator import generate_application_pdf
                 pdf_buffer = generate_application_pdf(application)
                 pdf_filename = f"{application.application_id}_application.pdf"
                 application.pdf_copy.save(pdf_filename, ContentFile(pdf_buffer.getvalue()))
@@ -1154,30 +1155,9 @@ def submit_application(request):
             # Save the application with files
             application.save()
             
-            # Save to local folder
-            try:
-                local_save_result = save_application_locally(application)
-                print(f"Application saved locally at: {local_save_result['folder_path']}")
-                print(f"Files saved: {local_save_result['files_count']} files")
-            except Exception as local_error:
-                print(f"Local save error: {local_error}")
-            
             # Send confirmation email with PDF attachment
             try:
-                # Prepare email context
                 submission_date = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
-                
-                email_context = {
-                    'first_name': application.first_name,
-                    'application_id': application.application_id,
-                    'college_name': college.college_name,
-                    'course_id': course_id,
-                    'quota_type': quota_type.upper(),
-                    'submission_date': submission_date,
-                }
-                
-                # Render HTML email template
-                html_message = render_to_string('emails/application_submitted_email.html', email_context)
                 
                 # Create plain text version
                 text_message = f'''Dear {application.first_name},
@@ -1187,7 +1167,7 @@ Your application has been submitted successfully.
 Application Details:
 - Application ID: {application.application_id}
 - College: {college.college_name}
-- Course ID: {course_id}
+- Course: {course_name}
 - Quota: {quota_type.upper()}
 - Submission Date: {submission_date}
 
@@ -1208,9 +1188,6 @@ The ICE Foundation Team'''
                     reply_to=[settings.DEFAULT_FROM_EMAIL]
                 )
                 
-                # Attach HTML version
-                email.attach_alternative(html_message, "text/html")
-                
                 # Attach PDF file
                 if application.pdf_copy and application.pdf_copy.path:
                     try:
@@ -1222,22 +1199,21 @@ The ICE Foundation Team'''
                                 mimetype='application/pdf'
                             )
                     except Exception as pdf_attach_error:
-                        logger.error(f"Failed to attach PDF for application {application.application_id}: {pdf_attach_error}")
+                        print(f"Failed to attach PDF for application {application.application_id}: {pdf_attach_error}")
                 
                 # Send email
                 email.send(fail_silently=False)
-                logger.info(f"Application submission email sent successfully to {application.email_id} for application {application.application_id}")
+                print(f"Application submission email sent successfully to {application.email_id} for application {application.application_id}")
                 
             except Exception as email_error:
-                logger.error(f"Email send failed for application {application.application_id}: {email_error}", exc_info=True)
-                print(f"Email send failed: {email_error}")
+                print(f"Email send failed for application {application.application_id}: {email_error}")
             
             return Response({
                 'success': True,
                 'message': 'Application submitted successfully',
                 'application_id': application.application_id,
                 'college_id': college.college_id,
-                'course_id': int(course_id),
+                'course_name': course_name,
                 'quota_type': quota_type,
                 'status': 'submitted'
             }, status=201)
@@ -1258,20 +1234,219 @@ The ICE Foundation Team'''
             'trace': traceback.format_exc()
         }, status=500)
 
-
 # ==================== APPLICATION RETRIEVAL VIEWS ====================
 
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def get_my_applications(request):
-    """Get all applications for the current user"""
+def submit_application(request):
+    """Submit student application form with file uploads"""
     try:
-        applications = StudentApplication.objects.filter(user=request.user)
-        serializer = StudentApplicationListSerializer(applications, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        user = request.user
+        print(f"Processing application for user: {user.id} - {user.username}")
 
+        if not user.is_authenticated:
+            return Response({'error': 'User not authenticated'}, status=401)
+
+        # Generate unique application ID
+        application_id = f'APP-{user.id}-{datetime.now().strftime("%Y%m%d%H%M%S")}'
+
+        # Get college object
+        college_id = request.data.get('college_id') or request.data.get('college')
+        if not college_id:
+            return Response({'error': 'College ID is required'}, status=400)
+
+        college = College.objects.filter(college_id=college_id).first()
+        if not college:
+            college = College.objects.filter(id=college_id).first()
+        if not college:
+            return Response({'error': 'College not found'}, status=404)
+
+        # Get course name
+        course_name = request.data.get('course_name') or request.data.get('course')
+        if not course_name:
+            return Response({'error': 'Course name is required'}, status=400)
+
+        quota_type = request.data.get('quota_type', 'management')
+
+        # Prepare data for StudentApplication model
+        application_data = {
+            'application_id': application_id,
+            'user': user.id,
+            'college': college.college_id,
+            'course_name': course_name,
+            'quota_type': quota_type,
+            'status': 'submitted',
+            'first_name': request.data.get('first_name', ''),
+            'last_name': request.data.get('last_name', ''),
+            'gender': request.data.get('gender', ''),
+            'date_of_birth': request.data.get('date_of_birth') or None,
+            'mobile_number': request.data.get('mobile_number', ''),
+            'email_id': request.data.get('email_id', ''),
+            'blood_group': request.data.get('blood_group', ''),
+            'nationality': request.data.get('nationality', 'Indian'),
+            'community': request.data.get('community', ''),
+            'sub_caste': request.data.get('sub_caste', ''),
+            'marital_status': request.data.get('marital_status', ''),
+            'mother_tongue': request.data.get('mother_tongue', ''),
+            'aadhar_number': request.data.get('aadhar_number', ''),
+            'first_graduation': request.data.get('first_graduation', ''),
+            'father_name': request.data.get('father_name', ''),
+            'father_mobile': request.data.get('father_mobile', ''),
+            'father_occupation': request.data.get('father_occupation', ''),
+            'mother_name': request.data.get('mother_name', ''),
+            'mother_mobile': request.data.get('mother_mobile', ''),
+            'mother_occupation': request.data.get('mother_occupation', ''),
+            'family_annual_income': request.data.get('family_annual_income') or None,
+            'address_line1': request.data.get('address_line1', ''),
+            'address_line2': request.data.get('address_line2', ''),
+            'city': request.data.get('city', ''),
+            'state': request.data.get('state', ''),
+            'pincode': request.data.get('pincode', ''),
+            'tenth_school_name': request.data.get('tenth_school_name', ''),
+            'tenth_board': request.data.get('tenth_board', ''),
+            'tenth_year_of_passing': request.data.get('tenth_year_of_passing') or None,
+            'tenth_result_status': request.data.get('tenth_result_status', ''),
+            'tenth_marks_percentage': request.data.get('tenth_marks_percentage') or None,
+            'twelfth_school_name': request.data.get('twelfth_school_name', ''),
+            'twelfth_board': request.data.get('twelfth_board', ''),
+            'twelfth_year_of_passing': request.data.get('twelfth_year_of_passing') or None,
+            'twelfth_result_status': request.data.get('twelfth_result_status', ''),
+            'twelfth_marks_percentage': request.data.get('twelfth_marks_percentage') or None,
+            'has_diploma': request.data.get('has_diploma') in [True, 'true', 'True', '1', 1],
+            'has_ug': request.data.get('has_ug') in [True, 'true', 'True', '1', 1],
+            'declaration_accepted': request.data.get('declaration_accepted') in [True, 'true', 'True', '1', 1],
+        }
+
+        # Handle diploma fields
+        if application_data['has_diploma']:
+            application_data['diploma_college_name'] = request.data.get('diploma_college_name', '')
+            application_data['diploma_board_university'] = request.data.get('diploma_board_university', '')
+            application_data['diploma_year_of_passing'] = request.data.get('diploma_year_of_passing') or None
+            application_data['diploma_result_status'] = request.data.get('diploma_result_status', '')
+            application_data['diploma_marks_percentage'] = request.data.get('diploma_marks_percentage') or None
+
+        # Handle UG fields
+        if application_data['has_ug']:
+            application_data['ug_college_name'] = request.data.get('ug_college_name', '')
+            application_data['ug_board_university'] = request.data.get('ug_board_university', '')
+            application_data['ug_year_of_passing'] = request.data.get('ug_year_of_passing') or None
+            application_data['ug_result_status'] = request.data.get('ug_result_status', '')
+            application_data['ug_marks_percentage'] = request.data.get('ug_marks_percentage') or None
+
+        # Validate file sizes
+        max_size = 5 * 1024 * 1024
+        file_fields = ['photo', 'aadhar_card', 'tenth_marksheet', 'twelfth_marksheet',
+                      'diploma_marksheet', 'ug_marksheet', 'community_marksheet']
+
+        for field in file_fields:
+            if field in request.FILES:
+                file = request.FILES[field]
+                if file.size > max_size:
+                    return Response({
+                        'error': f'{field} size must be less than 5MB.'
+                    }, status=400)
+
+        # Create application
+        serializer = StudentApplicationSerializer(data=application_data)
+        
+        if serializer.is_valid():
+            application = serializer.save()
+            
+            # Save files
+            for field in file_fields:
+                if field in request.FILES:
+                    setattr(application, field, request.FILES[field])
+            
+            # Generate and save PDF
+            try:
+                from .utils.pdf_generator import generate_application_pdf
+                pdf_buffer = generate_application_pdf(application)
+                pdf_filename = f"{application.application_id}_application.pdf"
+                application.pdf_copy.save(pdf_filename, ContentFile(pdf_buffer.getvalue()))
+            except Exception as pdf_error:
+                print(f"PDF generation error: {pdf_error}")
+            
+            # Save the application with files
+            application.save()
+            
+            # Send confirmation email with PDF attachment
+            try:
+                submission_date = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+                
+                # Create plain text version
+                text_message = f'''Dear {application.first_name},
+
+Your application has been submitted successfully.
+
+Application Details:
+- Application ID: {application.application_id}
+- College: {college.college_name}
+- Course: {course_name}
+- Quota: {quota_type.upper()}
+- Submission Date: {submission_date}
+
+A copy of your application PDF has been attached to this email.
+Your application has been saved securely in our records.
+
+Thank you for choosing ICE Foundation.
+
+Best Regards,
+The ICE Foundation Team'''
+                
+                # Create email with attachment
+                email = EmailMultiAlternatives(
+                    subject='Application Submitted Successfully - ICE Foundation',
+                    body=text_message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    to=[application.email_id],
+                    reply_to=[settings.DEFAULT_FROM_EMAIL]
+                )
+                
+                # Attach PDF file
+                if application.pdf_copy and application.pdf_copy.path:
+                    try:
+                        with open(application.pdf_copy.path, 'rb') as pdf_file:
+                            pdf_content = pdf_file.read()
+                            email.attach(
+                                filename=f'{application.application_id}_application.pdf',
+                                content=pdf_content,
+                                mimetype='application/pdf'
+                            )
+                    except Exception as pdf_attach_error:
+                        print(f"Failed to attach PDF for application {application.application_id}: {pdf_attach_error}")
+                
+                # Send email
+                email.send(fail_silently=False)
+                print(f"Application submission email sent successfully to {application.email_id} for application {application.application_id}")
+                
+            except Exception as email_error:
+                print(f"Email send failed for application {application.application_id}: {email_error}")
+            
+            return Response({
+                'success': True,
+                'message': 'Application submitted successfully',
+                'application_id': application.application_id,
+                'college_id': college.college_id,
+                'course_name': course_name,
+                'quota_type': quota_type,
+                'status': 'submitted'
+            }, status=201)
+        else:
+            print("Serializer errors:", serializer.errors)
+            return Response({
+                'success': False,
+                'error': 'Validation failed',
+                'details': serializer.errors
+            }, status=400)
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'error': str(e),
+            'trace': traceback.format_exc()
+        }, status=500)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -1805,6 +1980,21 @@ def download_application_pdf(request, application_id):
         return Response({'error': str(e)}, status=500)
 
 
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_my_applications(request):
+    """Get all applications for the current user"""
+    try:
+        applications = StudentApplication.objects.filter(user=request.user)
+        serializer = StudentApplicationListSerializer(applications, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_application_detail_page(request, application_id):
@@ -1822,7 +2012,7 @@ def get_application_detail_page(request, application_id):
             'submitted_at': application.submitted_at,
             'college_name': application.college.college_name if application.college else 'N/A',
             'college_id': application.college.college_id if application.college else None,
-            'course_id': application.course_id,
+            'course_name': application.course_name if application.course_name else 'N/A',
             'quota_type': application.quota_type,
             
             # Personal Info

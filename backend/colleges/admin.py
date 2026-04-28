@@ -337,7 +337,7 @@ class StudentApplicationAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Application Info', {
-            'fields': ('application_id', 'user', 'college', 'course_id', 'quota_type', 'status')
+            'fields': ('application_id', 'user', 'college', 'course_name', 'quota_type', 'status')
         }),
         ('Bio-data', {
             'fields': ('first_name', 'last_name', 'gender', 'date_of_birth', 'mobile_number',
