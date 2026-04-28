@@ -1188,7 +1188,7 @@ Your application has been submitted successfully.
 Application Details:
 - Application ID: {application.application_id}
 - College: {college.college_name}
-- Course ID: {course_id}
+- Course: {course_name}
 - Quota: {quota_type.upper()}
 - Submission Date: {submission_date}
 
@@ -1213,15 +1213,16 @@ The ICE Foundation Team'''
                 email.attach_alternative(html_message, "text/html")
                 
                 # Attach PDF file
-                if application.pdf_copy and application.pdf_copy.path:
+                if application.pdf_copy:
                     try:
-                        with open(application.pdf_copy.path, 'rb') as pdf_file:
-                            pdf_content = pdf_file.read()
-                            email.attach(
-                                filename=f'{application.application_id}_application.pdf',
-                                content=pdf_content,
-                                mimetype='application/pdf'
-                            )
+                        # Use read() directly instead of opening by path
+                        # since the PDF was saved from ContentFile (in-memory)
+                        pdf_content = application.pdf_copy.read()
+                        email.attach(
+                            filename=f'{application.application_id}_application.pdf',
+                            content=pdf_content,
+                            mimetype='application/pdf'
+                        )
                     except Exception as pdf_attach_error:
                         logger.error(f"Failed to attach PDF for application {application.application_id}: {pdf_attach_error}")
 

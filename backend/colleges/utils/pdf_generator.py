@@ -351,7 +351,7 @@ def generate_application_pdf(application):
     story.append(_section_bar("Course Details"))
     course_rows = [
         [P("College Name", S_LABEL), P(application.college.college_name if application.college and application.college.college_name else ''),
-         P("Course ID", S_LABEL), P(_v(application.course_id)),
+         P("Course Name", S_LABEL), P(_v(application.course_name)),
          P("Quota Type", S_LABEL), P(application.quota_type.upper() if application.quota_type else 'MANAGEMENT')],
     ]
     story.append(_grid(course_rows, CW6))
