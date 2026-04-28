@@ -1896,3 +1896,78 @@ def get_application_detail_page(request, application_id):
         return Response({'error': 'Application not found'}, status=404)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+
+
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    """Update the current user's profile"""
+    try:
+        user = request.user
+
+        # Update User model fields
+        if 'first_name' in request.data:
+            user.first_name = request.data['first_name']
+        if 'last_name' in request.data:
+            user.last_name = request.data['last_name']
+        if 'email' in request.data and request.data['email'] != user.email:
+            # Check if email already exists
+            if User.objects.filter(email=request.data['email']).exclude(id=user.id).exists():
+                return Response({'error': 'Email already exists'}, status=400)
+            user.email = request.data['email']
+        user.save()
+
+        # Get or create UserProfile
+        profile, created = UserProfile.objects.get_or_create(
+            user=user,
+            defaults={
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'email': user.email,
+                'phone_number': request.data.get('phone_number', '0000000000'),
+                'address': request.data.get('address', ''),
+                'city': request.data.get('city', ''),
+                'state': request.data.get('state', 'Tamil Nadu'),
+                'pincode': request.data.get('pincode', '000000')
+            }
+        )
+
+        # Update UserProfile fields
+        profile_fields = ['first_name', 'last_name', 'date_of_birth', 'gender', 'phone_number',
+                          'whatsapp_number', 'address', 'city', 'state', 'pincode']
+
+        for field in profile_fields:
+            if field in request.data and request.data[field] is not None:
+                setattr(profile, field, request.data[field])
+
+        profile.save()
+
+        # Return updated data
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+        }
+
+        profile_data = {
+            'date_of_birth': profile.date_of_birth,
+            'gender': profile.gender,
+            'phone_number': profile.phone_number,
+            'whatsapp_number': profile.whatsapp_number,
+            'address': profile.address,
+            'city': profile.city,
+            'state': profile.state,
+            'pincode': profile.pincode,
+        }
+
+        return Response({
+            'message': 'Profile updated successfully',
+            'user': {**user_data, **profile_data}
+        }, status=200)
+
+    except UserProfile.DoesNotExist:
+        return Response({'error': 'Profile not found'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
