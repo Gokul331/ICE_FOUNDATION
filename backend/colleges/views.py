@@ -1274,7 +1274,37 @@ def get_my_applications(request):
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_application_pdf(request, application_id):
+    """Download PDF for a specific application"""
+    try:
+        application = StudentApplication.objects.get(application_id=application_id, user=request.user)
+        
+        if application.pdf_copy and application.pdf_copy.name:
+            try:
+                pdf_content = application.pdf_copy.read()
+                response = HttpResponse(pdf_content, content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="application_{application_id}.pdf"'
+                return response
+            except Exception as e:
+                print(f"Error reading PDF: {e}")
+        
+        from .utils.pdf_generator import generate_application_pdf
+        pdf_buffer = generate_application_pdf(application)
+        application.pdf_copy.save(f"{application.application_id}_application.pdf", ContentFile(pdf_buffer.getvalue()))
+        application.save()
+        
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="application_{application_id}.pdf"'
+        return response
+    except StudentApplication.DoesNotExist:
+        return Response({'error': 'Application not found'}, status=404)
+    except Exception as e:
+        print(f"Error in download_application_pdf: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({'error': str(e)}, status=500)
 
 
 
