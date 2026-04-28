@@ -1281,21 +1281,38 @@ def download_application_pdf(request, application_id):
     """Download PDF for a specific application"""
     try:
         application = StudentApplication.objects.get(application_id=application_id, user=request.user)
-        
+
         if application.pdf_copy and application.pdf_copy.name:
             try:
+                # Reset file pointer if it was read before
+                if hasattr(application.pdf_copy, 'seek'):
+                    application.pdf_copy.seek(0)
                 pdf_content = application.pdf_copy.read()
                 response = HttpResponse(pdf_content, content_type='application/pdf')
                 response['Content-Disposition'] = f'attachment; filename="application_{application_id}.pdf"'
                 return response
             except Exception as e:
-                print(f"Error reading PDF: {e}")
-        
-        from .utils.pdf_generator import generate_application_pdf
-        pdf_buffer = generate_application_pdf(application)
-        application.pdf_copy.save(f"{application.application_id}_application.pdf", ContentFile(pdf_buffer.getvalue()))
-        application.save()
-        
+                print(f"Error reading stored PDF: {e}")
+                import traceback
+                traceback.print_exc()
+
+        # Regenerate PDF if not found or error
+        try:
+            from .utils.pdf_generator import generate_application_pdf
+            pdf_buffer = generate_application_pdf(application)
+        except Exception as pdf_gen_error:
+            print(f"PDF generation failed: {pdf_gen_error}")
+            import traceback
+            traceback.print_exc()
+            return Response({'error': f'PDF generation failed: {str(pdf_gen_error)}'}, status=500)
+
+        # Save for future downloads
+        try:
+            application.pdf_copy.save(f"{application.application_id}_application.pdf", ContentFile(pdf_buffer.getvalue()))
+            application.save()
+        except Exception as save_error:
+            print(f"Error saving PDF: {save_error}")
+
         response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="application_{application_id}.pdf"'
         return response

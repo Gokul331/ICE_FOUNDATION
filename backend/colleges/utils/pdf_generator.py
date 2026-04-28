@@ -51,6 +51,17 @@ def _v(value):
     return str(value)
 
 
+def _format_percentage(value):
+    """Safely format a percentage value"""
+    if value is None:
+        return ''
+    try:
+        return f"{float(value)}%"
+    except (ValueError, TypeError):
+        return str(value)
+    return str(value)
+
+
 def _age(dob):
     if not dob:
         return ''
@@ -300,7 +311,7 @@ def generate_application_pdf(application):
          P("Board", S_LABEL), P(application.tenth_board or ''),
          P("Year of Passing", S_LABEL), P(_v(application.tenth_year_of_passing))],
         [P("Result Status", S_LABEL), P(_get_display_name(application.tenth_result_status)),
-         P("Marks Scored (%)", S_LABEL), P(f"{application.tenth_marks_percentage}%" if application.tenth_marks_percentage else ''),
+         P("Marks Scored (%)", S_LABEL), P(_format_percentage(application.tenth_marks_percentage)),
          P("", S_LABEL), P("")],
     ]
     story.append(_grid(tenth_rows, CW6))
@@ -313,7 +324,7 @@ def generate_application_pdf(application):
          P("Board", S_LABEL), P(application.twelfth_board or ''),
          P("Year of Passing", S_LABEL), P(_v(application.twelfth_year_of_passing))],
         [P("Result Status", S_LABEL), P(_get_display_name(application.twelfth_result_status)),
-         P("Marks Scored (%)", S_LABEL), P(f"{application.twelfth_marks_percentage}%" if application.twelfth_marks_percentage else ''),
+         P("Marks Scored (%)", S_LABEL), P(_format_percentage(application.twelfth_marks_percentage)),
          P("", S_LABEL), P("")],
     ]
     story.append(_grid(twelfth_rows, CW6))
@@ -327,7 +338,7 @@ def generate_application_pdf(application):
              P("Board / University", S_LABEL), P(application.diploma_board_university or ''),
              P("Year of Passing", S_LABEL), P(_v(application.diploma_year_of_passing))],
             [P("Result Status", S_LABEL), P(_get_display_name(application.diploma_result_status)),
-             P("Marks Scored (%)", S_LABEL), P(f"{application.diploma_marks_percentage}%" if application.diploma_marks_percentage else ''),
+             P("Marks Scored (%)", S_LABEL), P(_format_percentage(application.diploma_marks_percentage)),
              P("", S_LABEL), P("")],
         ]
         story.append(_grid(diploma_rows, CW6))
@@ -341,7 +352,7 @@ def generate_application_pdf(application):
              P("Board / University", S_LABEL), P(application.ug_board_university or ''),
              P("Year of Passing", S_LABEL), P(_v(application.ug_year_of_passing))],
             [P("Result Status", S_LABEL), P(_get_display_name(application.ug_result_status)),
-             P("Marks Scored (%)", S_LABEL), P(f"{application.ug_marks_percentage}%" if application.ug_marks_percentage else ''),
+             P("Marks Scored (%)", S_LABEL), P(_format_percentage(application.ug_marks_percentage)),
              P("", S_LABEL), P("")],
         ]
         story.append(_grid(ug_rows, CW6))
