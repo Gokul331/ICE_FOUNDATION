@@ -1,12 +1,16 @@
 # colleges/utils/pdf_generator.py
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
+from reportlab.lib.units import inch, mm
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.pdfgen import canvas
 from io import BytesIO
 from datetime import datetime
+import os
+from PIL import Image as PILImage
+import tempfile
 
 def get_value(value):
     """Return empty string if value is None or empty, otherwise return value"""
@@ -14,9 +18,77 @@ def get_value(value):
         return ''
     return str(value)
 
+def resize_image_for_pdf(image_path, max_width=150, max_height=120):
+    """Resize image for PDF preview"""
+    try:
+        with PILImage.open(image_path) as img:
+            # Convert to RGB if necessary
+            if img.mode in ('RGBA', 'LA', 'P'):
+                rgb_img = PILImage.new('RGB', img.size, (255, 255, 255))
+                if img.mode == 'P':
+                    img = img.convert('RGBA')
+                rgb_img.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                img = rgb_img
+            
+            # Calculate aspect ratio
+            img.thumbnail((max_width, max_height), PILImage.Resampling.LANCZOS)
+            
+            # Save to temp file
+            temp_file = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
+            img.save(temp_file.name, 'JPEG', quality=85)
+            return temp_file.name
+    except Exception as e:
+        print(f"Error resizing image: {e}")
+        return None
+
+def get_image_from_field(file_field):
+    """Extract image from model field or return None"""
+    if file_field and file_field.name:
+        try:
+            # Check if it's a file path or file object
+            if hasattr(file_field, 'path') and os.path.exists(file_field.path):
+                return file_field.path
+            elif hasattr(file_field, 'read'):
+                # Save temporarily
+                temp_file = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
+                temp_file.write(file_field.read())
+                temp_file.close()
+                file_field.seek(0)  # Reset pointer
+                return temp_file.name
+        except Exception as e:
+            print(f"Error reading image: {e}")
+    return None
+
+def get_course_name(course_obj):
+    """Get full course name with degree and duration"""
+    if course_obj:
+        degree = get_value(course_obj.degree_name)
+        duration = get_value(course_obj.duration_years)
+        name = get_value(course_obj.course_name)
+        if name:
+            parts = [name]
+            if degree:
+                parts.append(degree)
+            if duration:
+                parts.append(f"{duration} YEARS")
+            return " - ".join(parts)
+    return ''
+
 def generate_application_pdf(application):
-    """Generate professional PDF for student application"""
-    
+    """Generate professional PDF for student application with image previews"""
+
+    # Get course object if course_id is available
+    course_obj = None
+    course_display = ''
+    if application.course_id:
+        try:
+            from colleges.models import Course
+            course_obj = Course.objects.get(course_id=application.course_id)
+            course_display = get_course_name(course_obj)
+        except Exception as e:
+            print(f"Error fetching course: {e}")
+            course_display = f"Course ID: {application.course_id}"
+
     buffer = BytesIO()
     
     doc = SimpleDocTemplate(
@@ -103,7 +175,7 @@ def generate_application_pdf(application):
             age -= 1
         age_text = f"{age} YEARS"
     
-    # Build basic details rows (only include non-empty values)
+    # Build basic details rows
     basic_rows = []
     
     row1 = []
@@ -162,9 +234,7 @@ def generate_application_pdf(application):
     if row7:
         basic_rows.append(row7)
     
-    # Create basic details table
     if basic_rows:
-        # Determine max columns (2, 4, or 6)
         max_cols = max(len(row) for row in basic_rows)
         col_width = 1.2 * inch
         basic_table = Table(basic_rows, colWidths=[col_width] * max_cols)
@@ -337,69 +407,79 @@ def generate_application_pdf(application):
         story.append(twelfth_table)
         story.append(Spacer(1, 0.05*inch))
     
-    # Diploma Details (only if has_diploma is True)
-    if application.has_diploma:
-        diploma_rows = []
-        if get_value(application.diploma_college_name):
-            diploma_rows.append(["College Name", get_value(application.diploma_college_name)])
-        if get_value(application.diploma_board_university):
-            diploma_rows.append(["Board/University", get_value(application.diploma_board_university)])
-        if get_value(application.diploma_year_of_passing):
-            diploma_rows.append(["Year of Passing", str(application.diploma_year_of_passing)])
-        if get_value(application.diploma_marks_percentage):
-            diploma_rows.append(["Percentage", f"{application.diploma_marks_percentage}%"])
-        
-        if diploma_rows:
-            story.append(Paragraph("<b>Diploma</b>", label_style))
-            diploma_table = Table(diploma_rows, colWidths=[2*inch, 4*inch])
-            diploma_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#e0e0e0')),
-                ('BACKGROUND', (1, 0), (1, -1), colors.HexColor('#ffffff')),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('FONTSIZE', (0, 0), (-1, -1), 9),
-                ('TOPPADDING', (0, 0), (-1, -1), 5),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-                ('LEFTPADDING', (0, 0), (-1, -1), 8),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
-            ]))
-            story.append(diploma_table)
-            story.append(Spacer(1, 0.05*inch))
+    # ==================== SECTION 5: DOCUMENT UPLOADS PREVIEW ====================
+    story.append(Paragraph("DOCUMENT UPLOADS", section_style))
     
-    # UG Details (only if has_ug is True)
-    if application.has_ug:
-        ug_rows = []
-        if get_value(application.ug_college_name):
-            ug_rows.append(["College Name", get_value(application.ug_college_name)])
-        if get_value(application.ug_board_university):
-            ug_rows.append(["Board/University", get_value(application.ug_board_university)])
-        if get_value(application.ug_year_of_passing):
-            ug_rows.append(["Year of Passing", str(application.ug_year_of_passing)])
-        if get_value(application.ug_marks_percentage):
-            ug_rows.append(["Percentage", f"{application.ug_marks_percentage}%"])
-        
-        if ug_rows:
-            story.append(Paragraph("<b>Undergraduate</b>", label_style))
-            ug_table = Table(ug_rows, colWidths=[2*inch, 4*inch])
-            ug_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#e0e0e0')),
-                ('BACKGROUND', (1, 0), (1, -1), colors.HexColor('#ffffff')),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('FONTSIZE', (0, 0), (-1, -1), 9),
-                ('TOPPADDING', (0, 0), (-1, -1), 5),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-                ('LEFTPADDING', (0, 0), (-1, -1), 8),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
-            ]))
-            story.append(ug_table)
-            story.append(Spacer(1, 0.05*inch))
+    # Define document fields and their display names
+    document_fields = [
+        ('photo', 'Student Photo'),
+        ('aadhar_card', 'Aadhar Card'),
+        ('tenth_marksheet', '10th Marksheet'),
+        ('twelfth_marksheet', '12th Marksheet'),
+        ('diploma_marksheet', 'Diploma Marksheet'),
+        ('ug_marksheet', 'UG Marksheet'),
+        ('community_marksheet', 'Community Certificate')
+    ]
     
-    # ==================== SECTION 5: COURSE DETAILS ====================
+    # Create table for document previews
+    doc_data = []
+    for field_name, display_name in document_fields:
+        file_obj = getattr(application, field_name)
+        if file_obj and file_obj.name:
+            # Try to get image preview
+            image_path = get_image_from_field(file_obj)
+            if image_path and image_path.lower().endswith(('.jpg', '.jpeg', '.png')):
+                # Resize and add image
+                resized_path = resize_image_for_pdf(image_path, max_width=100, max_height=80)
+                if resized_path and os.path.exists(resized_path):
+                    img = Image(resized_path, width=0.8*inch, height=0.6*inch)
+                    doc_data.append([Paragraph(display_name, label_style), img])
+                    # Clean up temp file
+                    try:
+                        os.unlink(resized_path)
+                    except:
+                        pass
+                else:
+                    doc_data.append([Paragraph(display_name, label_style), Paragraph("✓ Uploaded", label_style)])
+            else:
+                doc_data.append([Paragraph(display_name, label_style), Paragraph("✓ Uploaded", label_style)])
+            
+            # Clean up temp file
+            if image_path and image_path != file_obj.path:
+                try:
+                    os.unlink(image_path)
+                except:
+                    pass
+    
+    if doc_data:
+        doc_table = Table(doc_data, colWidths=[2*inch, 1.5*inch])
+        doc_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f5f5f5')),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+        ]))
+        story.append(doc_table)
+        story.append(Spacer(1, 0.1*inch))
+    else:
+        story.append(Paragraph("No documents uploaded", label_style))
+        story.append(Spacer(1, 0.1*inch))
+    
+    # ==================== SECTION 6: COURSE DETAILS ====================
     course_rows = []
     college_name_value = application.college.college_name if application.college and application.college.college_name else ''
     if college_name_value:
         course_rows.append(["College Name", college_name_value])
-    if get_value(application.course_id):
-        course_rows.append(["Course ID", str(application.course_id)])
+    if course_display:
+        course_rows.append(["Course", course_display])
+    else:
+        if get_value(application.course_id):
+            course_rows.append(["Course ID", str(application.course_id)])
     if get_value(application.quota_type):
         course_rows.append(["Quota Type", application.quota_type.upper()])
     
