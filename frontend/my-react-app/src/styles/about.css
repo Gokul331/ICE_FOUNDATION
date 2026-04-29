@@ -575,6 +575,13 @@
   line-height: 1.65;
 }
 
+.cta-btns {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 .cta-btn-w {
   padding: 14px 32px;
   font-size: 14px;

@@ -85,93 +85,103 @@ function ApplicationDetail() {
 
       {/* Content */}
       <div className="detail-card">
+        {/* Application Information */}
         <div className="detail-section">
           <h3>Application Information</h3>
-          <div className="detail-row">
-            <span className="label">Application ID:</span>
-            <span className="value">{application.application_id}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">Submitted Date:</span>
-            <span className="value">{new Date(application.submitted_at).toLocaleString()}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">College:</span>
-            <span className="value">{application.college_name}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">Course ID:</span>
-            <span className="value">{application.course_id}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">Quota:</span>
-            <span className="value">{application.quota_type}</span>
+          <div className="fields-grid">
+            <div className="detail-row">
+              <span className="label">Application ID:</span>
+              <span className="value">{application.application_id}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Submitted Date:</span>
+              <span className="value">{new Date(application.submitted_at).toLocaleString()}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">College:</span>
+              <span className="value">{application.college_name}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Course ID:</span>
+              <span className="value">{application.course_id}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Quota:</span>
+              <span className="value">{application.quota_type}</span>
+            </div>
           </div>
         </div>
 
+        {/* Personal Information */}
         <div className="detail-section">
           <h3>Personal Information</h3>
-          <div className="detail-row">
-            <span className="label">Full Name:</span>
-            <span className="value">{application.first_name} {application.last_name}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">Gender:</span>
-            <span className="value">{application.gender || 'N/A'}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">Date of Birth:</span>
-            <span className="value">{application.date_of_birth ? new Date(application.date_of_birth).toLocaleDateString() : 'N/A'}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">Mobile:</span>
-            <span className="value">{application.mobile_number}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">Email:</span>
-            <span className="value">{application.email_id}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">Blood Group:</span>
-            <span className="value">{application.blood_group || 'N/A'}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">Community:</span>
-            <span className="value">{application.community || 'N/A'}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">Aadhar:</span>
-            <span className="value">{application.aadhar_number || 'N/A'}</span>
+          <div className="fields-grid">
+            <div className="detail-row">
+              <span className="label">Full Name:</span>
+              <span className="value">{application.first_name} {application.last_name}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Gender:</span>
+              <span className="value">{application.gender || 'N/A'}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Date of Birth:</span>
+              <span className="value">{application.date_of_birth ? new Date(application.date_of_birth).toLocaleDateString() : 'N/A'}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Mobile:</span>
+              <span className="value">{application.mobile_number}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Email:</span>
+              <span className="value">{application.email_id}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Blood Group:</span>
+              <span className="value">{application.blood_group || 'N/A'}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Community:</span>
+              <span className="value">{application.community || 'N/A'}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Aadhar:</span>
+              <span className="value">{application.aadhar_number || 'N/A'}</span>
+            </div>
           </div>
         </div>
 
+        {/* Parent Information */}
         <div className="detail-section">
           <h3>Parent Information</h3>
-          <div className="detail-row">
-            <span className="label">Father's Name:</span>
-            <span className="value">{application.father_name || 'N/A'}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">Father's Mobile:</span>
-            <span className="value">{application.father_mobile || 'N/A'}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">Mother's Name:</span>
-            <span className="value">{application.mother_name || 'N/A'}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">Mother's Mobile:</span>
-            <span className="value">{application.mother_mobile || 'N/A'}</span>
-          </div>
-          <div className="detail-row">
-            <span className="label">Annual Income:</span>
-            <span className="value">₹{application.family_annual_income?.toLocaleString() || 'N/A'}</span>
+          <div className="fields-grid">
+            <div className="detail-row">
+              <span className="label">Father's Name:</span>
+              <span className="value">{application.father_name || 'N/A'}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Father's Mobile:</span>
+              <span className="value">{application.father_mobile || 'N/A'}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Mother's Name:</span>
+              <span className="value">{application.mother_name || 'N/A'}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Mother's Mobile:</span>
+              <span className="value">{application.mother_mobile || 'N/A'}</span>
+            </div>
+            <div className="detail-row">
+              <span className="label">Annual Income:</span>
+              <span className="value">₹{application.family_annual_income?.toLocaleString() || 'N/A'}</span>
+            </div>
           </div>
         </div>
 
+        {/* Address - Full Width */}
         <div className="detail-section">
           <h3>Address</h3>
-          <div className="detail-row">
+          <div className="detail-row full-width">
             <span className="label">Address:</span>
             <span className="value">
               {application.address_line1}
@@ -183,45 +193,51 @@ function ApplicationDetail() {
           </div>
         </div>
 
+        {/* Education */}
         <div className="detail-section">
           <h3>Education</h3>
+          
           <div className="sub-section">
             <strong>10th Standard</strong>
-            <div className="detail-row">
-              <span className="label">School:</span>
-              <span className="value">{application.tenth_school_name || 'N/A'}</span>
-            </div>
-            <div className="detail-row">
-              <span className="label">Board:</span>
-              <span className="value">{application.tenth_board || 'N/A'}</span>
-            </div>
-            <div className="detail-row">
-              <span className="label">Year:</span>
-              <span className="value">{application.tenth_year_of_passing || 'N/A'}</span>
-            </div>
-            <div className="detail-row">
-              <span className="label">Percentage:</span>
-              <span className="value">{application.tenth_marks_percentage ? `${application.tenth_marks_percentage}%` : 'N/A'}</span>
+            <div className="fields-grid">
+              <div className="detail-row">
+                <span className="label">School:</span>
+                <span className="value">{application.tenth_school_name || 'N/A'}</span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Board:</span>
+                <span className="value">{application.tenth_board || 'N/A'}</span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Year:</span>
+                <span className="value">{application.tenth_year_of_passing || 'N/A'}</span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Percentage:</span>
+                <span className="value">{application.tenth_marks_percentage ? `${application.tenth_marks_percentage}%` : 'N/A'}</span>
+              </div>
             </div>
           </div>
           
           <div className="sub-section">
             <strong>12th Standard</strong>
-            <div className="detail-row">
-              <span className="label">School:</span>
-              <span className="value">{application.twelfth_school_name || 'N/A'}</span>
-            </div>
-            <div className="detail-row">
-              <span className="label">Board:</span>
-              <span className="value">{application.twelfth_board || 'N/A'}</span>
-            </div>
-            <div className="detail-row">
-              <span className="label">Year:</span>
-              <span className="value">{application.twelfth_year_of_passing || 'N/A'}</span>
-            </div>
-            <div className="detail-row">
-              <span className="label">Percentage:</span>
-              <span className="value">{application.twelfth_marks_percentage ? `${application.twelfth_marks_percentage}%` : 'N/A'}</span>
+            <div className="fields-grid">
+              <div className="detail-row">
+                <span className="label">School:</span>
+                <span className="value">{application.twelfth_school_name || 'N/A'}</span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Board:</span>
+                <span className="value">{application.twelfth_board || 'N/A'}</span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Year:</span>
+                <span className="value">{application.twelfth_year_of_passing || 'N/A'}</span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Percentage:</span>
+                <span className="value">{application.twelfth_marks_percentage ? `${application.twelfth_marks_percentage}%` : 'N/A'}</span>
+              </div>
             </div>
           </div>
         </div>

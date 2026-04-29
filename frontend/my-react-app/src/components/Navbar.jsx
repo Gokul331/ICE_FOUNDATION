@@ -93,7 +93,15 @@ function Navbar() {
     <>
       <nav>
         <Link to="/" className="logo-area nav-link" onClick={closeMobileMenu}>
-          <img src="/favicon.png" alt="ICE Foundation" className="logo-name" />
+          <img 
+            src="/favicon.png" 
+            alt="ICE Foundation" 
+            className="logo-name" 
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'flex';
+            }}
+          />
           <div className="logo-text-wrapper">
             <span className="logo-text"><span className='logo-text-main'>ICE</span> Foundation</span>
             <span className="logo-subtext">Inspire Connect Empower</span>
@@ -138,7 +146,11 @@ function Navbar() {
                     </svg>
                     My Profile
                   </Link>
-                  <Link to="/my-applications" className={`dropdown-item ${isActive('/my-applications') ? 'active' : ''}`} onClick={() => setDropdownOpen(false)}>
+                  <Link 
+                    to="/my-applications" 
+                    className={`dropdown-item ${isActive('/my-applications') ? 'active' : ''}`} 
+                    onClick={() => setDropdownOpen(false)}
+                  >
                     <svg fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                       <path d="M9 17v-6a2 2 0 012-2h4"/>
                       <polyline points="12 15 9 12 12 9"/>
@@ -203,7 +215,14 @@ function Navbar() {
       {/* Mobile Navigation Menu */}
       <div className={`mobile-nav-menu ${mobileMenuOpen ? 'open' : ''}`} ref={mobileMenuRef}>
         <div className="mobile-nav-header">
-          <img src="/favicon.png" alt="ICE Foundation" className="logo-name" />
+          <img 
+            src="/favicon.png" 
+            alt="ICE Foundation" 
+            className="logo-name" 
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
+          />
           <span className="mobile-nav-title">ICE Foundation</span>
         </div>
         
@@ -239,7 +258,18 @@ function Navbar() {
                 </svg>
                 My Profile
               </Link>
-              <Link to="/my-applications">My Applications</Link>
+              <Link 
+                to="/my-applications" 
+                className={`mobile-nav-link ${isActive('/my-applications') ? 'active' : ''}`} 
+                onClick={closeMobileMenu}
+              >
+                <svg fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <path d="M9 17v-6a2 2 0 012-2h4"/>
+                  <polyline points="12 15 9 12 12 9"/>
+                  <line x1="15" y1="12" x2="9" y2="12"/>
+                </svg>
+                My Applications
+              </Link>
               <Link 
                 to="/colleges" 
                 className={`mobile-nav-link ${isActive('/colleges') ? 'active' : ''}`} 
@@ -272,7 +302,7 @@ function Navbar() {
               </button>
             </>
           ) : (
-            <Link to="/login" className={`mobile-nav-btn ${isActive('/login') ? 'active' : ''}`} onClick={closeMobileMenu}>
+            <Link to="/login" className="mobile-nav-btn" onClick={closeMobileMenu}>
               Login / Register
             </Link>
           )}

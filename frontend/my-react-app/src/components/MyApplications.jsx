@@ -46,10 +46,17 @@ function MyApplications() {
     }
   };
 
+  const getStatusText = (status) => {
+    switch(status) {
+      case 'under_review': return 'Under Review';
+      default: return status?.replace('_', ' ');
+    }
+  };
+
   // Filter applications
   const filteredApplications = applications.filter((app) => {
     const matchesSearch =
-      app.application_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.application_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.college_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       `${app.first_name} ${app.last_name}`.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || app.status === statusFilter;
@@ -69,80 +76,132 @@ function MyApplications() {
     <div className="myapps-container">
       {/* Header */}
       <div className="myapps-header">
-        <h1>My Applications</h1>
-        <p>View and download your submitted applications</p>
+        <div className="header-content">
+          <h1>My Applications</h1>
+          <p>Track and manage your college applications</p>
+        </div>
+        <button className="btn-browse-header" onClick={() => navigate("/colleges")}>
+          Browse More Colleges →
+        </button>
       </div>
 
-      {/* Stats */}
+      {/* Stats Cards */}
       <div className="myapps-stats">
         <div className="stat-card">
-          <span className="stat-number">{applications.length}</span>
-          <span className="stat-label">Total</span>
+          <div className="stat-icon">📊</div>
+          <div className="stat-info">
+            <span className="stat-number">{applications.length}</span>
+            <span className="stat-label">Total Applications</span>
+          </div>
         </div>
         <div className="stat-card">
-          <span className="stat-number">{applications.filter(a => a.status === 'submitted').length}</span>
-          <span className="stat-label">Submitted</span>
+          <div className="stat-icon">✅</div>
+          <div className="stat-info">
+            <span className="stat-number">{applications.filter(a => a.status === 'submitted').length}</span>
+            <span className="stat-label">Submitted</span>
+          </div>
         </div>
         <div className="stat-card">
-          <span className="stat-number">{applications.filter(a => a.status === 'approved').length}</span>
-          <span className="stat-label">Approved</span>
+          <div className="stat-icon">⭐</div>
+          <div className="stat-info">
+            <span className="stat-number">{applications.filter(a => a.status === 'approved').length}</span>
+            <span className="stat-label">Approved</span>
+          </div>
         </div>
         <div className="stat-card">
-          <span className="stat-number">{applications.filter(a => a.status === 'pending' || a.status === 'under_review').length}</span>
-          <span className="stat-label">Pending</span>
+          <div className="stat-icon">⏳</div>
+          <div className="stat-info">
+            <span className="stat-number">{applications.filter(a => a.status === 'pending' || a.status === 'under_review').length}</span>
+            <span className="stat-label">Pending Review</span>
+          </div>
         </div>
       </div>
 
       {/* Search and Filter */}
       <div className="myapps-filters">
-        <input
-          type="text"
-          className="search-input"
-          placeholder="Search by ID, college, or name..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+        <div className="search-wrapper">
+          <span className="search-icon">🔍</span>
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Search by Application ID, College, or Name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          {searchTerm && (
+            <button className="clear-search" onClick={() => setSearchTerm("")}>
+              ✕
+            </button>
+          )}
+        </div>
         <select
           className="filter-select"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
-          <option value="all">All Status</option>
-          <option value="submitted">Submitted</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
-          <option value="pending">Pending</option>
-          <option value="under_review">Under Review</option>
+          <option value="all">📋 All Status</option>
+          <option value="submitted">📤 Submitted</option>
+          <option value="approved">✓ Approved</option>
+          <option value="rejected">✗ Rejected</option>
+          <option value="pending">⏳ Pending</option>
+          <option value="under_review">👀 Under Review</option>
         </select>
       </div>
 
-      {/* Applications List */}
+      {/* Results Count */}
+      {filteredApplications.length > 0 && (
+        <div className="results-count">
+          Showing {filteredApplications.length} of {applications.length} applications
+        </div>
+      )}
+
+      {/* Applications Grid */}
       {filteredApplications.length === 0 ? (
         <div className="myapps-empty">
+          <div className="empty-icon">📭</div>
           <p>No applications found</p>
+          <p className="empty-subtitle">
+            {searchTerm || statusFilter !== "all" 
+              ? "Try adjusting your search or filter criteria" 
+              : "You haven't submitted any applications yet"}
+          </p>
           <button className="btn-browse" onClick={() => navigate("/colleges")}>
             Browse Colleges
           </button>
         </div>
       ) : (
-        <div className="myapps-list">
+        <div className="myapps-grid">
           {filteredApplications.map((app) => (
             <div key={app.application_id} className="myapps-card">
               <div className="card-header">
-                <div>
-                  <span className="app-id">{app.application_id}</span>
+                <div className="app-info">
+                  <span className="app-id">#{app.application_id}</span>
                   <span className={`status ${app.status}`}>
-                    {app.status?.replace("_", " ")}
+                    {getStatusText(app.status)}
                   </span>
                 </div>
               </div>
               
               <div className="card-body">
-                <h3>{app.college_name || "N/A"}</h3>
-                <div className="details">
-                  <p><strong>Name:</strong> {app.first_name} {app.last_name}</p>
-                  <p><strong>Quota:</strong> {app.quota_type}</p>
-                  <p><strong>Submitted:</strong> {new Date(app.submitted_at).toLocaleDateString()}</p>
+                <h3 className="college-name">{app.college_name || "College Name N/A"}</h3>
+                
+                <div className="details-grid">
+                  <div className="detail-item">
+                    <span className="detail-label">Student Name</span>
+                    <span className="detail-value">{app.first_name} {app.last_name}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">Quota Type</span>
+                    <span className="detail-value capitalize">{app.quota_type || "N/A"}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">Submitted Date</span>
+                    <span className="detail-value">{new Date(app.submitted_at).toLocaleDateString()}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">Submitted Time</span>
+                    <span className="detail-value">{new Date(app.submitted_at).toLocaleTimeString()}</span>
+                  </div>
                 </div>
               </div>
               
@@ -152,13 +211,17 @@ function MyApplications() {
                   onClick={() => handleDownloadPDF(app.application_id)}
                   disabled={downloading === app.application_id}
                 >
-                  {downloading === app.application_id ? "Downloading..." : "📥 Download PDF"}
+                  {downloading === app.application_id ? (
+                    <>⏳ Downloading...</>
+                  ) : (
+                    <>📥 Download PDF</>
+                  )}
                 </button>
                 <button 
                   className="btn-view"
                   onClick={() => navigate(`/applications/${app.application_id}`)}
                 >
-                  👁️ View Details
+                  View Details
                 </button>
               </div>
             </div>

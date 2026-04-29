@@ -71,7 +71,6 @@ function Home() {
     localStorage.removeItem("user");
     localStorage.removeItem("token");
     setUser(null);
-    // Optionally redirect to home page
     window.location.href = "/";
   };
 
@@ -310,7 +309,10 @@ function Home() {
                           alt={college.college_name}
                           onError={(e) => {
                             e.target.style.display = "none";
-                            e.target.parentElement.querySelector("span").style.display = "flex";
+                            if (e.target.parentElement) {
+                              const span = e.target.parentElement.querySelector("span");
+                              if (span) span.style.display = "flex";
+                            }
                           }}
                         />
                       ) : null}

@@ -20,7 +20,7 @@ function About() {
 
   return (
     <div className="about-page">
-   <Navbar />
+      <Navbar />
 
       <section className="hero">
         <div className="hero-ring1"></div>
@@ -161,53 +161,47 @@ function About() {
             <p className="lead">What started as a small counselling desk in Chennai has grown into one of South India's most trusted college guidance organisations.</p>
           </div>
           <div className="timeline">
-
-  <div className="tl-item">
-    <div className="tl-dot"></div>
-    <div className="tl-year">January 2026</div>
-    <div className="tl-title">ICE Foundation Founded</div>
-    <div className="tl-desc">
-      ICE Foundation was started with a vision to guide students in choosing the right college, course, and career path.
-    </div>
-  </div>
-
-  <div className="tl-item">
-    <div className="tl-dot"></div>
-    <div className="tl-year">February 2026</div>
-    <div className="tl-title">Initial College Partnerships</div>
-    <div className="tl-desc">
-      Partnered with multiple colleges across Tamil Nadu to provide students with verified admission opportunities.
-    </div>
-  </div>
-
-  <div className="tl-item">
-    <div className="tl-dot"></div>
-    <div className="tl-year">March 2026</div>
-    <div className="tl-title">Scholarship Support Initiated</div>
-    <div className="tl-desc">
-      Started helping students secure scholarships and financial support based on merit and eligibility.
-    </div>
-  </div>
-
-  <div className="tl-item">
-    <div className="tl-dot"></div>
-    <div className="tl-year">April 2026</div>
-    <div className="tl-title">Platform Launch</div>
-    <div className="tl-desc">
-      Launched the ICE Foundation digital platform to connect students with colleges and expert guidance.
-    </div>
-  </div>
-
-  <div className="tl-item">
-    <div className="tl-dot"></div>
-    <div className="tl-year">End of 2026 (Target)</div>
-    <div className="tl-title">3000+ Students Supported</div>
-    <div className="tl-desc">
-      Our goal is to guide over <strong>3000+ students</strong> and help them secure more than <strong>₹3 Crore</strong> in scholarships.
-    </div>
-  </div>
-
-</div>
+            <div className="tl-item">
+              <div className="tl-dot"></div>
+              <div className="tl-year">January 2026</div>
+              <div className="tl-title">ICE Foundation Founded</div>
+              <div className="tl-desc">
+                ICE Foundation was started with a vision to guide students in choosing the right college, course, and career path.
+              </div>
+            </div>
+            <div className="tl-item">
+              <div className="tl-dot"></div>
+              <div className="tl-year">February 2026</div>
+              <div className="tl-title">Initial College Partnerships</div>
+              <div className="tl-desc">
+                Partnered with multiple colleges across Tamil Nadu to provide students with verified admission opportunities.
+              </div>
+            </div>
+            <div className="tl-item">
+              <div className="tl-dot"></div>
+              <div className="tl-year">March 2026</div>
+              <div className="tl-title">Scholarship Support Initiated</div>
+              <div className="tl-desc">
+                Started helping students secure scholarships and financial support based on merit and eligibility.
+              </div>
+            </div>
+            <div className="tl-item">
+              <div className="tl-dot"></div>
+              <div className="tl-year">April 2026</div>
+              <div className="tl-title">Platform Launch</div>
+              <div className="tl-desc">
+                Launched the ICE Foundation digital platform to connect students with colleges and expert guidance.
+              </div>
+            </div>
+            <div className="tl-item">
+              <div className="tl-dot"></div>
+              <div className="tl-year">End of 2026 (Target)</div>
+              <div className="tl-title">3000+ Students Supported</div>
+              <div className="tl-desc">
+                Our goal is to guide over <strong>3000+ students</strong> and help them secure more than <strong>₹3 Crore</strong> in scholarships.
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -222,9 +216,9 @@ function About() {
               <div className="team-body">
                 <div className="team-name">Gokul Palanisamy</div>
                 <div className="team-role">Founder & Director</div>
-               <div className="team-bio">
-  Entrepreneur with a vision to inspire, connect, and empower students by guiding them towards the right college and career path.
-</div>
+                <div className="team-bio">
+                  Entrepreneur with a vision to inspire, connect, and empower students by guiding them towards the right college and career path.
+                </div>
               </div>
             </div>
             <div className="team-card">
@@ -233,8 +227,8 @@ function About() {
                 <div className="team-name">Manikandan Murugesan</div>
                 <div className="team-role">Head of Counselling</div>
                 <div className="team-bio">
-  Experienced student counsellor dedicated to helping students identify the right courses and colleges based on their interests and strengths.
-</div>
+                  Experienced student counsellor dedicated to helping students identify the right courses and colleges based on their interests and strengths.
+                </div>
               </div>
             </div>
             <div className="team-card">
@@ -242,9 +236,9 @@ function About() {
               <div className="team-body">
                 <div className="team-name">Dinesh Kumar</div>
                 <div className="team-role">Scholarship Specialist</div>
-               <div className="team-bio">
-  Specializes in identifying scholarship opportunities and assisting students in securing financial support for their education.
-</div>
+                <div className="team-bio">
+                  Specializes in identifying scholarship opportunities and assisting students in securing financial support for their education.
+                </div>
               </div>
             </div>
             <div className="team-card">
@@ -253,8 +247,8 @@ function About() {
                 <div className="team-name">Gnanasridhar Nagaraj</div>
                 <div className="team-role">College Relations Lead</div>
                 <div className="team-bio">
-  Focuses on building strong relationships with colleges to ensure students get the best admission opportunities and guidance.
-</div>
+                  Focuses on building strong relationships with colleges to ensure students get the best admission opportunities and guidance.
+                </div>
               </div>
             </div>
           </div>

@@ -2,6 +2,19 @@
    BLACK & WHITE NAVIGATION WITH 3D EFFECTS
    ============================================ */
 
+/* CSS Variables - Add these at the top of your CSS file */
+:root {
+  --white: #ffffff;
+  --black: #000000;
+  --gray-100: #f5f5f5;
+  --gray-200: #e5e5e5;
+  --gray-300: #d4d4d4;
+  --gray-400: #a3a3a3;
+  --gray-500: #737373;
+  --gray-600: #525252;
+  --gray-800: #262626;
+}
+
 /* Navigation Container */
 nav {
   position: sticky;
@@ -47,6 +60,7 @@ nav {
   letter-spacing: -0.5px;
   transition: all 0.3s ease;
   transform-style: preserve-3d;
+  object-fit: cover;
 }
 
 .logo-area:hover .logo-name {
@@ -62,7 +76,6 @@ nav {
 .logo-text {
   font-size: 18px;
   font-weight: 800;
-  color: rgb(255, 255, 255);
   letter-spacing: -0.5px;
 }
 
@@ -70,16 +83,18 @@ nav {
   color: white;
 }
 
-.logo-area:hover .logo-text-main{
-  color: rgb(122, 197, 226);
-}
-
 .logo-area .logo-text {
   color: rgb(122, 197, 226);
 }
+
 .logo-area:hover .logo-text {
   color: rgb(0, 0, 0);
 }
+
+.logo-area:hover .logo-text-main {
+  color: rgb(122, 197, 226);
+}
+
 .logo-subtext {
   font-size: 10px;
   color: var(--gray-500);
@@ -120,6 +135,7 @@ nav {
   transform: translateZ(-10px) scale(0.9);
   opacity: 0;
   transition: all 0.3s ease;
+  z-index: -1;
 }
 
 .nav-link:hover {
@@ -157,6 +173,7 @@ nav {
   display: inline-block;
   transform-style: preserve-3d;
   position: relative;
+  overflow: hidden;
 }
 
 .nav-btn::before {
@@ -168,6 +185,7 @@ nav {
   transform: translateZ(-5px);
   opacity: 0;
   transition: all 0.3s ease;
+  z-index: -1;
 }
 
 .nav-btn:hover {
@@ -266,6 +284,7 @@ nav {
   display: block;
   font-size: 12px;
   color: var(--gray-500);
+  word-break: break-word;
 }
 
 /* Dropdown Divider */
@@ -298,6 +317,7 @@ nav {
   height: 20px;
   color: var(--gray-500);
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .dropdown-item:hover {
@@ -307,6 +327,11 @@ nav {
 
 .dropdown-item:hover svg {
   color: var(--black);
+}
+
+.dropdown-item.active {
+  background: var(--gray-100);
+  font-weight: 600;
 }
 
 /* Logout Item */
@@ -423,6 +448,7 @@ nav {
   background: var(--white);
   color: var(--black);
   font-size: 13px;
+  border-radius: 12px;
 }
 
 .mobile-nav-title {
@@ -458,6 +484,7 @@ nav {
   height: 22px;
   color: var(--gray-500);
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .mobile-nav-link:hover,
@@ -469,6 +496,11 @@ nav {
 .mobile-nav-link:hover svg,
 .mobile-nav-link:active svg {
   color: var(--black);
+}
+
+.mobile-nav-link.active {
+  background: var(--gray-100);
+  font-weight: 700;
 }
 
 .mobile-user-info {
@@ -493,10 +525,12 @@ nav {
   font-weight: 700;
   font-size: 18px;
   color: var(--white);
+  flex-shrink: 0;
 }
 
 .mobile-user-details {
   flex: 1;
+  overflow: hidden;
 }
 
 .mobile-user-name {
@@ -504,11 +538,13 @@ nav {
   font-weight: 700;
   color: var(--black);
   margin-bottom: 4px;
+  word-break: break-word;
 }
 
 .mobile-user-email {
   font-size: 12px;
   color: var(--gray-500);
+  word-break: break-word;
 }
 
 .mobile-nav-btn {
@@ -568,6 +604,8 @@ nav {
 .mobile-nav-menu.open .mobile-nav-link:nth-child(6) { animation-delay: 0.3s; }
 .mobile-nav-menu.open .mobile-nav-link:nth-child(7) { animation-delay: 0.35s; }
 .mobile-nav-menu.open .mobile-nav-link:nth-child(8) { animation-delay: 0.4s; }
+.mobile-nav-menu.open .mobile-nav-link:nth-child(9) { animation-delay: 0.45s; }
+.mobile-nav-menu.open .mobile-nav-link:nth-child(10) { animation-delay: 0.5s; }
 
 @keyframes slideInFromRight {
   from {
@@ -636,12 +674,17 @@ nav {
   }
 
   .nav-links {
-    gap: 8px;
+    gap: 6px;
   }
 
   .nav-link {
-    padding: 10px 16px;
-    font-size: 14px;
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+  
+  .nav-btn {
+    padding: 10px 22px;
+    font-size: 13px;
   }
 }
 
@@ -662,7 +705,6 @@ nav {
 
   .logo-text {
     font-size: 16px;
-    color : white
   }
 
   .logo-subtext {
@@ -1087,6 +1129,10 @@ nav {
     width: 70%;
     max-width: 340px;
   }
+  
+  .mobile-nav-links {
+    padding: 16px;
+  }
 }
 
 /* High DPI Screens (Retina) */
@@ -1126,5 +1172,29 @@ nav {
 
   .logo-subtext {
     color: var(--gray-600);
+  }
+}
+
+/* Accessibility - Focus Styles */
+.nav-link:focus-visible,
+.nav-btn:focus-visible,
+.user-avatar-btn:focus-visible,
+.dropdown-item:focus-visible,
+.mobile-nav-link:focus-visible,
+.mobile-nav-btn:focus-visible,
+.mobile-menu-btn:focus-visible {
+  outline: 2px solid var(--white);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Reduced Motion Preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
