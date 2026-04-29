@@ -74,6 +74,15 @@ function MyApplications() {
 
   return (
     <div className="myapps-container">
+      {/* Back to Home Button */}
+      <button 
+        className="back-home-btn-top"
+        onClick={() => navigate("/")}
+        aria-label="Back to Home"
+      >
+        ← Back to Home
+      </button>
+
       {/* Header */}
       <div className="myapps-header">
         <div className="header-content">

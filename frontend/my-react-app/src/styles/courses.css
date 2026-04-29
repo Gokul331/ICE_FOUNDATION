@@ -1,0 +1,1633 @@
+/* Courses Page - Clean Black & White Theme with Enhanced Responsive Design */
+
+.courses-page {
+  background: #ffffff;
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Hero Section */
+.courses-hero {
+  background: #000000;
+  padding: 80px 8% 100px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.courses-hero::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.05) 0%, transparent 50%);
+  animation: float3D 20s ease-in-out infinite;
+}
+
+@keyframes float3D {
+  0%, 100% { transform: translateY(0) rotateX(0deg); }
+  50% { transform: translateY(-10px) rotateX(2deg); }
+}
+
+.courses-hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 50px;
+  padding: 8px 18px;
+  margin-bottom: 24px;
+}
+
+.badge-dot {
+  width: 8px;
+  height: 8px;
+  background: #ffffff;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.2); }
+}
+
+.hero-badge span:first-child {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.courses-hero h1 {
+  font-size: clamp(28px, 6vw, 52px);
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -1.5px;
+  margin-bottom: 20px;
+  line-height: 1.2;
+}
+
+.courses-hero p {
+  font-size: clamp(14px, 4vw, 16px);
+  color: rgba(255,255,255,0.7);
+  line-height: 1.6;
+}
+
+/* Filter Bar */
+.courses-filter-bar {
+  background: #ffffff;
+  border-bottom: 2px solid #e5e5e5;
+  padding: 20px 8%;
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 72px;
+  z-index: 50;
+}
+
+.search-wrapper {
+  flex: 2;
+  min-width: 200px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-wrapper svg {
+  position: absolute;
+  left: 16px;
+  width: 20px;
+  height: 20px;
+  color: #a3a3a3;
+}
+
+.search-wrapper input {
+  width: 100%;
+  padding: 14px 16px 14px 48px;
+  border: 2px solid #e5e5e5;
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.3s ease;
+}
+
+.search-wrapper input:focus {
+  outline: none;
+  border-color: #000000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.filter-group {
+  flex: 3;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-select {
+  flex: 1;
+  min-width: 120px;
+  padding: 14px 16px;
+  border: 2px solid #e5e5e5;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #000000;
+}
+
+.sort-view-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.sort-select {
+  padding: 14px 16px;
+  border: 2px solid #e5e5e5;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.view-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.vt-btn {
+  width: 48px;
+  height: 48px;
+  border: 2px solid #e5e5e5;
+  border-radius: 12px;
+  background: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.vt-btn:hover {
+  border-color: #000000;
+}
+
+.vt-btn.active {
+  background: #000000;
+  border-color: #000000;
+}
+
+.vt-btn.active svg {
+  color: #ffffff;
+}
+
+.vt-btn svg {
+  width: 20px;
+  height: 20px;
+  color: #000000;
+}
+
+/* Results */
+.courses-results {
+  padding: 20px 8% 0;
+}
+
+.results-count {
+  font-size: 14px;
+  color: #666666;
+  font-weight: 500;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+/* Grid View */
+.courses-grid {
+  padding: 32px 8%;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 28px;
+}
+
+/* Course Card */
+.course-card {
+  background: #ffffff;
+  border: 2px solid #e5e5e5;
+  border-radius: 20px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fadeInUp 0.5s ease both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.course-card:hover {
+  transform: translateY(-8px);
+  border-color: #000000;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+}
+
+/* Card Header */
+.course-card-header {
+  padding: 20px 24px;
+  background: #fafafa;
+  border-bottom: 1px solid #e5e5e5;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  position: relative;
+}
+
+.college-logo-section {
+  flex-shrink: 0;
+}
+
+.college-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #f5f5f5;
+  border: 2px solid #e5e5e5;
+}
+
+.college-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.college-logo .logo-fallback {
+  font-size: 20px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.college-details {
+  flex: 1;
+}
+
+.college-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #000000;
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+
+.college-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #666666;
+  margin-bottom: 6px;
+}
+
+.college-location svg {
+  width: 14px;
+  height: 14px;
+}
+
+.college-accreditation {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #e8f5e9;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.duration-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid #e5e5e5;
+}
+
+/* Card Body */
+.course-card-body {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.course-name-display {
+  font-size: 18px;
+  font-weight: 800;
+  color: #000000;
+  margin-bottom: 8px;
+  line-height: 1.3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.course-code {
+  font-size: 11px;
+  font-weight: 600;
+  color: #666666;
+  background: #f5f5f5;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.degree-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #000000;
+  color: #ffffff;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+/* Fee Structure */
+.fee-structure {
+  background: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.fee-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.fee-item:last-child {
+  border-bottom: none;
+}
+
+.fee-item.scholarship {
+  background: #e8f5e9;
+  margin: 8px -8px -8px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border-bottom: none;
+}
+
+.fee-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666666;
+}
+
+.fee-amount {
+  font-size: 15px;
+  font-weight: 800;
+  color: #000000;
+}
+
+.scholarship-amount {
+  color: #2e7d32;
+}
+
+/* Course Info */
+.course-intake,
+.course-eligibility,
+.cutoff-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #666666;
+  margin-top: 12px;
+  padding: 8px 0;
+}
+
+.course-intake svg,
+.course-eligibility svg,
+.cutoff-info svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.cutoff-info {
+  background: #f5f5f5;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+/* Card Footer */
+.course-card-footer {
+  padding: 20px 24px;
+  display: flex;
+  gap: 12px;
+  background: #ffffff;
+}
+
+.apply-btn,
+.view-college-btn {
+  flex: 1;
+  padding: 12px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.apply-btn {
+  background: #000000;
+  color: #ffffff;
+  border: none;
+}
+
+.apply-btn:hover {
+  background: #333333;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.view-college-btn {
+  background: transparent;
+  color: #000000;
+  border: 2px solid #000000;
+}
+
+.view-college-btn:hover {
+  background: #000000;
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
+/* List View Styles */
+.course-list-item {
+  background: #ffffff;
+  border: 2px solid #e5e5e5;
+  border-radius: 16px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.5s ease both;
+}
+
+.course-list-item:hover {
+  border-color: #000000;
+  transform: translateX(8px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+.list-item-logo-section {
+  flex-shrink: 0;
+}
+
+.list-item-logo {
+  width: 70px;
+  height: 70px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #f5f5f5;
+  border: 2px solid #e5e5e5;
+}
+
+.list-item-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.list-item-logo .logo-fallback {
+  font-size: 18px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.list-item-info {
+  flex: 1;
+}
+
+.list-college-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.list-college-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #000000;
+}
+
+.list-naac-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #2e7d32;
+  background: #e8f5e9;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.list-course-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #333333;
+  margin-bottom: 4px;
+}
+
+.list-degree {
+  font-size: 12px;
+  color: #666666;
+  margin-bottom: 8px;
+}
+
+.list-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #666666;
+  margin-bottom: 10px;
+}
+
+.list-location svg {
+  width: 14px;
+  height: 14px;
+}
+
+.list-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.duration-tag,
+.intake-tag,
+.stream-tag {
+  padding: 4px 12px;
+  background: #f5f5f5;
+  border: 1px solid #e5e5e5;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #666666;
+}
+
+.list-item-fees {
+  min-width: 150px;
+  padding: 0 20px;
+  border-left: 1px solid #e5e5e5;
+  border-right: 1px solid #e5e5e5;
+}
+
+.fee-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 12px;
+  padding: 6px 0;
+}
+
+.fee-row span {
+  color: #666666;
+}
+
+.fee-row strong {
+  color: #000000;
+  font-weight: 700;
+}
+
+.fee-row.scholarship strong {
+  color: #2e7d32;
+}
+
+.list-item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 130px;
+}
+
+.list-item-actions .apply-btn,
+.list-item-actions .view-college-btn {
+  padding: 10px 12px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* Loading & Error States */
+.loading-container,
+.error-container {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid #e5e5e5;
+  border-top-color: #000000;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-icon {
+  width: 80px;
+  height: 80px;
+  background: #000000;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.error-detail {
+  font-size: 14px;
+  color: #666666;
+  margin-top: 8px;
+}
+
+.retry-btn {
+  padding: 12px 28px;
+  background: #000000;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.retry-btn:hover {
+  background: #333333;
+  transform: translateY(-2px);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+}
+
+.empty-state svg {
+  width: 100px;
+  height: 100px;
+  margin-bottom: 24px;
+  color: #d4d4d4;
+}
+
+.empty-state h3 {
+  font-size: 22px;
+  color: #000000;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.empty-state p {
+  font-size: 14px;
+  color: #666666;
+}
+
+/* ============================================
+   ENHANCED RESPONSIVE DESIGN
+   ============================================ */
+
+/* Large Desktop (1200px - 1400px) */
+@media (min-width: 1200px) and (max-width: 1400px) {
+  .courses-grid {
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 24px;
+  }
+  
+  .courses-hero {
+    padding: 80px 8% 90px;
+  }
+}
+
+/* Desktop (992px - 1199px) */
+@media (min-width: 992px) and (max-width: 1199px) {
+  .courses-grid {
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 20px;
+  }
+  
+  .courses-filter-bar {
+    padding: 16px 6%;
+  }
+  
+  .courses-results,
+  .courses-grid {
+    padding: 24px 6% 32px;
+  }
+}
+
+/* Tablet Landscape (768px - 991px) */
+@media (min-width: 768px) and (max-width: 991px) {
+  .courses-hero {
+    padding: 60px 6% 80px;
+  }
+  
+  .courses-hero h1 {
+    font-size: 40px;
+  }
+  
+  .courses-filter-bar {
+    padding: 16px 5%;
+    top: 70px;
+  }
+  
+  .filter-group {
+    width: 100%;
+  }
+  
+  .sort-view-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .courses-results {
+    padding: 20px 5% 0;
+  }
+  
+  .courses-grid {
+    padding: 30px 5%;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+  }
+  
+  .course-card-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .college-location {
+    justify-content: center;
+  }
+  
+  .duration-badge {
+    position: static;
+    margin-top: 12px;
+    justify-content: center;
+  }
+  
+  .course-name-display {
+    text-align: center;
+    justify-content: center;
+  }
+  
+  .degree-badge {
+    display: block;
+    text-align: center;
+  }
+  
+  .list-item-fees {
+    min-width: 130px;
+    padding: 0 15px;
+  }
+  
+  .list-item-actions {
+    min-width: 110px;
+  }
+}
+
+/* Tablet Portrait (576px - 767px) */
+@media (min-width: 576px) and (max-width: 767px) {
+  .courses-hero {
+    padding: 50px 5% 70px;
+  }
+  
+  .courses-hero h1 {
+    font-size: 32px;
+  }
+  
+  .courses-hero p {
+    font-size: 14px;
+  }
+  
+  .courses-filter-bar {
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+    top: 0;
+    padding: 16px 5%;
+  }
+  
+  .filter-group {
+    flex-direction: row;
+    gap: 10px;
+  }
+  
+  .filter-select {
+    font-size: 13px;
+    padding: 12px 12px;
+  }
+  
+  .sort-view-group {
+    justify-content: space-between;
+  }
+  
+  .courses-results {
+    padding: 16px 5% 0;
+  }
+  
+  .courses-grid {
+    padding: 24px 5%;
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .course-card-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .course-card-footer {
+    flex-direction: column;
+  }
+  
+  .apply-btn,
+  .view-college-btn {
+    white-space: normal;
+  }
+  
+  .course-name-display {
+    text-align: center;
+    justify-content: center;
+    font-size: 17px;
+  }
+  
+  .degree-badge {
+    display: block;
+    text-align: center;
+  }
+  
+  .course-list-item {
+    flex-direction: column;
+    text-align: center;
+    padding: 16px;
+    gap: 16px;
+  }
+  
+  .list-item-fees {
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid #e5e5e5;
+    border-bottom: 1px solid #e5e5e5;
+    padding: 16px;
+    width: 100%;
+  }
+  
+  .list-item-actions {
+    width: 100%;
+    flex-direction: row;
+    min-width: auto;
+  }
+  
+  .list-item-actions button {
+    flex: 1;
+  }
+  
+  .list-badges {
+    justify-content: center;
+  }
+  
+  .list-college-header {
+    justify-content: center;
+  }
+  
+  .list-location {
+    justify-content: center;
+  }
+  
+  .list-course-name {
+    text-align: center;
+  }
+  
+  .list-degree {
+    text-align: center;
+  }
+}
+
+/* Mobile Landscape (481px - 575px) */
+@media (min-width: 481px) and (max-width: 575px) {
+  .courses-hero {
+    padding: 45px 5% 60px;
+  }
+  
+  .hero-badge {
+    padding: 6px 14px;
+    font-size: 11px;
+  }
+  
+  .courses-hero h1 {
+    font-size: 28px;
+  }
+  
+  .courses-hero p {
+    font-size: 13px;
+  }
+  
+  .courses-filter-bar {
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+    top: 0;
+    padding: 16px 4%;
+  }
+  
+  .search-wrapper input {
+    padding: 12px 16px 12px 44px;
+    font-size: 13px;
+  }
+  
+  .filter-group {
+    flex-direction: column;
+  }
+  
+  .filter-select {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 13px;
+  }
+  
+  .sort-view-group {
+    justify-content: space-between;
+    gap: 8px;
+  }
+  
+  .sort-select {
+    padding: 12px 14px;
+    font-size: 13px;
+  }
+  
+  .vt-btn {
+    width: 44px;
+    height: 44px;
+  }
+  
+  .courses-results {
+    padding: 16px 4% 0;
+  }
+  
+  .results-count {
+    font-size: 13px;
+  }
+  
+  .courses-grid {
+    padding: 20px 4%;
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .course-card-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 16px;
+    gap: 12px;
+  }
+  
+  .college-logo {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .college-name {
+    font-size: 15px;
+  }
+  
+  .course-card-body {
+    padding: 16px;
+  }
+  
+  .course-name-display {
+    flex-direction: column;
+    text-align: center;
+    font-size: 16px;
+  }
+  
+  .degree-badge {
+    display: block;
+    text-align: center;
+  }
+  
+  .fee-structure {
+    padding: 12px;
+  }
+  
+  .fee-amount {
+    font-size: 14px;
+  }
+  
+  .course-card-footer {
+    flex-direction: column;
+    padding: 16px;
+    gap: 10px;
+  }
+  
+  .apply-btn,
+  .view-college-btn {
+    padding: 10px 12px;
+    font-size: 11px;
+  }
+  
+  .course-list-item {
+    flex-direction: column;
+    text-align: center;
+    padding: 16px;
+    gap: 16px;
+  }
+  
+  .list-item-logo {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .list-college-name {
+    font-size: 14px;
+  }
+  
+  .list-course-name {
+    font-size: 15px;
+  }
+  
+  .list-item-fees {
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid #e5e5e5;
+    border-bottom: 1px solid #e5e5e5;
+    padding: 14px;
+    width: 100%;
+  }
+  
+  .list-item-actions {
+    width: 100%;
+    flex-direction: row;
+    gap: 8px;
+  }
+  
+  .list-item-actions button {
+    flex: 1;
+    white-space: normal;
+  }
+  
+  .list-badges,
+  .list-college-header,
+  .list-location {
+    justify-content: center;
+  }
+}
+
+/* Mobile Portrait (320px - 480px) */
+@media (max-width: 480px) {
+  .courses-hero {
+    padding: 40px 4% 50px;
+  }
+  
+  .hero-badge {
+    padding: 6px 12px;
+    margin-bottom: 16px;
+  }
+  
+  .hero-badge span:first-child {
+    font-size: 10px;
+  }
+  
+  .courses-hero h1 {
+    font-size: 24px;
+    margin-bottom: 12px;
+  }
+  
+  .courses-hero p {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  
+  .courses-filter-bar {
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    top: 0;
+    padding: 14px 4%;
+  }
+  
+  .search-wrapper svg {
+    left: 14px;
+    width: 18px;
+    height: 18px;
+  }
+  
+  .search-wrapper input {
+    padding: 10px 14px 10px 42px;
+    font-size: 12px;
+  }
+  
+  .filter-group {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .filter-select {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+  
+  .sort-view-group {
+    justify-content: space-between;
+    gap: 8px;
+  }
+  
+  .sort-select {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+  
+  .vt-btn {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .vt-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .courses-results {
+    padding: 12px 4% 0;
+  }
+  
+  .results-count {
+    font-size: 12px;
+    padding-bottom: 12px;
+  }
+  
+  .courses-grid {
+    padding: 16px 4%;
+    gap: 16px;
+  }
+  
+  .course-card {
+    border-radius: 16px;
+  }
+  
+  .course-card-header {
+    padding: 14px;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+  }
+  
+  .college-logo {
+    width: 55px;
+    height: 55px;
+  }
+  
+  .college-logo .logo-fallback {
+    font-size: 16px;
+  }
+  
+  .college-name {
+    font-size: 14px;
+  }
+  
+  .college-location {
+    font-size: 11px;
+  }
+  
+  .college-accreditation {
+    font-size: 9px;
+  }
+  
+  .course-card-body {
+    padding: 14px;
+  }
+  
+  .course-name-display {
+    font-size: 15px;
+    flex-direction: column;
+    text-align: center;
+    gap: 6px;
+  }
+  
+  .course-code {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+  
+  .degree-badge {
+    font-size: 10px;
+    padding: 3px 10px;
+    margin-bottom: 12px;
+    display: inline-block;
+    text-align: center;
+  }
+  
+  .fee-structure {
+    padding: 10px;
+    margin-bottom: 12px;
+  }
+  
+  .fee-item {
+    padding: 6px 0;
+  }
+  
+  .fee-label {
+    font-size: 11px;
+  }
+  
+  .fee-amount {
+    font-size: 13px;
+  }
+  
+  .course-intake,
+  .cutoff-info {
+    font-size: 11px;
+    margin-top: 8px;
+    padding: 6px 0;
+  }
+  
+  .course-intake svg,
+  .cutoff-info svg {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .course-card-footer {
+    padding: 14px;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .apply-btn,
+  .view-college-btn {
+    padding: 10px 12px;
+    font-size: 11px;
+  }
+  
+  .course-list-item {
+    padding: 14px;
+    gap: 12px;
+  }
+  
+  .list-item-logo {
+    width: 55px;
+    height: 55px;
+  }
+  
+  .list-item-logo .logo-fallback {
+    font-size: 14px;
+  }
+  
+  .list-college-name {
+    font-size: 13px;
+  }
+  
+  .list-naac-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+  
+  .list-course-name {
+    font-size: 14px;
+  }
+  
+  .list-degree {
+    font-size: 11px;
+  }
+  
+  .list-location {
+    font-size: 11px;
+  }
+  
+  .list-badges {
+    gap: 6px;
+  }
+  
+  .duration-tag,
+  .intake-tag {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+  
+  .list-item-fees {
+    padding: 12px;
+  }
+  
+  .fee-row {
+    font-size: 11px;
+    padding: 4px 0;
+  }
+  
+  .list-item-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .list-item-actions button {
+    padding: 8px 12px;
+    font-size: 11px;
+  }
+  
+  .empty-state {
+    padding: 60px 20px;
+  }
+  
+  .empty-state svg {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .empty-state h3 {
+    font-size: 18px;
+  }
+  
+  .empty-state p {
+    font-size: 13px;
+  }
+}
+
+/* Small Mobile (below 360px) */
+@media (max-width: 359px) {
+  .courses-hero {
+    padding: 35px 4% 45px;
+  }
+  
+  .courses-hero h1 {
+    font-size: 22px;
+  }
+  
+  .courses-hero p {
+    font-size: 11px;
+  }
+  
+  .filter-select,
+  .sort-select {
+    font-size: 11px;
+    padding: 8px 12px;
+  }
+  
+  .vt-btn {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .vt-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .college-logo {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .course-name-display {
+    font-size: 14px;
+  }
+  
+  .fee-amount {
+    font-size: 12px;
+  }
+  
+  .list-item-logo {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .list-course-name {
+    font-size: 13px;
+  }
+  
+  .list-item-actions button {
+    font-size: 10px;
+    padding: 7px 10px;
+  }
+}
+
+/* Landscape Mode for Mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .courses-hero {
+    padding: 40px 5% 50px;
+  }
+  
+  .courses-hero h1 {
+    font-size: 28px;
+  }
+  
+  .courses-filter-bar {
+    position: relative;
+    top: 0;
+  }
+  
+  .filter-group {
+    flex-direction: row;
+  }
+  
+  .courses-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+  
+  .course-card-footer {
+    flex-direction: row;
+  }
+  
+  .list-item-actions {
+    flex-direction: row;
+  }
+}
+
+/* High DPI Screens (Retina) */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .course-card,
+  .course-list-item {
+    border-width: 1px;
+  }
+  
+  .filter-select,
+  .sort-select,
+  .search-wrapper input {
+    border-width: 1px;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .courses-page {
+    background: #1a1a1a;
+  }
+  
+  .courses-filter-bar {
+    background: #1a1a1a;
+    border-bottom-color: #333;
+  }
+  
+  .course-card,
+  .course-list-item {
+    background: #2a2a2a;
+    border-color: #444;
+  }
+  
+  .course-card-header {
+    background: #252525;
+    border-bottom-color: #444;
+  }
+  
+  .college-name,
+  .course-name-display,
+  .course-code {
+    color: #ffffff;
+  }
+  
+  .college-location,
+  .course-intake,
+  .cutoff-info {
+    color: #aaa;
+  }
+  
+  .search-wrapper input,
+  .filter-select,
+  .sort-select {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #ffffff;
+  }
+  
+  .search-wrapper input::placeholder {
+    color: #888;
+  }
+  
+  .fee-structure,
+  .cutoff-info {
+    background: #252525;
+  }
+  
+  .fee-label {
+    color: #aaa;
+  }
+  
+  .fee-amount {
+    color: #ffffff;
+  }
+  
+  .duration-badge {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #ffffff;
+  }
+  
+  .results-count {
+    color: #aaa;
+    border-bottom-color: #444;
+  }
+}
+
+/* Reduced Motion Preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .courses-hero,
+  .courses-filter-bar,
+  .course-card-footer,
+  .view-toggle,
+  .duration-badge {
+    display: none;
+  }
+  
+  .course-card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+  
+  .courses-page {
+    background: white;
+  }
+  
+  .courses-grid {
+    padding: 0;
+  }
+  
+  .college-location {
+    color: #333;
+  }
+  
+  .fee-amount {
+    color: #000;
+  }
+}

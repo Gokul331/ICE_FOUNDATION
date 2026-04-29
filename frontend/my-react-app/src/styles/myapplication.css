@@ -1,11 +1,37 @@
-/* My Applications - Modern Premium Design */
+/* My Applications - Clean White & Black Theme */
 
 .myapps-container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  background: #ffffff;
   min-height: 100vh;
+}
+
+/* Back to Home Button - Correct Alignment */
+.back-home-btn-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  margin-bottom: 1.5rem;
+  background: transparent;
+  color: #000000;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.back-home-btn-top:hover {
+  background: #000000;
+  color: #ffffff;
+  border-color: #000000;
+  transform: translateX(-4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 /* Header */
@@ -15,7 +41,7 @@
   align-items: center;
   margin-bottom: 2rem;
   padding: 1.5rem 2rem;
-  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  background: #000000;
   border-radius: 20px;
   color: white;
   flex-wrap: wrap;
@@ -27,27 +53,29 @@
   font-weight: 700;
   margin-bottom: 0.5rem;
   letter-spacing: -0.5px;
+  color: #ffffff;
 }
 
 .header-content p {
   font-size: 0.9rem;
-  opacity: 0.9;
+  opacity: 0.8;
+  color: #d4d4d4;
 }
 
 .btn-browse-header {
   padding: 0.7rem 1.5rem;
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.2);
+  background: transparent;
+  border: 1px solid #ffffff;
   border-radius: 12px;
   color: white;
   cursor: pointer;
   font-weight: 600;
   transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
 }
 
 .btn-browse-header:hover {
-  background: rgba(255,255,255,0.2);
+  background: #ffffff;
+  color: #000000;
   transform: translateY(-2px);
 }
 
@@ -60,7 +88,7 @@
 }
 
 .stat-card {
-  background: white;
+  background: #ffffff;
   padding: 1.25rem;
   border-radius: 16px;
   display: flex;
@@ -68,12 +96,13 @@
   gap: 1rem;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   transition: all 0.3s ease;
-  border: 1px solid rgba(0,0,0,0.05);
+  border: 1px solid #e5e5e5;
 }
 
 .stat-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  border-color: #000000;
 }
 
 .stat-icon {
@@ -88,14 +117,14 @@
   display: block;
   font-size: 1.75rem;
   font-weight: 800;
-  color: #1a1a2e;
+  color: #000000;
   line-height: 1.2;
 }
 
 .stat-label {
   display: block;
   font-size: 0.8rem;
-  color: #6b7280;
+  color: #666666;
   font-weight: 500;
 }
 
@@ -118,23 +147,28 @@
   position: absolute;
   left: 1rem;
   font-size: 1rem;
-  color: #9ca3af;
+  color: #999999;
 }
 
 .search-input {
   width: 100%;
   padding: 0.85rem 1rem 0.85rem 2.5rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e5e5e5;
   border-radius: 12px;
   font-size: 0.9rem;
   transition: all 0.3s ease;
-  background: white;
+  background: #ffffff;
+  color: #000000;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+  border-color: #000000;
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+}
+
+.search-input::placeholder {
+  color: #999999;
 }
 
 .clear-search {
@@ -143,7 +177,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #9ca3af;
+  color: #999999;
   font-size: 1rem;
   padding: 0.25rem;
   border-radius: 50%;
@@ -151,21 +185,22 @@
 }
 
 .clear-search:hover {
-  color: #ef4444;
-  background: #fef2f2;
+  color: #000000;
+  background: #f5f5f5;
 }
 
 .filter-select {
   flex: 1;
   padding: 0.85rem 2rem 0.85rem 1rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e5e5e5;
   border-radius: 12px;
   font-size: 0.9rem;
-  background: white;
+  background: #ffffff;
+  color: #000000;
   cursor: pointer;
   transition: all 0.3s ease;
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 1rem center;
   background-size: 1em;
@@ -173,17 +208,17 @@
 
 .filter-select:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #000000;
 }
 
 /* Results Count */
 .results-count {
   margin-bottom: 1.5rem;
   padding: 0.5rem 0;
-  color: #6b7280;
+  color: #666666;
   font-size: 0.85rem;
   font-weight: 500;
-  border-bottom: 2px solid #e5e7eb;
+  border-bottom: 1px solid #e5e5e5;
 }
 
 /* Applications Grid */
@@ -195,12 +230,12 @@
 
 /* Application Card */
 .myapps-card {
-  background: white;
+  background: #ffffff;
   border-radius: 20px;
   overflow: hidden;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  border: 1px solid rgba(0,0,0,0.05);
+  border: 1px solid #e5e5e5;
   display: flex;
   flex-direction: column;
 }
@@ -208,12 +243,13 @@
 .myapps-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+  border-color: #000000;
 }
 
 .card-header {
   padding: 1rem 1.25rem;
-  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-  border-bottom: 1px solid #e5e7eb;
+  background: #fafafa;
+  border-bottom: 1px solid #e5e5e5;
 }
 
 .app-info {
@@ -227,14 +263,14 @@
 .app-id {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #6b7280;
+  color: #666666;
   font-family: 'Courier New', monospace;
-  background: rgba(0,0,0,0.05);
+  background: #f5f5f5;
   padding: 0.25rem 0.5rem;
   border-radius: 6px;
 }
 
-/* Status Badges */
+/* Status Badges - Black & White */
 .status {
   padding: 0.3rem 0.8rem;
   border-radius: 20px;
@@ -245,28 +281,30 @@
 }
 
 .status.submitted {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
+  background: #000000;
+  color: #ffffff;
 }
 
 .status.approved {
-  background: linear-gradient(135deg, #11998e, #38ef7d);
-  color: white;
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #000000;
 }
 
 .status.rejected {
-  background: linear-gradient(135deg, #eb3349, #f45c43);
-  color: white;
+  background: #f5f5f5;
+  color: #000000;
+  border: 1px solid #e5e5e5;
 }
 
 .status.pending {
-  background: linear-gradient(135deg, #f2994a, #f2c94c);
-  color: white;
+  background: #e5e5e5;
+  color: #000000;
 }
 
 .status.under_review {
-  background: linear-gradient(135deg, #4facfe, #00f2fe);
-  color: white;
+  background: #d4d4d4;
+  color: #000000;
 }
 
 /* Card Body */
@@ -278,7 +316,7 @@
 .college-name {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #1a1a2e;
+  color: #000000;
   margin-bottom: 1rem;
   line-height: 1.4;
 }
@@ -298,16 +336,20 @@
 .detail-label {
   font-size: 0.7rem;
   font-weight: 600;
-  color: #9ca3af;
+  color: #999999;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .detail-value {
   font-size: 0.85rem;
-  color: #1f2937;
+  color: #000000;
   font-weight: 500;
   word-break: break-word;
+}
+
+.detail-value.capitalize {
+  text-transform: capitalize;
 }
 
 /* Card Actions */
@@ -315,8 +357,8 @@
   padding: 1rem 1.25rem;
   display: flex;
   gap: 0.75rem;
-  border-top: 1px solid #e5e7eb;
-  background: #f8f9fa;
+  border-top: 1px solid #e5e5e5;
+  background: #fafafa;
 }
 
 .btn-download, .btn-view {
@@ -335,39 +377,42 @@
 }
 
 .btn-download {
-  background: linear-gradient(135deg, #1a1a2e, #16213e);
-  color: white;
+  background: #000000;
+  color: #ffffff;
 }
 
 .btn-download:hover:not(:disabled) {
+  background: #333333;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(26,26,46,0.3);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
 .btn-download:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .btn-view {
-  background: white;
-  color: #1a1a2e;
-  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #e5e5e5;
 }
 
 .btn-view:hover {
-  background: #f3f4f6;
+  background: #f5f5f5;
   transform: translateY(-2px);
+  border-color: #000000;
 }
 
 /* Empty State */
 .myapps-empty {
   text-align: center;
   padding: 4rem 2rem;
-  background: white;
+  background: #ffffff;
   border-radius: 20px;
   margin-top: 2rem;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border: 1px solid #e5e5e5;
 }
 
 .empty-icon {
@@ -377,21 +422,21 @@
 
 .myapps-empty p {
   font-size: 1.1rem;
-  color: #1f2937;
+  color: #000000;
   margin-bottom: 0.5rem;
   font-weight: 600;
 }
 
 .empty-subtitle {
   font-size: 0.9rem;
-  color: #6b7280;
+  color: #666666;
   margin-bottom: 1.5rem;
 }
 
 .btn-browse {
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #1a1a2e, #16213e);
-  color: white;
+  background: #000000;
+  color: #ffffff;
   border: none;
   border-radius: 12px;
   cursor: pointer;
@@ -401,6 +446,7 @@
 }
 
 .btn-browse:hover {
+  background: #333333;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
@@ -418,8 +464,8 @@
 .myapps-spinner {
   width: 50px;
   height: 50px;
-  border: 3px solid #e5e7eb;
-  border-top-color: #667eea;
+  border: 3px solid #e5e5e5;
+  border-top-color: #000000;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -429,7 +475,7 @@
 }
 
 .myapps-loading p {
-  color: #6b7280;
+  color: #666666;
   font-size: 0.9rem;
   font-weight: 500;
 }
@@ -570,6 +616,7 @@
 @media print {
   .myapps-filters,
   .btn-browse-header,
+  .back-home-btn-top,
   .card-actions,
   .stat-card {
     display: none;
@@ -587,6 +634,10 @@
     margin-bottom: 1rem;
   }
 
+  .myapps-header h1 {
+    color: black;
+  }
+
   .myapps-card {
     break-inside: avoid;
     box-shadow: none;
@@ -597,89 +648,5 @@
     border: 1px solid #ccc;
     background: #f5f5f5 !important;
     color: black !important;
-  }
-}
-
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-  .myapps-container {
-    background: linear-gradient(135deg, #1a1a2e, #16213e);
-  }
-
-  .stat-card,
-  .myapps-card,
-  .myapps-empty {
-    background: #1e1e2e;
-    border-color: rgba(255,255,255,0.05);
-  }
-
-  .stat-number {
-    color: #e5e7eb;
-  }
-
-  .college-name {
-    color: #e5e7eb;
-  }
-
-  .detail-value {
-    color: #f3f4f6;
-  }
-
-  .card-header {
-    background: #2a2a3e;
-    border-bottom-color: rgba(255,255,255,0.1);
-  }
-
-  .card-actions {
-    background: #2a2a3e;
-    border-top-color: rgba(255,255,255,0.1);
-  }
-
-  .btn-view {
-    background: #1e1e2e;
-    color: #e5e7eb;
-    border-color: rgba(255,255,255,0.1);
-  }
-
-  .btn-view:hover {
-    background: #2a2a3e;
-  }
-
-  .search-input,
-  .filter-select {
-    background: #1e1e2e;
-    border-color: rgba(255,255,255,0.1);
-    color: #e5e7eb;
-  }
-
-  .search-input::placeholder {
-    color: #6b7280;
-  }
-
-  .search-input:focus,
-  .filter-select:focus {
-    border-color: #667eea;
-  }
-
-  .app-id {
-    background: rgba(255,255,255,0.1);
-    color: #9ca3af;
-  }
-
-  .results-count {
-    color: #9ca3af;
-    border-bottom-color: rgba(255,255,255,0.1);
-  }
-
-  .empty-icon {
-    opacity: 0.7;
-  }
-
-  .myapps-empty p {
-    color: #e5e7eb;
-  }
-
-  .empty-subtitle {
-    color: #9ca3af;
   }
 }

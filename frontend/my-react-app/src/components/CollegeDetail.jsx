@@ -10,7 +10,7 @@ import Navbar from "./Navbar";
 import "../styles/collegedetails.css";
 
 function CollegeDetail() {
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
   const { id } = useParams();
   const [college, setCollege] = useState(null);
   const [courses, setCourses] = useState([]);
@@ -92,10 +92,19 @@ function CollegeDetail() {
     const token = localStorage.getItem("token");
     if (!token) {
       // Not logged in - redirect to login with all data needed to continue
-      navigate("/login", { state: { from: `/colleges/${id}`, course, college, quotaType: selectedQuota } });
+      navigate("/login", {
+        state: {
+          from: `/colleges/${id}`,
+          course,
+          college,
+          quotaType: selectedQuota,
+        },
+      });
     } else {
       // Logged in - redirect to application form with course info
-      navigate("/application-form", { state: { college, course, quotaType: selectedQuota } });
+      navigate("/application-form", {
+        state: { college, course, quotaType: selectedQuota },
+      });
     }
   };
 
@@ -151,13 +160,13 @@ function CollegeDetail() {
   // Get hostel options from hostels array
   const getHostelOptions = () => {
     if (!hostels || hostels.length === 0) return [];
-    return hostels.map(hostel => ({
+    return hostels.map((hostel) => ({
       room_type: hostel.room_type,
       room_type_display: hostel.room_type_display,
       hostel_fee: parseFloat(hostel.fee_per_year) || 0,
       available_seats: hostel.total_capacity || 0,
       name: hostel.name,
-      gender: hostel.gender
+      gender: hostel.gender,
     }));
   };
 
@@ -426,7 +435,14 @@ function CollegeDetail() {
                       <div className="contact-list">
                         {college.contact_phone && (
                           <div className="contact-item">
-                            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <svg
+                              width="20"
+                              height="20"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              viewBox="0 0 24 24"
+                            >
                               <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.17-1.17a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z" />
                             </svg>
                             <span>{college.contact_phone}</span>
@@ -434,7 +450,14 @@ function CollegeDetail() {
                         )}
                         {college.email_domain && (
                           <div className="contact-item">
-                            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <svg
+                              width="20"
+                              height="20"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              viewBox="0 0 24 24"
+                            >
                               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                               <polyline points="22,6 12,13 2,6" />
                             </svg>
@@ -443,12 +466,24 @@ function CollegeDetail() {
                         )}
                         {college.website_url && (
                           <div className="contact-item">
-                            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <svg
+                              width="20"
+                              height="20"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              viewBox="0 0 24 24"
+                            >
                               <circle cx="12" cy="12" r="10" />
                               <line x1="2" y1="12" x2="22" y2="12" />
                               <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
                             </svg>
-                            <a href={college.website_url} target="_blank" rel="noopener noreferrer" className="contact-link">
+                            <a
+                              href={college.website_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="contact-link"
+                            >
                               {college.website_url}
                             </a>
                           </div>
@@ -479,7 +514,12 @@ function CollegeDetail() {
                     </div>
                   )}
                   {courses && courses.length > 0 && (
-                    <button className="action-btn" onClick={() => handleApplyNow(courses[0])}>Start Application</button>
+                    <button
+                      className="action-btn"
+                      onClick={() => handleApplyNow(courses[0])}
+                    >
+                      Start Application
+                    </button>
                   )}
                   <div className="action-footer">
                     <Link to="/contact" className="action-link">
@@ -515,36 +555,81 @@ function CollegeDetail() {
                             <th>Course Name</th>
                             <th>Degree</th>
                             <th>Duration</th>
-                            <th>Tuition Fee ({selectedQuota === "management" ? "Management" : "Government"})</th>
+                            <th>
+                              Tuition Fee (
+                              {selectedQuota === "management"
+                                ? "Management"
+                                : "Government"}
+                              )
+                            </th>
                             <th>Total Fee*</th>
+                            <th>
+                              Scholarship
+                            </th>
                             <th>Cutoff Marks</th>
                             <th>Action</th>
                           </tr>
                         </thead>
                         <tbody>
                           {courses.map((course, index) => {
-                            const tuitionFee = getCourseTuitionFee(course, selectedQuota);
+                            const tuitionFee = getCourseTuitionFee(
+                              course,
+                              selectedQuota,
+                            );
                             const totalFee = getTotalFee(course);
 
                             return (
                               <tr key={course.course_id || index}>
                                 <td className="course-name">
-                                  <strong>{course.course_name || course.name}</strong>
+                                  <strong>
+                                    {course.course_name || course.name}
+                                  </strong>
                                 </td>
-                                <td>{course.degree_name || course.degree_type || "N/A"}</td>
+                                <td>
+                                  {course.degree_name ||
+                                    course.degree_type ||
+                                    "N/A"}
+                                </td>
                                 <td>{course.duration_years || "N/A"} years</td>
                                 <td>
-                                  <div style={{ fontSize: "14px", fontWeight: "500", color: "#333" }}>
-                                    {tuitionFee > 0 ? formatCurrency(tuitionFee) : "Contact College"}
-                                    {tuitionFee > 0 && <small style={{ fontSize: "11px", color: "#666" }}>/year</small>}
+                                  <div
+                                    style={{
+                                      fontSize: "14px",
+                                      fontWeight: "500",
+                                      color: "#333",
+                                    }}
+                                  >
+                                    {tuitionFee > 0
+                                      ? formatCurrency(tuitionFee)
+                                      : "Contact College"}
+                                    {tuitionFee > 0 && (
+                                      <small
+                                        style={{
+                                          fontSize: "11px",
+                                          color: "#666",
+                                        }}
+                                      >
+                                        /year
+                                      </small>
+                                    )}
                                   </div>
                                 </td>
                                 <td>
-                                  <div style={{ fontWeight: "bold", color: "#2c7da0" }}>
-                                    {totalFee > 0 ? formatCurrency(totalFee) : "N/A"}
+                                  <div
+                                    style={{
+                                      fontWeight: "bold",
+                                      color: "#2c7da0",
+                                    }}
+                                  >
+                                    {totalFee > 0
+                                      ? formatCurrency(totalFee)
+                                      : "N/A"}
                                   </div>
-                                  <small style={{ fontSize: "10px" }}>per year*</small>
+                                  <small style={{ fontSize: "10px" }}>
+                                    per year*
+                                  </small>
                                 </td>
+                                <td>{course.scholarship_amount || "N/A"}</td>
                                 <td>
                                   <span className="cutoff-marks">
                                     {course.cutoff_oc || "N/A"}
@@ -564,7 +649,10 @@ function CollegeDetail() {
                         </tbody>
                       </table>
                       <div className="fee-disclaimer">
-                        <small>*Total fee includes tuition + admission + book + exam fees (excluding hostel & transport)</small>
+                        <small>
+                          *Total fee includes tuition + admission + book + exam
+                          fees (excluding hostel & transport)
+                        </small>
                       </div>
                     </div>
                   </div>
@@ -604,15 +692,21 @@ function CollegeDetail() {
                             <div className="fee-quick-stats">
                               {fees.admission_fee > 0 && (
                                 <div className="quick-stat">
-                                  <span className="quick-stat-label">Admission</span>
+                                  <span className="quick-stat-label">
+                                    Admission
+                                  </span>
                                   <span className="quick-stat-value">
-                                    {formatCurrency(parseFloat(fees.admission_fee))}
+                                    {formatCurrency(
+                                      parseFloat(fees.admission_fee),
+                                    )}
                                   </span>
                                 </div>
                               )}
                               {fees.book_fee > 0 && (
                                 <div className="quick-stat">
-                                  <span className="quick-stat-label">Book Fee</span>
+                                  <span className="quick-stat-label">
+                                    Book Fee
+                                  </span>
                                   <span className="quick-stat-value">
                                     {formatCurrency(parseFloat(fees.book_fee))}
                                   </span>
@@ -620,7 +714,9 @@ function CollegeDetail() {
                               )}
                               {fees.exam_fee > 0 && (
                                 <div className="quick-stat">
-                                  <span className="quick-stat-label">Exam Fee</span>
+                                  <span className="quick-stat-label">
+                                    Exam Fee
+                                  </span>
                                   <span className="quick-stat-value">
                                     {formatCurrency(parseFloat(fees.exam_fee))}
                                   </span>
@@ -637,7 +733,10 @@ function CollegeDetail() {
                                 className={`fee-tab-btn ${activeFeeTab.common === "admission" ? "active" : ""}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setActiveFeeTab({ ...activeFeeTab, common: "admission" });
+                                  setActiveFeeTab({
+                                    ...activeFeeTab,
+                                    common: "admission",
+                                  });
                                 }}
                               >
                                 <span className="fee-tab-icon">📝</span>
@@ -647,7 +746,10 @@ function CollegeDetail() {
                                 className={`fee-tab-btn ${activeFeeTab.common === "academic" ? "active" : ""}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setActiveFeeTab({ ...activeFeeTab, common: "academic" });
+                                  setActiveFeeTab({
+                                    ...activeFeeTab,
+                                    common: "academic",
+                                  });
                                 }}
                               >
                                 <span className="fee-tab-icon">📚</span>
@@ -658,19 +760,26 @@ function CollegeDetail() {
                                   className={`fee-tab-btn ${activeFeeTab.common === "hostel" ? "active" : ""}`}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setActiveFeeTab({ ...activeFeeTab, common: "hostel" });
+                                    setActiveFeeTab({
+                                      ...activeFeeTab,
+                                      common: "hostel",
+                                    });
                                   }}
                                 >
                                   <span className="fee-tab-icon">🏠</span>
                                   Hostel
                                 </button>
                               )}
-                              {(fees.transport_fee_min > 0 || fees.transport_fee_max > 0) && (
+                              {(fees.transport_fee_min > 0 ||
+                                fees.transport_fee_max > 0) && (
                                 <button
                                   className={`fee-tab-btn ${activeFeeTab.common === "transport" ? "active" : ""}`}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setActiveFeeTab({ ...activeFeeTab, common: "transport" });
+                                    setActiveFeeTab({
+                                      ...activeFeeTab,
+                                      common: "transport",
+                                    });
                                   }}
                                 >
                                   <span className="fee-tab-icon">🚌</span>
@@ -681,7 +790,10 @@ function CollegeDetail() {
                                 className={`fee-tab-btn ${activeFeeTab.common === "summary" ? "active" : ""}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setActiveFeeTab({ ...activeFeeTab, common: "summary" });
+                                  setActiveFeeTab({
+                                    ...activeFeeTab,
+                                    common: "summary",
+                                  });
                                 }}
                               >
                                 <span className="fee-tab-icon">📊</span>
@@ -691,25 +803,38 @@ function CollegeDetail() {
 
                             <div className="fee-card-body">
                               {/* Admission Tab */}
-                              {(activeFeeTab.common === "admission" || !activeFeeTab.common) && (
+                              {(activeFeeTab.common === "admission" ||
+                                !activeFeeTab.common) && (
                                 <div className="fee-tab-content">
                                   <div className="fee-grid">
                                     {fees.application_fee > 0 && (
                                       <div className="fee-item">
-                                        <div className="fee-item-label">APPLICATION FEE</div>
-                                        <div className="fee-item-value">
-                                          {formatCurrency(parseFloat(fees.application_fee))}
+                                        <div className="fee-item-label">
+                                          APPLICATION FEE
                                         </div>
-                                        <div className="fee-item-desc">One-time application fee</div>
+                                        <div className="fee-item-value">
+                                          {formatCurrency(
+                                            parseFloat(fees.application_fee),
+                                          )}
+                                        </div>
+                                        <div className="fee-item-desc">
+                                          One-time application fee
+                                        </div>
                                       </div>
                                     )}
                                     {fees.admission_fee > 0 && (
                                       <div className="fee-item">
-                                        <div className="fee-item-label">ADMISSION FEE</div>
-                                        <div className="fee-item-value">
-                                          {formatCurrency(parseFloat(fees.admission_fee))}
+                                        <div className="fee-item-label">
+                                          ADMISSION FEE
                                         </div>
-                                        <div className="fee-item-desc">One-time payment at admission</div>
+                                        <div className="fee-item-value">
+                                          {formatCurrency(
+                                            parseFloat(fees.admission_fee),
+                                          )}
+                                        </div>
+                                        <div className="fee-item-desc">
+                                          One-time payment at admission
+                                        </div>
                                       </div>
                                     )}
                                   </div>
@@ -722,52 +847,83 @@ function CollegeDetail() {
                                   <div className="fee-grid">
                                     {fees.book_fee > 0 && (
                                       <div className="fee-item">
-                                        <div className="fee-item-label">BOOK FEE</div>
+                                        <div className="fee-item-label">
+                                          BOOK FEE
+                                        </div>
                                         <div className="fee-item-value">
-                                          {formatCurrency(parseFloat(fees.book_fee))}
+                                          {formatCurrency(
+                                            parseFloat(fees.book_fee),
+                                          )}
                                           <small>/year</small>
                                         </div>
-                                        <div className="fee-item-desc">Library & book fee</div>
+                                        <div className="fee-item-desc">
+                                          Library & book fee
+                                        </div>
                                       </div>
                                     )}
                                     {fees.exam_fee > 0 && (
                                       <div className="fee-item">
-                                        <div className="fee-item-label">EXAM FEE</div>
+                                        <div className="fee-item-label">
+                                          EXAM FEE
+                                        </div>
                                         <div className="fee-item-value">
-                                          {formatCurrency(parseFloat(fees.exam_fee))}
+                                          {formatCurrency(
+                                            parseFloat(fees.exam_fee),
+                                          )}
                                           <small>/year</small>
                                         </div>
-                                        <div className="fee-item-desc">Examination fee</div>
+                                        <div className="fee-item-desc">
+                                          Examination fee
+                                        </div>
                                       </div>
                                     )}
                                     {fees.lab_fee > 0 && (
                                       <div className="fee-item">
-                                        <div className="fee-item-label">LAB FEE</div>
+                                        <div className="fee-item-label">
+                                          LAB FEE
+                                        </div>
                                         <div className="fee-item-value">
-                                          {formatCurrency(parseFloat(fees.lab_fee))}
+                                          {formatCurrency(
+                                            parseFloat(fees.lab_fee),
+                                          )}
                                           <small>/year</small>
                                         </div>
-                                        <div className="fee-item-desc">Laboratory fee</div>
+                                        <div className="fee-item-desc">
+                                          Laboratory fee
+                                        </div>
                                       </div>
                                     )}
                                     {fees.sports_fee > 0 && (
                                       <div className="fee-item">
-                                        <div className="fee-item-label">SPORTS FEE</div>
+                                        <div className="fee-item-label">
+                                          SPORTS FEE
+                                        </div>
                                         <div className="fee-item-value">
-                                          {formatCurrency(parseFloat(fees.sports_fee))}
+                                          {formatCurrency(
+                                            parseFloat(fees.sports_fee),
+                                          )}
                                           <small>/year</small>
                                         </div>
-                                        <div className="fee-item-desc">Sports facilities fee</div>
+                                        <div className="fee-item-desc">
+                                          Sports facilities fee
+                                        </div>
                                       </div>
                                     )}
                                     {fees.miscellaneous_fee > 0 && (
                                       <div className="fee-item">
-                                        <div className="fee-item-label">MISCELLANEOUS</div>
+                                        <div className="fee-item-label">
+                                          MISCELLANEOUS
+                                        </div>
                                         <div className="fee-item-value">
-                                          {formatCurrency(parseFloat(fees.miscellaneous_fee))}
+                                          {formatCurrency(
+                                            parseFloat(fees.miscellaneous_fee),
+                                          )}
                                           <small>/year</small>
                                         </div>
-                                        <div className="fee-item-desc">{fees.miscellaneous_description || "Other charges"}</div>
+                                        <div className="fee-item-desc">
+                                          {fees.miscellaneous_description ||
+                                            "Other charges"}
+                                        </div>
                                       </div>
                                     )}
                                   </div>
@@ -775,32 +931,43 @@ function CollegeDetail() {
                               )}
 
                               {/* Hostel Tab */}
-                              {activeFeeTab.common === "hostel" && hostelOptions.length > 0 && (
-                                <div className="fee-tab-content">
-                                  <div className="hostel-options-grid">
-                                    {hostelOptions.map((option, idx) => (
-                                      <div key={idx} className="hostel-option-card">
-                                        <div className="hostel-room-type">
-                                          {option.room_type_display}
-                                          <span className="hostel-room-badge">Type {option.room_type}</span>
-                                        </div>
-                                        <div className="hostel-fee-amount">
-                                          ₹{option.hostel_fee.toLocaleString()}
-                                          <small>/year</small>
-                                        </div>
-                                        {option.available_seats > 0 && (
-                                          <div className="hostel-seats">
-                                            🪑 {option.available_seats} seats available
+                              {activeFeeTab.common === "hostel" &&
+                                hostelOptions.length > 0 && (
+                                  <div className="fee-tab-content">
+                                    <div className="hostel-options-grid">
+                                      {hostelOptions.map((option, idx) => (
+                                        <div
+                                          key={idx}
+                                          className="hostel-option-card"
+                                        >
+                                          <div className="hostel-room-type">
+                                            {option.room_type_display}
+                                            <span className="hostel-room-badge">
+                                              Type {option.room_type}
+                                            </span>
                                           </div>
-                                        )}
-                                      </div>
-                                    ))}
+                                          <div className="hostel-fee-amount">
+                                            ₹
+                                            {option.hostel_fee.toLocaleString()}
+                                            <small>/year</small>
+                                          </div>
+                                          {option.available_seats > 0 && (
+                                            <div className="hostel-seats">
+                                              🪑 {option.available_seats} seats
+                                              available
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <div className="fee-note-info">
+                                      <small>
+                                        💡 Hostel fees are separate and vary by
+                                        room type
+                                      </small>
+                                    </div>
                                   </div>
-                                  <div className="fee-note-info">
-                                    <small>💡 Hostel fees are separate and vary by room type</small>
-                                  </div>
-                                </div>
-                              )}
+                                )}
 
                               {/* Transport Tab */}
                               {activeFeeTab.common === "transport" && (
@@ -809,27 +976,40 @@ function CollegeDetail() {
                                     <div className="transport-info-card">
                                       <div className="transport-range-display">
                                         <div className="transport-min-card">
-                                          <div className="transport-label">Minimum Transport Fee</div>
+                                          <div className="transport-label">
+                                            Minimum Transport Fee
+                                          </div>
                                           <div className="transport-amount">
                                             {fees.transport_fee_min > 0
-                                              ? formatCurrency(parseFloat(fees.transport_fee_min))
+                                              ? formatCurrency(
+                                                  parseFloat(
+                                                    fees.transport_fee_min,
+                                                  ),
+                                                )
                                               : "Not specified"}
                                             <small>/year</small>
                                           </div>
                                         </div>
                                         <div className="transport-arrow">→</div>
                                         <div className="transport-max-card">
-                                          <div className="transport-label">Maximum Transport Fee</div>
+                                          <div className="transport-label">
+                                            Maximum Transport Fee
+                                          </div>
                                           <div className="transport-amount">
                                             {fees.transport_fee_max > 0
-                                              ? formatCurrency(parseFloat(fees.transport_fee_max))
+                                              ? formatCurrency(
+                                                  parseFloat(
+                                                    fees.transport_fee_max,
+                                                  ),
+                                                )
                                               : "Not specified"}
                                             <small>/year</small>
                                           </div>
                                         </div>
                                       </div>
                                       <div className="transport-note">
-                                        🚍 Transport fee varies based on distance and route
+                                        🚍 Transport fee varies based on
+                                        distance and route
                                       </div>
                                     </div>
                                   </div>
@@ -842,52 +1022,89 @@ function CollegeDetail() {
                                   <div className="summary-grid">
                                     {fees.admission_fee > 0 && (
                                       <div className="summary-item">
-                                        <div className="summary-label">Admission Fee</div>
-                                        <div className="summary-amount">{formatCurrency(parseFloat(fees.admission_fee))}</div>
+                                        <div className="summary-label">
+                                          Admission Fee
+                                        </div>
+                                        <div className="summary-amount">
+                                          {formatCurrency(
+                                            parseFloat(fees.admission_fee),
+                                          )}
+                                        </div>
                                       </div>
                                     )}
                                     {fees.book_fee > 0 && (
                                       <div className="summary-item">
-                                        <div className="summary-label">Book Fee</div>
-                                        <div className="summary-amount">{formatCurrency(parseFloat(fees.book_fee))}<small>/year</small></div>
+                                        <div className="summary-label">
+                                          Book Fee
+                                        </div>
+                                        <div className="summary-amount">
+                                          {formatCurrency(
+                                            parseFloat(fees.book_fee),
+                                          )}
+                                          <small>/year</small>
+                                        </div>
                                       </div>
                                     )}
                                     {fees.exam_fee > 0 && (
                                       <div className="summary-item">
-                                        <div className="summary-label">Exam Fee</div>
-                                        <div className="summary-amount">{formatCurrency(parseFloat(fees.exam_fee))}<small>/year</small></div>
+                                        <div className="summary-label">
+                                          Exam Fee
+                                        </div>
+                                        <div className="summary-amount">
+                                          {formatCurrency(
+                                            parseFloat(fees.exam_fee),
+                                          )}
+                                          <small>/year</small>
+                                        </div>
                                       </div>
                                     )}
                                     {hostelOptions.length > 0 && (
                                       <div className="summary-item">
-                                        <div className="summary-label">Hostel Fee Range</div>
+                                        <div className="summary-label">
+                                          Hostel Fee Range
+                                        </div>
                                         <div className="summary-amount">
                                           {(() => {
-                                            const hostelFees = hostelOptions.map(opt => opt.hostel_fee);
-                                            const minHostel = Math.min(...hostelFees);
-                                            const maxHostel = Math.max(...hostelFees);
+                                            const hostelFees =
+                                              hostelOptions.map(
+                                                (opt) => opt.hostel_fee,
+                                              );
+                                            const minHostel = Math.min(
+                                              ...hostelFees,
+                                            );
+                                            const maxHostel = Math.max(
+                                              ...hostelFees,
+                                            );
                                             return `₹${minHostel.toLocaleString()} - ₹${maxHostel.toLocaleString()}`;
                                           })()}
                                           <small>/year</small>
                                         </div>
                                       </div>
                                     )}
-                                    {(fees.transport_fee_min > 0 || fees.transport_fee_max > 0) && (
+                                    {(fees.transport_fee_min > 0 ||
+                                      fees.transport_fee_max > 0) && (
                                       <div className="summary-item">
-                                        <div className="summary-label">Transport Fee Range</div>
+                                        <div className="summary-label">
+                                          Transport Fee Range
+                                        </div>
                                         <div className="summary-amount">
-                                          {formatCurrency(parseFloat(fees.transport_fee_min))}
-                                          {fees.transport_fee_max > fees.transport_fee_min && 
-                                            ` - ${formatCurrency(parseFloat(fees.transport_fee_max))}`
-                                          }
+                                          {formatCurrency(
+                                            parseFloat(fees.transport_fee_min),
+                                          )}
+                                          {fees.transport_fee_max >
+                                            fees.transport_fee_min &&
+                                            ` - ${formatCurrency(parseFloat(fees.transport_fee_max))}`}
                                           <small>/year</small>
                                         </div>
                                       </div>
                                     )}
-                                    
                                   </div>
                                   <div className="summary-disclaimer">
-                                    <small>⚠️ Tuition fees vary by course and are shown in the Courses table above. Hostel fees are additional.</small>
+                                    <small>
+                                      ⚠️ Tuition fees vary by course and are
+                                      shown in the Courses table above. Hostel
+                                      fees are additional.
+                                    </small>
                                   </div>
                                 </div>
                               )}
@@ -943,32 +1160,43 @@ function CollegeDetail() {
                 <div className="stats-grid" style={{ marginBottom: "32px" }}>
                   {college.placement_percentage && (
                     <div className="stat-card">
-                      <div className="stat-value">{college.placement_percentage}%</div>
+                      <div className="stat-value">
+                        {college.placement_percentage}%
+                      </div>
                       <div className="stat-label">Placement Rate</div>
                     </div>
                   )}
                   {college.highest_salary && (
                     <div className="stat-card">
-                      <div className="stat-value">₹{parseFloat(college.highest_salary).toFixed(1)} LPA</div>
+                      <div className="stat-value">
+                        ₹{parseFloat(college.highest_salary).toFixed(1)} LPA
+                      </div>
                       <div className="stat-label">Highest Package</div>
                     </div>
                   )}
                   {college.avg_salary && (
                     <div className="stat-card">
-                      <div className="stat-value">₹{parseFloat(college.avg_salary).toFixed(1)} LPA</div>
+                      <div className="stat-value">
+                        ₹{parseFloat(college.avg_salary).toFixed(1)} LPA
+                      </div>
                       <div className="stat-label">Average Package</div>
                     </div>
                   )}
                   {college.median_salary && (
                     <div className="stat-card">
-                      <div className="stat-value">₹{parseFloat(college.median_salary).toFixed(1)} LPA</div>
+                      <div className="stat-value">
+                        ₹{parseFloat(college.median_salary).toFixed(1)} LPA
+                      </div>
                       <div className="stat-label">Median Package</div>
                     </div>
                   )}
                 </div>
                 <div>
                   <h4>Placement Process</h4>
-                  <p>The college has a dedicated placement cell that organizes campus recruitment drives.</p>
+                  <p>
+                    The college has a dedicated placement cell that organizes
+                    campus recruitment drives.
+                  </p>
                 </div>
               </div>
             </div>

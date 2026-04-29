@@ -14,6 +14,7 @@ import Contact from './components/Contact';
 import './App.css';
 import MyApplications from './components/MyApplications';
 import ApplicationDetail from './components/ApplicationDetail';
+import Courses from './components/Courses';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/colleges" element={<Colleges />} />
         <Route path="/colleges/:id" element={<CollegeDetail />} />
+        <Route path="/courses" element={<Courses />} />
         <Route path="/college-suggestion" element={<CollegeSuggestion />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/application-form" element={<ApplicationForm />} />

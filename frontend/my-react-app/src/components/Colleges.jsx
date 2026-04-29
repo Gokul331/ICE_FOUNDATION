@@ -15,9 +15,9 @@ function Colleges() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [coursesMap, setCoursesMap] = useState({}); // Store courses for each college
-  const [expandedCollege, setExpandedCollege] = useState(null); // Track expanded college for courses
-  const [loadingCourses, setLoadingCourses] = useState({}); // Track loading state per college
+  const [coursesMap, setCoursesMap] = useState({});
+  const [expandedCollege, setExpandedCollege] = useState(null);
+  const [loadingCourses, setLoadingCourses] = useState({});
 
   useEffect(() => {
     const fetchColleges = async () => {
@@ -27,7 +27,6 @@ function Colleges() {
         const collegesArray = Array.isArray(data) ? data : (data.results || []);
         setColleges(collegesArray);
 
-        // Pre-fetch courses for all colleges
         const coursesPromises = collegesArray.map(async (college) => {
           const collegeId = college.college_id || college.id;
           try {
@@ -79,10 +78,8 @@ function Colleges() {
     }
   };
 
-  // Fetch courses for a specific college
   const fetchCourses = async (collegeId) => {
     if (coursesMap[collegeId]) {
-      // Courses already loaded, just toggle expansion
       setExpandedCollege(expandedCollege === collegeId ? null : collegeId);
       return;
     }
@@ -95,7 +92,6 @@ function Colleges() {
       setExpandedCollege(collegeId);
     } catch (error) {
       console.error('Error fetching courses:', error);
-      // Set empty array on error
       setCoursesMap(prev => ({ ...prev, [collegeId]: [] }));
     } finally {
       setLoadingCourses(prev => ({ ...prev, [collegeId]: false }));
@@ -206,7 +202,6 @@ function Colleges() {
     setFilters(prev => ({ ...prev, [filterType]: value }));
   };
 
-  // Render courses component
   const renderCourses = (college) => {
     const collegeId = college.id;
     const courses = coursesMap[collegeId];
@@ -495,20 +490,22 @@ function Colleges() {
         </div>
       </div>
 
-      {/* Filter Bar */}
+      {/* Filter Bar with Scrollable Chips on Mobile */}
       <div className="filter-bar">
         <div className="filter-group">
           <span className="filter-label">Type</span>
-          <div className="filter-chips">
-            {['All', 'Government', 'Private', 'Aided', 'Autonomous'].map(type => (
-              <button
-                key={type}
-                className={`chip ${filters.type === type ? 'active' : ''}`}
-                onClick={() => handleFilterChange('type', type)}
-              >
-                {type}
-              </button>
-            ))}
+          <div className="filter-chips-wrapper">
+            <div className="filter-chips">
+              {['All', 'Government', 'Private', 'Aided', 'Autonomous'].map(type => (
+                <button
+                  key={type}
+                  className={`chip ${filters.type === type ? 'active' : ''}`}
+                  onClick={() => handleFilterChange('type', type)}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <div className="sort-group">

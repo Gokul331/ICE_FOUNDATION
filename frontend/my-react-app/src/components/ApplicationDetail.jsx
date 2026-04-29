@@ -65,7 +65,6 @@ function ApplicationDetail() {
 
   return (
     <div className="detail-container">
-      {/* Navigation Bar */}
       <div className="detail-nav">
         <button onClick={() => navigate('/')} className="nav-btn home-btn">
           🏠 Home
@@ -75,7 +74,6 @@ function ApplicationDetail() {
         </button>
       </div>
 
-      {/* Header */}
       <div className="detail-header">
         <h1>Application Details</h1>
         <div className={`status-badge ${application.status}`}>
@@ -83,9 +81,7 @@ function ApplicationDetail() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="detail-card">
-        {/* Application Information */}
         <div className="detail-section">
           <h3>Application Information</h3>
           <div className="fields-grid">
@@ -112,7 +108,6 @@ function ApplicationDetail() {
           </div>
         </div>
 
-        {/* Personal Information */}
         <div className="detail-section">
           <h3>Personal Information</h3>
           <div className="fields-grid">
@@ -151,7 +146,6 @@ function ApplicationDetail() {
           </div>
         </div>
 
-        {/* Parent Information */}
         <div className="detail-section">
           <h3>Parent Information</h3>
           <div className="fields-grid">
@@ -178,7 +172,6 @@ function ApplicationDetail() {
           </div>
         </div>
 
-        {/* Address - Full Width */}
         <div className="detail-section">
           <h3>Address</h3>
           <div className="detail-row full-width">
@@ -193,7 +186,6 @@ function ApplicationDetail() {
           </div>
         </div>
 
-        {/* Education */}
         <div className="detail-section">
           <h3>Education</h3>
           
@@ -242,7 +234,6 @@ function ApplicationDetail() {
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div className="detail-actions">
           <button 
             className="btn-download"
