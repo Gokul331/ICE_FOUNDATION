@@ -53,6 +53,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -254,7 +255,7 @@ REST_AUTH = {
     'JWT_AUTH_HTTPONLY': True,
     'JWT_AUTH_SECURE': False,
     'JWT_AUTH_SAMESITE': 'Lax',
-    'USER_DETAILS_SERIALIZER': 'backend.serializers.CustomUserDetailsSerializer',
+    'USER_DETAILS_SERIALIZER': 'colleges.serializers.CustomUserDetailsSerializer',
 }
 
 # Allauth settings
