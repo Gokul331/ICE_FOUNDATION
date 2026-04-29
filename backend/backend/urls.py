@@ -1,25 +1,14 @@
-"""
-URL configuration for backend project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
+# backend/urls.py
 from django.contrib import admin
 from django.urls import path, include
 from django.http import JsonResponse
 from django.conf import settings
 from django.conf.urls.static import serve
 import re
+
+from dj_rest_auth.views import LogoutView
+from dj_rest_auth.registration.views import SocialLoginView
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 
 def api_root(request):
     return JsonResponse({
@@ -28,16 +17,32 @@ def api_root(request):
             'register': '/api/register/',
             'login': '/api/login/',
             'profile': '/api/profile/',
+            'auth': {
+                'login': '/api/auth/login/',
+                'logout': '/api/auth/logout/',
+                'google': '/api/auth/google/',
+                'registration': '/api/auth/registration/',
+            }
         }
     })
 
-# Serve media files in development
+# Define Google Login View
+class GoogleLogin(SocialLoginView):
+    adapter_class = GoogleOAuth2Adapter
+
 def serve_media(request, path=''):
     return serve(request, path, document_root=settings.MEDIA_ROOT)
 
+# Main URL patterns
 urlpatterns = [
+    path('', api_root, name='api_root'),
     path('admin/', admin.site.urls),
     path('api/', include('colleges.urls')),
-    # Serve media files
     path('media/<path:path>', serve_media, name='media'),
+    
+    # Auth URLs
+    path('api/auth/', include('dj_rest_auth.urls')),
+    path('api/auth/registration/', include('dj_rest_auth.registration.urls')),
+    path('api/auth/google/', GoogleLogin.as_view(), name='google_login'),
+    path('api/auth/logout/', LogoutView.as_view(), name='logout'),
 ]

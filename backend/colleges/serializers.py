@@ -595,3 +595,13 @@ class StudentApplicationListSerializer(serializers.ModelSerializer):
             'first_name', 'last_name', 'email_id', 'mobile_number',
             'submitted_at', 'updated_at'
         ]
+from dj_rest_auth.serializers import UserDetailsSerializer
+from rest_framework import serializers
+
+class CustomUserDetailsSerializer(UserDetailsSerializer):
+    phone_number = serializers.CharField(source='userprofile.phone_number', read_only=True)
+    date_of_birth = serializers.DateField(source='userprofile.date_of_birth', read_only=True)
+    
+    class Meta(UserDetailsSerializer.Meta):
+        fields = UserDetailsSerializer.Meta.fields + ('phone_number', 'date_of_birth',)
+        read_only_fields = ('email', 'username',)
