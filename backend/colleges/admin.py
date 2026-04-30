@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.db.models import Avg, Count
-from django.utils.html import format_html
+
 from .models import College, Course, Fees, Hostel, UserProfile, TeamMember, TimelineEvent, StudentApplication
 from django.utils.safestring import mark_safe
 
@@ -73,25 +73,25 @@ class CollegeAdmin(admin.ModelAdmin):
         count = obj.courses.filter(is_active=True).count()
         # Fix the URL - use correct app name (probably 'colleges' instead of 'app')
         courses_url = f"/admin/colleges/course/?college__id__exact={obj.college_id}"
-        return format_html('<a href="{}">{} active courses</a>', courses_url, count)
+        return mark_safe('<a href="{}">{} active courses</a>', courses_url, count)
     total_courses_count.short_description = 'Total Courses'
     
     def sync_status(self, obj):
         """Show if categories are synced with actual courses"""
         # Check if courses exist and have category field
         if not obj.courses.exists():
-            return format_html('<span style="color: #999;">No courses available</span>')
+            return mark_safe('<span style="color: #999;">No courses available</span>')
         
         try:
             actual_categories = set(obj.courses.filter(is_active=True).values_list('category', flat=True).distinct())
             current_categories = set(obj.courses_offered if obj.courses_offered else [])
             
             if actual_categories == current_categories:
-                return format_html('<span style="color: #4CAF50;">✓ Synced</span>')
+                return mark_safe('<span style="color: #4CAF50;">✓ Synced</span>')
             else:
-                return format_html('<span style="color: #FF9800;">⚠ Out of sync (Run sync action)</span>')
+                return mark_safe('<span style="color: #FF9800;">⚠ Out of sync (Run sync action)</span>')
         except Exception:
-            return format_html('<span style="color: #FF9800;">⚠ Category field missing in Course model</span>')
+            return mark_safe('<span style="color: #FF9800;">⚠ Category field missing in Course model</span>')
     sync_status.short_description = 'Sync Status'
     
     def sync_categories_from_courses(self, request, queryset):
@@ -214,7 +214,7 @@ class CourseAdmin(admin.ModelAdmin):
             'allied_science': '#009688'
         }
         color = color_map.get(obj.category, '#666')
-        return format_html('<span style="background:{}; color:white; padding:2px 8px; border-radius:12px; font-size:11px;">{}</span>', color, category_name)
+        return mark_safe('<span style="background:{}; color:white; padding:2px 8px; border-radius:12px; font-size:11px;">{}</span>', color, category_name)
     category_badge.short_description = 'Category'
     
     def get_queryset(self, request):
@@ -393,7 +393,7 @@ class FeesAdmin(admin.ModelAdmin):
             html += '</div>'
         
         html += '</div>'
-        return format_html(html)
+        return mark_safe(html)
     total_fee_calculated.short_description = 'Fee Calculator'
     
     def save_model(self, request, obj, form, change):
@@ -519,7 +519,7 @@ class StudentApplicationAdmin(admin.ModelAdmin):
 
     def view_pdf_link(self, obj):
         if obj.pdf_copy and obj.pdf_copy.name:
-            return format_html('<a href="{}" target="_blank">📄 View PDF</a>', obj.pdf_copy.url)
+            return mark_safe('<a href="{}" target="_blank">📄 View PDF</a>', obj.pdf_copy.url)
         return "No PDF available"
     view_pdf_link.short_description = 'Application PDF'
 
