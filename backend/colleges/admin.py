@@ -5,7 +5,6 @@ from .models import College, Course, Fees, Hostel, UserProfile, TeamMember, Time
 from django.utils.safestring import mark_safe
 
 
-# ==================== COLLEGE ADMIN (ENHANCED) ====================
 @admin.register(College)
 class CollegeAdmin(admin.ModelAdmin):
     list_display = ('college_name', 'short_name', 'counselling_code', 'courses_offered_summary', 
@@ -15,7 +14,6 @@ class CollegeAdmin(admin.ModelAdmin):
     list_filter = ('location_state', 'type', 'affiliation', 'naac_grade', 'hostel_available', 'established_year')
     readonly_fields = ('created_at', 'updated_at', 'courses_offered_summary', 'total_courses_count', 'sync_status')
     
-    # Admin actions for bulk operations
     actions = ['sync_categories_from_courses', 'bulk_add_engineering_category', 'clear_categories']
     
     fieldsets = (
@@ -24,7 +22,7 @@ class CollegeAdmin(admin.ModelAdmin):
         ('Campus Details', {'fields': ('established_year', 'total_campus_area', 'hostel_available')}),
         ('Course Categories', {
             'fields': ('courses_offered', 'courses_offered_summary', 'total_courses_count', 'sync_status'),
-            'description': '''
+            'description': mark_safe('''
                 <div style="background: #e8f5e9; padding: 12px; border-radius: 6px; margin-bottom: 10px;">
                     <strong>📚 Course Categories Management:</strong><br>
                     • Select the categories of courses offered by this college<br>
@@ -32,7 +30,7 @@ class CollegeAdmin(admin.ModelAdmin):
                     • Categories can be automatically synced from detailed courses<br>
                     • Use the "Sync Categories from Courses" action below to auto-update
                 </div>
-            '''
+            ''')
         }),
         ('Rankings & Accreditation', {'fields': ('naac_grade', 'nirf_rank')}),
         ('Placement', {'fields': ('placement_percentage', 'median_salary', 'highest_salary', 'avg_salary')}),
@@ -43,7 +41,7 @@ class CollegeAdmin(admin.ModelAdmin):
     def courses_offered_summary(self, obj):
         """Display course categories as colored badges"""
         if not obj.courses_offered:
-            return format_html('<span style="color: #999;">No categories selected</span>')
+            return mark_safe('<span style="color: #999;">No categories selected</span>')
         
         badges = []
         category_map = dict(College.COURSE_CATEGORY_CHOICES)
@@ -63,7 +61,9 @@ class CollegeAdmin(admin.ModelAdmin):
         for category in obj.courses_offered:
             category_name = category_map.get(category, category)
             color = color_map.get(category, '#666')
-            badges.append(f'<span style="background:{color}; color:white; padding:2px 8px; border-radius:12px; margin:2px; font-size:11px;">{category_name}</span>')
+            # Build HTML string then wrap with mark_safe
+            badge_html = f'<span style="background:{color}; color:white; padding:2px 8px; border-radius:12px; margin:2px; font-size:11px; display:inline-block;">{category_name}</span>'
+            badges.append(badge_html)
         
         return mark_safe(' '.join(badges))
     courses_offered_summary.short_description = 'Course Categories'
@@ -71,14 +71,15 @@ class CollegeAdmin(admin.ModelAdmin):
     def total_courses_count(self, obj):
         """Display total number of active courses"""
         count = obj.courses.filter(is_active=True).count()
-        # Fix the URL - use correct app name (probably 'colleges' instead of 'app')
+        if count == 0:
+            return "0 active courses"
         courses_url = f"/admin/colleges/course/?college__id__exact={obj.college_id}"
-        return mark_safe('<a href="{}">{} active courses</a>', courses_url, count)
+        # Use format_html for multiple arguments
+        return format_html('<a href="{}">{} active courses</a>', courses_url, count)
     total_courses_count.short_description = 'Total Courses'
     
     def sync_status(self, obj):
         """Show if categories are synced with actual courses"""
-        # Check if courses exist and have category field
         if not obj.courses.exists():
             return mark_safe('<span style="color: #999;">No courses available</span>')
         
@@ -105,7 +106,9 @@ class CollegeAdmin(admin.ModelAdmin):
                     continue
                     
                 actual_categories = set(college.courses.filter(is_active=True).values_list('category', flat=True).distinct())
-                if set(college.courses_offered if college.courses_offered else []) != actual_categories:
+                current_categories = set(college.courses_offered if college.courses_offered else [])
+                
+                if current_categories != actual_categories:
                     college.courses_offered = list(actual_categories)
                     college.save(update_fields=['courses_offered', 'updated_at'])
                     updated_count += 1
@@ -120,7 +123,7 @@ class CollegeAdmin(admin.ModelAdmin):
         """Admin action to add engineering category to selected colleges"""
         updated_count = 0
         for college in queryset:
-            categories = college.courses_offered if college.courses_offered else []
+            categories = list(college.courses_offered) if college.courses_offered else []
             if 'engineering' not in categories:
                 categories.append('engineering')
                 college.courses_offered = categories
