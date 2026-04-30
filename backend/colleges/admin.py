@@ -14,6 +14,9 @@ class CollegeAdmin(admin.ModelAdmin):
     list_filter = ('location_state', 'type', 'affiliation', 'naac_grade', 'hostel_available', 'established_year')
     readonly_fields = ('created_at', 'updated_at', 'courses_offered_summary', 'total_courses_count', 'sync_status')
     
+    # Admin actions for bulk operations
+    actions = ['sync_categories_from_courses', 'bulk_add_engineering_category', 'clear_categories']
+    
     fieldsets = (
         ('Basic Information', {'fields': ('college_name', 'short_name', 'counselling_code', 'logo_url', 'type', 'affiliation')}),
         ('Location', {'fields': ('location_city', 'location_state', 'location_pincode', 'address')}),
@@ -35,8 +38,6 @@ class CollegeAdmin(admin.ModelAdmin):
         ('Contact & Web', {'fields': ('website_url', 'email_domain', 'contact_phone')}),
         ('Timestamps', {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)})
     )
-    
-    actions = ['sync_categories_from_courses', 'bulk_add_engineering_category', 'clear_categories']
     
     def courses_offered_summary(self, obj):
         """Display course categories as colored badges"""
@@ -69,53 +70,74 @@ class CollegeAdmin(admin.ModelAdmin):
     def total_courses_count(self, obj):
         """Display total number of active courses"""
         count = obj.courses.filter(is_active=True).count()
-        courses_url = f"/admin/app/course/?college__id__exact={obj.college_id}"
+        # Fix the URL - use correct app name (probably 'colleges' instead of 'app')
+        courses_url = f"/admin/colleges/course/?college__id__exact={obj.college_id}"
         return format_html('<a href="{}">{} active courses</a>', courses_url, count)
     total_courses_count.short_description = 'Total Courses'
     
     def sync_status(self, obj):
         """Show if categories are synced with actual courses"""
-        actual_categories = set(obj.courses.filter(is_active=True).values_list('category', flat=True).distinct())
-        current_categories = set(obj.courses_offered)
+        # Check if courses exist and have category field
+        if not obj.courses.exists():
+            return format_html('<span style="color: #999;">No courses available</span>')
         
-        if actual_categories == current_categories:
-            return format_html('<span style="color: #4CAF50;">✓ Synced</span>')
-        else:
-            return format_html('<span style="color: #FF9800;">⚠ Out of sync (Run sync action)</span>')
+        try:
+            actual_categories = set(obj.courses.filter(is_active=True).values_list('category', flat=True).distinct())
+            current_categories = set(obj.courses_offered if obj.courses_offered else [])
+            
+            if actual_categories == current_categories:
+                return format_html('<span style="color: #4CAF50;">✓ Synced</span>')
+            else:
+                return format_html('<span style="color: #FF9800;">⚠ Out of sync (Run sync action)</span>')
+        except Exception:
+            return format_html('<span style="color: #FF9800;">⚠ Category field missing in Course model</span>')
     sync_status.short_description = 'Sync Status'
     
     def sync_categories_from_courses(self, request, queryset):
         """Admin action to sync categories from courses"""
         updated_count = 0
+        errors = 0
+        
         for college in queryset:
-            actual_categories = set(college.courses.filter(is_active=True).values_list('category', flat=True).distinct())
-            if set(college.courses_offered) != actual_categories:
-                college.courses_offered = list(actual_categories)
-                college.save()
-                updated_count += 1
-        self.message_user(request, f'Synced {updated_count} colleges successfully.')
+            try:
+                if not hasattr(college, 'courses'):
+                    continue
+                    
+                actual_categories = set(college.courses.filter(is_active=True).values_list('category', flat=True).distinct())
+                if set(college.courses_offered if college.courses_offered else []) != actual_categories:
+                    college.courses_offered = list(actual_categories)
+                    college.save(update_fields=['courses_offered', 'updated_at'])
+                    updated_count += 1
+            except Exception as e:
+                errors += 1
+                self.message_user(request, f'Error syncing {college.college_name}: {str(e)}', level='ERROR')
+        
+        self.message_user(request, f'Synced {updated_count} colleges successfully. Errors: {errors}')
     sync_categories_from_courses.short_description = 'Sync categories from actual courses'
     
     def bulk_add_engineering_category(self, request, queryset):
         """Admin action to add engineering category to selected colleges"""
+        updated_count = 0
         for college in queryset:
-            if 'engineering' not in college.courses_offered:
-                college.courses_offered.append('engineering')
-                college.save()
-        self.message_user(request, f'Added Engineering category to {queryset.count()} colleges.')
+            categories = college.courses_offered if college.courses_offered else []
+            if 'engineering' not in categories:
+                categories.append('engineering')
+                college.courses_offered = categories
+                college.save(update_fields=['courses_offered', 'updated_at'])
+                updated_count += 1
+        self.message_user(request, f'Added Engineering category to {updated_count} colleges.')
     bulk_add_engineering_category.short_description = 'Add "Engineering" category'
     
     def clear_categories(self, request, queryset):
         """Admin action to clear all categories"""
         for college in queryset:
             college.courses_offered = []
-            college.save()
+            college.save(update_fields=['courses_offered', 'updated_at'])
         self.message_user(request, f'Cleared categories for {queryset.count()} colleges.')
     clear_categories.short_description = 'Clear all categories'
     
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related('courses')
-
 
 # ==================== COURSE ADMIN (ENHANCED) ====================
 class CollegeStateListFilter(admin.SimpleListFilter):
