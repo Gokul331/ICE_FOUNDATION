@@ -14,34 +14,130 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+# ==================== COLLEGE SERIALIZERS (UPDATED WITH JSONFIELD) ====================
+
 class CollegeSerializer(serializers.ModelSerializer):
+    courses_offered_display = serializers.SerializerMethodField()
+    type_display = serializers.SerializerMethodField()
+    affiliation_display = serializers.SerializerMethodField()
+    
     class Meta:
         model = College
         fields = '__all__'
+    
+    def get_courses_offered_display(self, obj):
+        """Return human-readable course names"""
+        course_map = dict(College.COURSE_CATEGORY_CHOICES)
+        return [course_map.get(course, course) for course in obj.courses_offered]
+    
+    def get_type_display(self, obj):
+        return dict(College.TYPE_CHOICES).get(obj.type, obj.type)
+    
+    def get_affiliation_display(self, obj):
+        return dict(College.AFFILIATION_CHOICES).get(obj.affiliation, obj.affiliation)
 
 
 class CollegeListSerializer(serializers.ModelSerializer):
+    courses_offered_display = serializers.SerializerMethodField()
+    courses_count = serializers.SerializerMethodField()
+    
     class Meta:
         model = College
-        fields = ['college_id', 'college_name', 'short_name', 'counselling_code', 
-                  'location_city', 'location_state', 'type', 'affiliation',
-                  'placement_percentage', 'naac_grade', 'nirf_rank', 'logo_url', 
-                  'hostel_available']
+        fields = [
+            'college_id', 'college_name', 'short_name', 'counselling_code', 
+            'location_city', 'location_state', 'type', 'affiliation',
+            'placement_percentage', 'naac_grade', 'nirf_rank', 'logo_url', 
+            'hostel_available', 'courses_offered', 'courses_offered_display',
+            'courses_count'
+        ]
+    
+    def get_courses_offered_display(self, obj):
+        course_map = dict(College.COURSE_CATEGORY_CHOICES)
+        return [course_map.get(course, course) for course in obj.courses_offered]
+    
+    def get_courses_count(self, obj):
+        return len(obj.courses_offered) if obj.courses_offered else 0
+
+
+class CollegeCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating colleges with validation"""
+    class Meta:
+        model = College
+        fields = '__all__'
+    
+    def validate_courses_offered(self, value):
+        valid_categories = [choice[0] for choice in College.COURSE_CATEGORY_CHOICES]
+        for category in value:
+            if category not in valid_categories:
+                raise serializers.ValidationError(
+                    f"'{category}' is not a valid course category. Valid options: {valid_categories}"
+                )
+        return value
 
 
 class CollegeWithCoursesSerializer(serializers.ModelSerializer):
-    courses = serializers.SerializerMethodField()
+    courses_offered_display = serializers.SerializerMethodField()
+    courses_detail = serializers.SerializerMethodField()
+    type_display = serializers.SerializerMethodField()
+    affiliation_display = serializers.SerializerMethodField()
     
     class Meta:
         model = College
         fields = '__all__'
     
-    def get_courses(self, obj):
-        courses = Course.objects.filter(college_id=obj.college_id)
-        return CourseSerializer(courses, many=True).data
+    def get_courses_offered_display(self, obj):
+        course_map = dict(College.COURSE_CATEGORY_CHOICES)
+        return [course_map.get(course, course) for course in obj.courses_offered]
+    
+    def get_courses_detail(self, obj):
+        """If you have a separate Course model, return those details"""
+        if hasattr(obj, 'course_set'):
+            courses = obj.course_set.filter(is_active=True)
+            return CourseSerializer(courses, many=True).data
+        return None
+    
+    def get_type_display(self, obj):
+        return dict(College.TYPE_CHOICES).get(obj.type, obj.type)
+    
+    def get_affiliation_display(self, obj):
+        return dict(College.AFFILIATION_CHOICES).get(obj.affiliation, obj.affiliation)
 
+
+class CollegeWithFeesSerializer(serializers.ModelSerializer):
+    fees = serializers.SerializerMethodField()
+    courses_offered_display = serializers.SerializerMethodField()
+    hostels = serializers.SerializerMethodField()
+    type_display = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = College
+        fields = [
+            'college_id', 'college_name', 'counselling_code', 
+            'location_city', 'location_state', 'type', 'type_display',
+            'courses_offered', 'courses_offered_display', 'fees', 'hostels'
+        ]
+    
+    def get_fees(self, obj):
+        fees = Fees.objects.filter(college=obj).order_by('-academic_year')
+        return FeesListSerializer(fees, many=True).data
+    
+    def get_courses_offered_display(self, obj):
+        course_map = dict(College.COURSE_CATEGORY_CHOICES)
+        return [course_map.get(course, course) for course in obj.courses_offered]
+    
+    def get_hostels(self, obj):
+        hostels = Hostel.objects.filter(college=obj, is_active=True)
+        return HostelSerializer(hostels, many=True).data
+    
+    def get_type_display(self, obj):
+        return dict(College.TYPE_CHOICES).get(obj.type, obj.type)
+
+
+# ==================== COURSE SERIALIZERS ====================
 
 class CourseSerializer(serializers.ModelSerializer):
+    """Course serializer - for detailed course information"""
+    category_display = serializers.SerializerMethodField()
     course_code_display = serializers.SerializerMethodField()
     course_name_display = serializers.SerializerMethodField()
     degree_type_display = serializers.SerializerMethodField()
@@ -51,6 +147,13 @@ class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = '__all__'
+    
+    def get_category_display(self, obj):
+        """Map course category to display name"""
+        if hasattr(obj, 'category'):
+            category_map = dict(College.COURSE_CATEGORY_CHOICES)
+            return category_map.get(obj.category, obj.category)
+        return None
     
     def get_course_code_display(self, obj):
         return obj.get_course_code_display()
@@ -70,6 +173,102 @@ class CourseSerializer(serializers.ModelSerializer):
         if obj.tuition_fee_government:
             return f"₹{obj.tuition_fee_government:,.2f}/year"
         return None
+
+
+class CourseWithFeesSerializer(serializers.ModelSerializer):
+    college_fees = serializers.SerializerMethodField()
+    college_hostels = serializers.SerializerMethodField()
+    category_display = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Course
+        fields = '__all__'
+    
+    def get_college_fees(self, obj):
+        fees = Fees.objects.filter(college=obj.college).order_by('-academic_year')
+        return FeesListSerializer(fees, many=True).data
+    
+    def get_college_hostels(self, obj):
+        hostels = Hostel.objects.filter(college=obj.college, is_active=True)
+        return HostelSerializer(hostels, many=True).data
+    
+    def get_category_display(self, obj):
+        category_map = dict(College.COURSE_CATEGORY_CHOICES)
+        return category_map.get(obj.category, obj.category) if hasattr(obj, 'category') else None
+
+
+# ==================== FILTER SERIALIZERS ====================
+
+class CollegeCourseFilterSerializer(serializers.Serializer):
+    """Serializer for filtering colleges by course categories"""
+    categories = serializers.ListField(
+        child=serializers.ChoiceField(choices=College.COURSE_CATEGORY_CHOICES),
+        required=False,
+        help_text="List of course categories to filter"
+    )
+    city = serializers.CharField(required=False, allow_blank=True)
+    state = serializers.CharField(required=False, allow_blank=True)
+    type = serializers.ChoiceField(choices=College.TYPE_CHOICES, required=False)
+    min_placement = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
+    hostel_available = serializers.BooleanField(required=False)
+
+
+class CollegeBulkCourseUpdateSerializer(serializers.Serializer):
+    """Serializer for bulk updating course categories for multiple colleges"""
+    college_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=True
+    )
+    add_categories = serializers.ListField(
+        child=serializers.ChoiceField(choices=College.COURSE_CATEGORY_CHOICES),
+        required=False,
+        default=list
+    )
+    remove_categories = serializers.ListField(
+        child=serializers.ChoiceField(choices=College.COURSE_CATEGORY_CHOICES),
+        required=False,
+        default=list
+    )
+    replace_categories = serializers.ListField(
+        child=serializers.ChoiceField(choices=College.COURSE_CATEGORY_CHOICES),
+        required=False,
+        help_text="If provided, completely replaces existing categories"
+    )
+    
+    def validate(self, attrs):
+        has_add_remove = attrs.get('add_categories') or attrs.get('remove_categories')
+        has_replace = attrs.get('replace_categories') is not None
+        
+        if not has_add_remove and not has_replace:
+            raise serializers.ValidationError(
+                "Either add_categories/remove_categories or replace_categories must be provided"
+            )
+        
+        return attrs
+    
+    def update_colleges(self):
+        from django.db import transaction
+        
+        colleges = College.objects.filter(college_id__in=self.validated_data['college_ids'])
+        updated_count = 0
+        
+        with transaction.atomic():
+            for college in colleges:
+                if self.validated_data.get('replace_categories') is not None:
+                    college.courses_offered = self.validated_data['replace_categories']
+                else:
+                    current = set(college.courses_offered)
+                    current.update(self.validated_data.get('add_categories', []))
+                    current.difference_update(self.validated_data.get('remove_categories', []))
+                    college.courses_offered = list(current)
+                
+                college.save()
+                updated_count += 1
+        
+        return {
+            'updated_colleges': updated_count,
+            'college_ids': list(colleges.values_list('college_id', flat=True))
+        }
 
 
 # ==================== HOSTEL SERIALIZER ====================
@@ -95,7 +294,7 @@ class HostelSerializer(serializers.ModelSerializer):
         return dict(Hostel.GENDER_CHOICES).get(obj.gender, obj.gender)
 
 
-# ==================== FEES SERIALIZER ====================
+# ==================== FEES SERIALIZERS ====================
 
 class FeesSerializer(serializers.ModelSerializer):
     payment_frequency_display = serializers.SerializerMethodField()
@@ -142,7 +341,8 @@ class FeesSerializer(serializers.ModelSerializer):
                 'location_city': obj.college.location_city,
                 'location_state': obj.college.location_state,
                 'type': obj.college.type,
-                'hostel_available': obj.college.hostel_available
+                'hostel_available': obj.college.hostel_available,
+                'courses_offered': obj.college.courses_offered
             }
         return None
 
@@ -164,49 +364,6 @@ class FeesListSerializer(serializers.ModelSerializer):
     
     def get_payment_frequency_display(self, obj):
         return obj.get_payment_frequency_display()
-
-
-class CollegeWithFeesSerializer(serializers.ModelSerializer):
-    fees = serializers.SerializerMethodField()
-    courses = serializers.SerializerMethodField()
-    hostels = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = College
-        fields = [
-            'college_id', 'college_name', 'counselling_code', 
-            'location_city', 'location_state', 'type', 
-            'courses', 'fees', 'hostels'
-        ]
-    
-    def get_fees(self, obj):
-        fees = Fees.objects.filter(college=obj).order_by('-academic_year')
-        return FeesListSerializer(fees, many=True).data
-    
-    def get_courses(self, obj):
-        courses = Course.objects.filter(college_id=obj.college_id, is_active=True)
-        return CourseSerializer(courses, many=True).data
-    
-    def get_hostels(self, obj):
-        hostels = Hostel.objects.filter(college=obj, is_active=True)
-        return HostelSerializer(hostels, many=True).data
-
-
-class CourseWithFeesSerializer(serializers.ModelSerializer):
-    college_fees = serializers.SerializerMethodField()
-    college_hostels = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Course
-        fields = '__all__'
-    
-    def get_college_fees(self, obj):
-        fees = Fees.objects.filter(college=obj.college).order_by('-academic_year')
-        return FeesListSerializer(fees, many=True).data
-    
-    def get_college_hostels(self, obj):
-        hostels = Hostel.objects.filter(college=obj.college, is_active=True)
-        return HostelSerializer(hostels, many=True).data
 
 
 class FeeRangeSerializer(serializers.Serializer):
@@ -463,7 +620,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         return attrs
 
 
-# ==================== APPLICATION FORM SERIALIZER (UPDATED) ====================
+# ==================== APPLICATION FORM SERIALIZERS ====================
 
 class ApplicationFormSerializer(serializers.Serializer):
     # Bio-data
@@ -528,13 +685,11 @@ class ApplicationFormSerializer(serializers.Serializer):
     ug_result_status = serializers.ChoiceField(choices=['declared', 'awaited'], required=False, allow_blank=True)
     ug_marks_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
 
-    # Applied course info (updated to match model)
+    # Applied course info
     college_id = serializers.IntegerField(required=False)
     course_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     quota_type = serializers.ChoiceField(choices=['management', 'government'], required=False, default='management')
 
-
-# ==================== STUDENT APPLICATION DATA SERIALIZER ====================
 
 class StudentApplicationDataSerializer(serializers.Serializer):
     """Serializer to fetch existing student data for pre-filling application form"""
@@ -542,7 +697,6 @@ class StudentApplicationDataSerializer(serializers.Serializer):
     email = serializers.ReadOnlyField()
     first_name = serializers.ReadOnlyField()
     last_name = serializers.ReadOnlyField()
-
     date_of_birth = serializers.DateField(allow_null=True, required=False)
     gender = serializers.CharField(allow_null=True, required=False)
     phone_number = serializers.CharField(allow_null=True, required=False)
@@ -551,8 +705,6 @@ class StudentApplicationDataSerializer(serializers.Serializer):
     state = serializers.CharField(allow_null=True, required=False)
     pincode = serializers.CharField(allow_null=True, required=False)
 
-
-# ==================== STUDENT APPLICATION MODEL SERIALIZER ====================
 
 class StudentApplicationSerializer(serializers.ModelSerializer):
     """Serializer for StudentApplication model with file uploads"""

@@ -1,26 +1,207 @@
 from django.contrib import admin
-from django.db.models import Avg
+from django.db.models import Avg, Count
 from django.utils.html import format_html
 from .models import College, Course, Fees, Hostel, UserProfile, TeamMember, TimelineEvent, StudentApplication
 
 
-# ==================== COLLEGE ADMIN ====================
+# ==================== COLLEGE ADMIN (ENHANCED) ====================
 @admin.register(College)
 class CollegeAdmin(admin.ModelAdmin):
-    list_display = ('college_name', 'short_name', 'counselling_code', 'location_city', 'location_state', 'type', 'affiliation', 'naac_grade', 'nirf_rank', 'placement_percentage', 'median_salary', 'hostel_available', 'created_at')
+    list_display = ('college_name', 'short_name', 'counselling_code', 'courses_offered_summary', 
+                    'location_city', 'location_state', 'type', 'affiliation', 'placement_percentage', 
+                    'hostel_available', 'created_at')
     search_fields = ('college_name', 'short_name', 'counselling_code', 'location_city', 'location_state')
     list_filter = ('location_state', 'type', 'affiliation', 'naac_grade', 'hostel_available', 'established_year')
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at', 'courses_offered_summary', 'total_courses_count', 'sync_status')
     
     fieldsets = (
         ('Basic Information', {'fields': ('college_name', 'short_name', 'counselling_code', 'logo_url', 'type', 'affiliation')}),
         ('Location', {'fields': ('location_city', 'location_state', 'location_pincode', 'address')}),
         ('Campus Details', {'fields': ('established_year', 'total_campus_area', 'hostel_available')}),
+        ('Course Categories', {
+            'fields': ('courses_offered', 'courses_offered_summary', 'total_courses_count', 'sync_status'),
+            'description': '''
+                <div style="background: #e8f5e9; padding: 12px; border-radius: 6px; margin-bottom: 10px;">
+                    <strong>📚 Course Categories Management:</strong><br>
+                    • Select the categories of courses offered by this college<br>
+                    • These categories help students filter colleges by course type<br>
+                    • Categories can be automatically synced from detailed courses<br>
+                    • Use the "Sync Categories from Courses" action below to auto-update
+                </div>
+            '''
+        }),
         ('Rankings & Accreditation', {'fields': ('naac_grade', 'nirf_rank')}),
         ('Placement', {'fields': ('placement_percentage', 'median_salary', 'highest_salary', 'avg_salary')}),
         ('Contact & Web', {'fields': ('website_url', 'email_domain', 'contact_phone')}),
         ('Timestamps', {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)})
     )
+    
+    actions = ['sync_categories_from_courses', 'bulk_add_engineering_category', 'clear_categories']
+    
+    def courses_offered_summary(self, obj):
+        """Display course categories as colored badges"""
+        if not obj.courses_offered:
+            return format_html('<span style="color: #999;">No categories selected</span>')
+        
+        badges = []
+        category_map = dict(College.COURSE_CATEGORY_CHOICES)
+        color_map = {
+            'engineering': '#2196F3',
+            'medical': '#4CAF50',
+            'arts_science': '#FF9800',
+            'management': '#9C27B0',
+            'law': '#F44336',
+            'nursing': '#00BCD4',
+            'pharmacy': '#795548',
+            'education': '#607D8B',
+            'polytechnic': '#3F51B5',
+            'allied_science': '#009688'
+        }
+        
+        for category in obj.courses_offered:
+            category_name = category_map.get(category, category)
+            color = color_map.get(category, '#666')
+            badges.append(f'<span style="background:{color}; color:white; padding:2px 8px; border-radius:12px; margin:2px; font-size:11px;">{category_name}</span>')
+        
+        return format_html(' '.join(badges))
+    courses_offered_summary.short_description = 'Course Categories'
+    
+    def total_courses_count(self, obj):
+        """Display total number of active courses"""
+        count = obj.courses.filter(is_active=True).count()
+        courses_url = f"/admin/app/course/?college__id__exact={obj.college_id}"
+        return format_html('<a href="{}">{} active courses</a>', courses_url, count)
+    total_courses_count.short_description = 'Total Courses'
+    
+    def sync_status(self, obj):
+        """Show if categories are synced with actual courses"""
+        actual_categories = set(obj.courses.filter(is_active=True).values_list('category', flat=True).distinct())
+        current_categories = set(obj.courses_offered)
+        
+        if actual_categories == current_categories:
+            return format_html('<span style="color: #4CAF50;">✓ Synced</span>')
+        else:
+            return format_html('<span style="color: #FF9800;">⚠ Out of sync (Run sync action)</span>')
+    sync_status.short_description = 'Sync Status'
+    
+    def sync_categories_from_courses(self, request, queryset):
+        """Admin action to sync categories from courses"""
+        updated_count = 0
+        for college in queryset:
+            actual_categories = set(college.courses.filter(is_active=True).values_list('category', flat=True).distinct())
+            if set(college.courses_offered) != actual_categories:
+                college.courses_offered = list(actual_categories)
+                college.save()
+                updated_count += 1
+        self.message_user(request, f'Synced {updated_count} colleges successfully.')
+    sync_categories_from_courses.short_description = 'Sync categories from actual courses'
+    
+    def bulk_add_engineering_category(self, request, queryset):
+        """Admin action to add engineering category to selected colleges"""
+        for college in queryset:
+            if 'engineering' not in college.courses_offered:
+                college.courses_offered.append('engineering')
+                college.save()
+        self.message_user(request, f'Added Engineering category to {queryset.count()} colleges.')
+    bulk_add_engineering_category.short_description = 'Add "Engineering" category'
+    
+    def clear_categories(self, request, queryset):
+        """Admin action to clear all categories"""
+        for college in queryset:
+            college.courses_offered = []
+            college.save()
+        self.message_user(request, f'Cleared categories for {queryset.count()} colleges.')
+    clear_categories.short_description = 'Clear all categories'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('courses')
+
+
+# ==================== COURSE ADMIN (ENHANCED) ====================
+class CollegeStateListFilter(admin.SimpleListFilter):
+    title = 'College State'
+    parameter_name = 'college_state'
+    def lookups(self, request, model_admin):
+        states = set(college.location_state for college in College.objects.all() if college.location_state)
+        return [(state, state) for state in sorted(states)]
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(college__location_state=self.value())
+        return queryset
+
+
+@admin.register(Course)
+class CourseAdmin(admin.ModelAdmin):
+    list_display = ('course_name', 'course_code', 'college', 'category_badge', 'degree_name', 
+                    'tuition_fee_management', 'tuition_fee_government', 'cutoff_oc', 
+                    'cutoff_bc', 'cutoff_sc',  # Added cutoff_bc and cutoff_sc here
+                    'intake_seats', 'is_active')
+    search_fields = ('course_name', 'course_code', 'college__college_name')
+    list_filter = (CollegeStateListFilter, 'college', 'category', 'degree_type', 'degree_name', 'is_active', 'college__type', 'college__affiliation')
+    readonly_fields = ('created_at', 'updated_at', 'category_badge')
+    list_editable = ('tuition_fee_management', 'tuition_fee_government', 'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
+    list_per_page = 25
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('college', 'course_code', 'course_name', 'category', 'category_badge', 'degree_type', 'degree_name', 'duration_years')
+        }),
+        ('Fee Information', {
+            'fields': ('tuition_fee_management', 'tuition_fee_government'),
+            'description': '''
+                <div style="background: #e8f5e9; padding: 8px 12px; border-radius: 6px;">
+                    <strong>📘 Fee Structure:</strong><br>
+                    • <strong>Management Quota Fee:</strong> Annual fee for students admitted through management quota<br>
+                    • <strong>Government Quota Fee:</strong> Annual fee for students admitted through government counselling
+                </div>
+            '''
+        }),
+        ('Seats & Cutoff Marks', {
+            'fields': ('intake_seats', 'cutoff_oc', 'cutoff_bc', 'cutoff_bcm', 'cutoff_mbc', 
+                      'cutoff_sc', 'cutoff_sca', 'cutoff_st'),
+            'classes': ('wide',)
+        }),
+        ('Scholarship Information', {
+            'fields': ('scholarship_amount', 'scholarship_criteria'),
+            'classes': ('collapse',)
+        }),
+        ('Status', {
+            'fields': ('is_active',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def category_badge(self, obj):
+        """Display category as colored badge"""
+        category_map = dict(College.COURSE_CATEGORY_CHOICES)
+        category_name = category_map.get(obj.category, obj.category)
+        color_map = {
+            'engineering': '#2196F3',
+            'medical': '#4CAF50',
+            'arts_science': '#FF9800',
+            'management': '#9C27B0',
+            'law': '#F44336',
+            'nursing': '#00BCD4',
+            'pharmacy': '#795548',
+            'education': '#607D8B',
+            'polytechnic': '#3F51B5',
+            'allied_science': '#009688'
+        }
+        color = color_map.get(obj.category, '#666')
+        return format_html('<span style="background:{}; color:white; padding:2px 8px; border-radius:12px; font-size:11px;">{}</span>', color, category_name)
+    category_badge.short_description = 'Category'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('college')
+    
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        # Trigger sync on college after saving course
+        if obj.college:
+            obj.college.sync_courses_offered()
 
 
 # ==================== HOSTEL ADMIN ====================
@@ -64,65 +245,6 @@ class HostelAdmin(admin.ModelAdmin):
     def total_fee_with_deposit(self, obj):
         return f"₹{obj.total_fee_with_deposit:,.2f}/year"
     total_fee_with_deposit.short_description = 'Total with Deposit'
-
-
-# ==================== COURSE ADMIN ====================
-class CollegeStateListFilter(admin.SimpleListFilter):
-    title = 'College State'
-    parameter_name = 'college_state'
-    def lookups(self, request, model_admin):
-        states = set(college.location_state for college in College.objects.all() if college.location_state)
-        return [(state, state) for state in sorted(states)]
-    def queryset(self, request, queryset):
-        if self.value():
-            return queryset.filter(college__location_state=self.value())
-        return queryset
-
-@admin.register(Course)
-class CourseAdmin(admin.ModelAdmin):
-    list_display = ('course_name', 'course_code', 'college', 'degree_name', 
-                    'tuition_fee_management', 'tuition_fee_government', 
-                    'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
-    search_fields = ('course_name', 'course_code', 'college__college_name')
-    list_filter = (CollegeStateListFilter, 'college', 'degree_type', 'degree_name', 'is_active', 'college__type', 'college__affiliation')
-    readonly_fields = ('created_at', 'updated_at')
-    list_editable = ('tuition_fee_management', 'tuition_fee_government', 'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
-    list_per_page = 25
-    
-    fieldsets = (
-        ('Basic Information', {
-            'fields': ('college', 'course_code', 'course_name', 'degree_type', 'degree_name', 'duration_years')
-        }),
-        ('Fee Information', {
-            'fields': ('tuition_fee_management', 'tuition_fee_government'),
-            'description': '''
-                <div style="background: #e8f5e9; padding: 8px 12px; border-radius: 6px;">
-                    <strong>📘 Fee Structure:</strong><br>
-                    • <strong>Management Quota Fee:</strong> Annual fee for students admitted through management quota<br>
-                    • <strong>Government Quota Fee:</strong> Annual fee for students admitted through government counselling
-                </div>
-            '''
-        }),
-        ('Seats & Cutoff Marks', {
-            'fields': ('intake_seats', 'cutoff_oc', 'cutoff_bc', 'cutoff_bcm', 'cutoff_mbc', 
-                      'cutoff_sc', 'cutoff_sca', 'cutoff_st'),
-            'classes': ('wide',)
-        }),
-        ('Scholarship Information', {
-            'fields': ('scholarship_amount', 'scholarship_criteria'),
-            'classes': ('collapse',)
-        }),
-        ('Status', {
-            'fields': ('is_active',)
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        })
-    )
-    
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related('college')
 
 
 # ==================== FEES ADMIN ====================
@@ -380,6 +502,28 @@ class StudentApplicationAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'college')
+
+
+# ==================== DASHBOARD STATS (OPTIONAL) ====================
+class DashboardStats(admin.AdminSite):
+    """Custom admin site with dashboard stats"""
+    
+    def index(self, request, extra_context=None):
+        # Add custom context for dashboard
+        context = {
+            'total_colleges': College.objects.count(),
+            'total_courses': Course.objects.filter(is_active=True).count(),
+            'total_applications': StudentApplication.objects.count(),
+            'pending_applications': StudentApplication.objects.filter(status='submitted').count(),
+            'colleges_by_type': College.objects.values('type').annotate(count=Count('type')),
+            'top_course_categories': College.objects.annotate(
+                cat_count=Count('courses_offered')
+            ).order_by('-cat_count')[:5],
+        }
+        
+        extra_context = extra_context or {}
+        extra_context.update(context)
+        return super().index(request, extra_context)
 
 
 # ==================== CUSTOM ADMIN SITE SETTINGS ====================

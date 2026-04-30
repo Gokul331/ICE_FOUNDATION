@@ -4,6 +4,13 @@ from django.core.validators import RegexValidator, MinValueValidator, MaxValueVa
 from django.utils import timezone
 from datetime import datetime
 
+from django.db import models
+from django.contrib.auth.models import User
+from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
+from django.utils import timezone
+from datetime import datetime
+from django.core.exceptions import ValidationError
+
 # ==================== COLLEGE MODEL ====================
 class College(models.Model):
     TYPE_CHOICES = [
@@ -18,11 +25,29 @@ class College(models.Model):
         ('anna_university_affiliated', 'Anna University Affiliated'),
         ('deemed_university', 'Deemed University'),
     ]
-
+    
+    COURSE_CATEGORY_CHOICES = [
+        ('engineering', 'Engineering'),
+        ('arts_science', 'Arts and Science'),
+        ('polytechnic', 'Polytechnic'),
+        ('allied_science', 'Allied Science'),
+        ('medical', 'Medical'),
+        ('law', 'Law'),
+        ('nursing', 'Nursing'),
+        ('management', 'Management'),
+        ('pharmacy', 'Pharmacy'),
+        ('education', 'Education'),
+    ]
+    
     college_id = models.AutoField(primary_key=True)
     college_name = models.CharField(max_length=200, unique=True)
     short_name = models.CharField(max_length=50, null=True, blank=True)
     counselling_code = models.CharField(max_length=20, unique=True, null=True, blank=True)
+    courses_offered = models.JSONField(
+        default=list, 
+        blank=True, 
+        help_text="List of course categories offered by the college"
+    )
     logo_url = models.URLField(max_length=500, null=True, blank=True)
     location_city = models.CharField(max_length=100)
     location_state = models.CharField(max_length=100)
@@ -47,12 +72,65 @@ class College(models.Model):
 
     def __str__(self):
         return self.college_name
-
+    
+    def clean(self):
+        """Validate courses_offered contains valid categories"""
+        if self.courses_offered:
+            valid_categories = [choice[0] for choice in self.COURSE_CATEGORY_CHOICES]
+            for course in self.courses_offered:
+                if course not in valid_categories:
+                    raise ValidationError(
+                        f"'{course}' is not a valid course category. "
+                        f"Valid options: {valid_categories}"
+                    )
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+        # Auto-sync categories from detailed courses
+        self.sync_courses_offered()
+    
+    def sync_courses_offered(self):
+        """Synchronize courses_offered JSONField with actual Course objects"""
+        if hasattr(self, 'courses'):
+            # Get unique categories from actual courses
+            actual_categories = set(
+                self.courses.filter(is_active=True)
+                .values_list('category', flat=True)
+                .distinct()
+            )
+            # Update if changed
+            if set(self.courses_offered) != actual_categories:
+                self.courses_offered = list(actual_categories)
+                # Use update to avoid recursion
+                College.objects.filter(pk=self.pk).update(courses_offered=self.courses_offered)
+    
+    def get_courses_by_category(self, category=None):
+        """Get all courses, optionally filtered by category"""
+        queryset = self.courses.filter(is_active=True)
+        if category:
+            queryset = queryset.filter(category=category)
+        return queryset
+    
+    @property
+    def courses_count(self):
+        """Total number of active courses"""
+        return self.courses.filter(is_active=True).count()
+    
+    @property
+    def unique_course_categories(self):
+        """Get unique course categories with counts"""
+        from django.db.models import Count
+        return self.courses.filter(is_active=True)\
+            .values('category')\
+            .annotate(count=Count('category'))\
+            .order_by('category')
+    
     class Meta:
         ordering = ['college_name']
 
 
-# ==================== COURSE MODEL ====================
+# ==================== COURSE MODEL (UPDATED WITH CATEGORY FIELD) ====================
 class Course(models.Model):
     DEGREE_TYPE_CHOICES = [
         ('ug', 'UG'),
@@ -190,6 +268,14 @@ class Course(models.Model):
     course_id = models.AutoField(primary_key=True)
     college = models.ForeignKey('College', on_delete=models.CASCADE, related_name='courses')
     
+    # Add category field to link to College.COURSE_CATEGORY_CHOICES
+    category = models.CharField(
+        max_length=50, 
+        choices=College.COURSE_CATEGORY_CHOICES,
+        default='engineering',
+        help_text="Course category (e.g., Engineering, Medical, etc.)"
+    )
+    
     course_code = models.CharField(max_length=20, choices=COURSE_CODE_CHOICES, help_text="Select course code")
     course_name = models.CharField(max_length=200, choices=COURSE_NAME_CHOICES, help_text="Select course name")
     
@@ -218,7 +304,32 @@ class Course(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.course_code} - {self.course_name}"
+        return f"{self.get_course_code_display()} - {self.get_course_name_display()}"
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Trigger sync on college
+        if self.college:
+            self.college.sync_courses_offered()
+    
+    def delete(self, *args, **kwargs):
+        college = self.college
+        super().delete(*args, **kwargs)
+        if college:
+            college.sync_courses_offered()
+    
+    def get_course_code_display(self):
+        return self.course_code
+    
+    def get_course_name_display(self):
+        return self.course_name
+    
+    def get_degree_type_display(self):
+        return dict(self.DEGREE_TYPE_CHOICES).get(self.degree_type, self.degree_type)
+    
+    @property
+    def category_display(self):
+        return dict(College.COURSE_CATEGORY_CHOICES).get(self.category, self.category)
 
     class Meta:
         ordering = ['college__college_name', 'course_code']

@@ -29,7 +29,15 @@ from .views import (
     get_application_detail,
     get_application_detail_page,
     sync_applications_to_local,
+    
+    # New views for course categories
+    get_college_course_categories,
+    get_colleges_by_course_category,
+    get_courses_by_category,
+    bulk_update_college_categories,
+    get_course_category_stats,
 )
+
 from . import views
 from django.conf import settings
 from django.conf.urls.static import static
@@ -43,10 +51,20 @@ urlpatterns = [
     path('colleges/<int:college_id>/hostels/', get_college_hostels, name='get_college_hostels'),
     path('colleges/<int:college_id>/hostels/<int:room_type>/', get_hostel_by_room_type, name='get_hostel_by_room_type'),
     path('colleges/suggest/', suggest_colleges, name='suggest_colleges'),
-
+    
+    # ==================== COLLEGE COURSE CATEGORIES (NEW) ====================
+    path('colleges/categories/', get_college_course_categories, name='get_college_course_categories'),
+    path('colleges/by-category/', get_colleges_by_course_category, name='get_colleges_by_course_category'),
+    path('colleges/categories/stats/', get_course_category_stats, name='get_course_category_stats'),
+    path('colleges/bulk-update-categories/', bulk_update_college_categories, name='bulk_update_college_categories'),
+    
     # ==================== COURSES ====================
     path('courses/', get_courses, name='get_courses'),
     path('courses/<int:course_id>/', get_course_detail, name='get_course_detail'),
+    
+    # ==================== COURSE CATEGORIES (NEW) ====================
+    path('courses/categories/', get_courses_by_category, name='get_courses_by_category'),
+    path('courses/categories/<str:category>/', get_courses_by_category, name='get_courses_by_category_filtered'),
 
     # ==================== FEES ====================
     path('fees/', get_filtered_fees, name='get_filtered_fees'),

@@ -12,8 +12,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from django.db.models import Q, F, Sum, Avg, Min, Max, Count
+from django.db.models import Q, F, Sum, Avg, Min, Max, Count, Value
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.core.exceptions import ValidationError
@@ -35,17 +34,20 @@ from .serializers import (
 )
 from .utils.pdf_generator import generate_application_pdf
 from .utils.local_save import save_application_locally, save_application_media_files
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 
 # Set up logger
 logger = logging.getLogger(__name__)
 
 # ==================== COLLEGE VIEWS ====================
 
+# Update your existing get_colleges function to include category filtering
 @api_view(['GET'])
 def get_colleges(request):
-    """Get all colleges with optional filtering"""
+    """Get all colleges with optional filtering including course categories"""
     colleges = College.objects.all()
 
+    # Existing filters
     district = request.GET.get('district')
     if district:
         colleges = colleges.filter(location_city__icontains=district)
@@ -73,10 +75,23 @@ def get_colleges(request):
     naac = request.GET.get('naac_grade')
     if naac:
         colleges = colleges.filter(naac_grade=naac)
+    
+    # NEW: Filter by course categories
+    categories = request.GET.getlist('categories')
+    if categories:
+        category_query = Q()
+        for category in categories:
+            category_query |= Q(courses_offered__contains=category)
+        colleges = colleges.filter(category_query)
+    
+    # NEW: Filter by multiple categories (AND condition)
+    require_all_categories = request.GET.get('require_all', 'false').lower() == 'true'
+    if require_all_categories and categories:
+        for category in categories:
+            colleges = colleges.filter(courses_offered__contains=category)
 
     serializer = CollegeSerializer(colleges, many=True)
     return Response(serializer.data)
-
 
 @api_view(['GET'])
 def get_college_detail(request, college_id):
@@ -103,6 +118,470 @@ def get_college_courses(request, college_id):
 
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+
+
+from django.db.models import Q, Count, Value
+from django.db.models.functions import Length
+from .serializers import (
+    CollegeCourseFilterSerializer, 
+    CollegeBulkCourseUpdateSerializer,
+    CollegeWithCoursesSerializer,
+    CollegeWithFeesSerializer
+)
+
+# ==================== COURSE CATEGORY VIEWS ====================
+
+@api_view(['GET'])
+def get_college_course_categories(request):
+    """Get all available course categories with statistics"""
+    try:
+        categories = []
+        for category_code, category_name in College.COURSE_CATEGORY_CHOICES:
+            # Count colleges offering this category
+            college_count = College.objects.filter(
+                courses_offered__contains=category_code
+            ).count()
+            
+            # Count active courses in this category
+            course_count = Course.objects.filter(
+                category=category_code, 
+                is_active=True
+            ).count()
+            
+            # Count colleges with detailed courses in this category
+            colleges_with_courses = Course.objects.filter(
+                category=category_code,
+                is_active=True
+            ).values('college').distinct().count()
+            
+            categories.append({
+                'code': category_code,
+                'name': category_name,
+                'college_count': college_count,
+                'course_count': course_count,
+                'colleges_with_courses': colleges_with_courses
+            })
+        
+        # Get popular categories (top 5 by college count)
+        popular = sorted(categories, key=lambda x: x['college_count'], reverse=True)[:5]
+        
+        return Response({
+            'total_categories': len(categories),
+            'categories': categories,
+            'popular_categories': popular,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in get_college_course_categories: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+def get_colleges_by_course_category(request):
+    """Get colleges filtered by course categories with advanced filtering"""
+    try:
+        serializer = CollegeCourseFilterSerializer(data=request.query_params)
+        
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        queryset = College.objects.all()
+        data = serializer.validated_data
+        
+        # Filter by categories
+        categories = data.get('categories', [])
+        if categories:
+            category_query = Q()
+            for category in categories:
+                category_query |= Q(courses_offered__contains=category)
+            queryset = queryset.filter(category_query)
+        
+        # Filter by city
+        if data.get('city'):
+            queryset = queryset.filter(location_city__icontains=data['city'])
+        
+        # Filter by state
+        if data.get('state'):
+            queryset = queryset.filter(location_state__icontains=data['state'])
+        
+        # Filter by college type
+        if data.get('type'):
+            queryset = queryset.filter(type=data['type'])
+        
+        # Filter by placement percentage
+        if data.get('min_placement'):
+            queryset = queryset.filter(placement_percentage__gte=data['min_placement'])
+        
+        # Filter by hostel availability
+        if data.get('hostel_available') is not None:
+            queryset = queryset.filter(hostel_available=data['hostel_available'])
+        
+        # Filter by NAAC grade
+        naac = request.query_params.get('naac_grade')
+        if naac:
+            queryset = queryset.filter(naac_grade=naac)
+        
+        # Filter by NIRF rank
+        max_nirf = request.query_params.get('max_nirf')
+        if max_nirf:
+            queryset = queryset.filter(nirf_rank__lte=int(max_nirf))
+        
+        # Ordering
+        order_by = request.query_params.get('order_by', 'college_name')
+        if order_by == 'placement':
+            queryset = queryset.order_by('-placement_percentage')
+        elif order_by == 'nirf':
+            queryset = queryset.order_by('nirf_rank')
+        elif order_by == 'name':
+            queryset = queryset.order_by('college_name')
+        else:
+            queryset = queryset.order_by(order_by)
+        
+        # Pagination
+        limit = int(request.query_params.get('limit', 20))
+        offset = int(request.query_params.get('offset', 0))
+        
+        total_count = queryset.count()
+        colleges = queryset[offset:offset + limit]
+        
+        # Include detailed college info
+        use_detailed = request.query_params.get('detailed', 'false').lower() == 'true'
+        if use_detailed:
+            serializer_class = CollegeWithCoursesSerializer
+        else:
+            serializer_class = CollegeListSerializer
+        
+        serializer = serializer_class(colleges, many=True)
+        
+        return Response({
+            'total': total_count,
+            'limit': limit,
+            'offset': offset,
+            'has_next': offset + limit < total_count,
+            'has_previous': offset > 0,
+            'filters_applied': {
+                'categories': categories,
+                'city': data.get('city'),
+                'state': data.get('state'),
+                'type': data.get('type')
+            },
+            'colleges': serializer.data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in get_colleges_by_course_category: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+def get_courses_by_category(request, category=None):
+    """Get courses filtered by category"""
+    try:
+        queryset = Course.objects.filter(is_active=True)
+        
+        # Filter by category from URL or query param
+        if category:
+            queryset = queryset.filter(category=category)
+        else:
+            category_param = request.query_params.get('category')
+            if category_param:
+                queryset = queryset.filter(category=category_param)
+        
+        # Additional filters
+        college_id = request.query_params.get('college_id')
+        if college_id:
+            queryset = queryset.filter(college_id=college_id)
+        
+        degree_type = request.query_params.get('degree_type')
+        if degree_type:
+            queryset = queryset.filter(degree_type=degree_type)
+        
+        # Search by course name
+        search = request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(course_name__icontains=search)
+        
+        # Filter by cutoff
+        cutoff = request.query_params.get('cutoff')
+        community = request.query_params.get('community')
+        if cutoff and community:
+            community_field = f'cutoff_{community.lower()}'
+            queryset = queryset.filter(**{f'{community_field}__lte': cutoff})
+        
+        # Ordering
+        order_by = request.query_params.get('order_by', 'college__college_name')
+        if order_by == 'cutoff':
+            community = request.query_params.get('community', 'oc')
+            order_by = f'cutoff_{community.lower()}'
+        queryset = queryset.order_by(order_by)
+        
+        # Get distinct colleges count
+        colleges_count = queryset.values('college').distinct().count()
+        
+        # Pagination
+        limit = int(request.query_params.get('limit', 50))
+        offset = int(request.query_params.get('offset', 0))
+        
+        total_count = queryset.count()
+        courses = queryset[offset:offset + limit]
+        
+        serializer = CourseSerializer(courses, many=True)
+        
+        # Get category display name
+        category_display = None
+        if category:
+            category_display = dict(College.COURSE_CATEGORY_CHOICES).get(category)
+        
+        return Response({
+            'total': total_count,
+            'limit': limit,
+            'offset': offset,
+            'colleges_count': colleges_count,
+            'category': category,
+            'category_display': category_display,
+            'courses': serializer.data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in get_courses_by_category: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+def get_course_category_stats(request):
+    """Get detailed statistics for course categories"""
+    try:
+        # Overall stats
+        total_colleges = College.objects.count()
+        total_courses = Course.objects.filter(is_active=True).count()
+        
+        # Category-wise breakdown
+        category_stats = []
+        for category_code, category_name in College.COURSE_CATEGORY_CHOICES:
+            colleges_with_category = College.objects.filter(
+                courses_offered__contains=category_code
+            ).count()
+            
+            courses_in_category = Course.objects.filter(
+                category=category_code,
+                is_active=True
+            ).count()
+            
+            # Get average placement for colleges in this category
+            colleges_list = College.objects.filter(courses_offered__contains=category_code)
+            avg_placement = colleges_list.aggregate(Avg('placement_percentage'))['placement_percentage__avg'] or 0
+            
+            # Get average fees for courses in this category
+            courses_list = Course.objects.filter(category=category_code, is_active=True)
+            avg_fee_management = courses_list.aggregate(Avg('tuition_fee_management'))['tuition_fee_management__avg'] or 0
+            avg_fee_government = courses_list.aggregate(Avg('tuition_fee_government'))['tuition_fee_government__avg'] or 0
+            
+            category_stats.append({
+                'code': category_code,
+                'name': category_name,
+                'colleges_count': colleges_with_category,
+                'courses_count': courses_in_category,
+                'percentage_of_colleges': round((colleges_with_category / total_colleges * 100), 2) if total_colleges > 0 else 0,
+                'percentage_of_courses': round((courses_in_category / total_courses * 100), 2) if total_courses > 0 else 0,
+                'avg_placement_percentage': round(avg_placement, 2),
+                'avg_fee_management': round(avg_fee_management, 2),
+                'avg_fee_government': round(avg_fee_government, 2)
+            })
+        
+        # Sort by colleges count
+        category_stats.sort(key=lambda x: x['colleges_count'], reverse=True)
+        
+        # Get top colleges by number of categories
+        top_colleges_by_categories = College.objects.annotate(
+            categories_count=Length('courses_offered')
+        ).order_by('-categories_count')[:10]
+        
+        top_colleges_data = CollegeListSerializer(top_colleges_by_categories, many=True).data
+        
+        return Response({
+            'summary': {
+                'total_colleges': total_colleges,
+                'total_courses': total_courses,
+                'total_categories': len(College.COURSE_CATEGORY_CHOICES),
+                'colleges_with_courses': College.objects.filter(courses__isnull=False).distinct().count()
+            },
+            'category_breakdown': category_stats,
+            'top_colleges_by_categories': top_colleges_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in get_course_category_stats: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def bulk_update_college_categories(request):
+    """Bulk update course categories for multiple colleges (Admin only)"""
+    try:
+        serializer = CollegeBulkCourseUpdateSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        result = serializer.update_colleges()
+        
+        return Response({
+            'success': True,
+            'message': f"Successfully updated {result['updated_colleges']} colleges",
+            'updated_college_ids': result['college_ids'],
+            'timestamp': datetime.now().isoformat()
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error in bulk_update_college_categories: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+def get_college_with_courses_detail(request, college_id):
+    """Get college with detailed course information grouped by category"""
+    try:
+        college = College.objects.get(college_id=college_id)
+        
+        # Get all active courses for this college
+        courses = Course.objects.filter(college=college, is_active=True)
+        
+        # Group courses by category
+        courses_by_category = {}
+        for category_code, category_name in College.COURSE_CATEGORY_CHOICES:
+            category_courses = courses.filter(category=category_code)
+            if category_courses.exists():
+                courses_by_category[category_code] = {
+                    'category_name': category_name,
+                    'courses': CourseSerializer(category_courses, many=True).data,
+                    'count': category_courses.count()
+                }
+        
+        # Get fees and hostels
+        fees = Fees.objects.filter(college=college).order_by('-academic_year')
+        hostels = Hostel.objects.filter(college=college, is_active=True)
+        
+        college_data = CollegeSerializer(college).data
+        college_data['courses_by_category'] = courses_by_category
+        college_data['fees'] = FeesListSerializer(fees, many=True).data
+        college_data['hostels'] = HostelSerializer(hostels, many=True).data
+        
+        return Response(college_data)
+        
+    except College.DoesNotExist:
+        return Response({'error': 'College not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error in get_college_with_courses_detail: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def sync_categories_from_courses(request):
+    """Synchronize courses_offered JSONField with actual courses (Admin only)"""
+    try:
+        updated_count = 0
+        errors = []
+        
+        colleges = College.objects.prefetch_related('courses').all()
+        
+        for college in colleges:
+            try:
+                # Get unique categories from active courses
+                actual_categories = set(
+                    college.courses.filter(is_active=True)
+                    .values_list('category', flat=True)
+                    .distinct()
+                )
+                
+                # Check if update is needed
+                if set(college.courses_offered) != actual_categories:
+                    college.courses_offered = list(actual_categories)
+                    college.save(update_fields=['courses_offered', 'updated_at'])
+                    updated_count += 1
+                    
+            except Exception as e:
+                errors.append({
+                    'college_id': college.college_id,
+                    'college_name': college.college_name,
+                    'error': str(e)
+                })
+        
+        return Response({
+            'success': True,
+            'message': f"Synchronization completed",
+            'updated_colleges': updated_count,
+            'total_colleges': colleges.count(),
+            'errors': errors,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in sync_categories_from_courses: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+def search_colleges_by_courses(request):
+    """Search colleges by course name or category with auto-complete"""
+    try:
+        query = request.query_params.get('q', '').strip()
+        if len(query) < 2:
+            return Response({
+                'results': [],
+                'message': 'Please enter at least 2 characters'
+            })
+        
+        # Search in course names
+        matching_courses = Course.objects.filter(
+            Q(course_name__icontains=query) | 
+            Q(course_code__icontains=query),
+            is_active=True
+        ).select_related('college').distinct()
+        
+        # Get unique colleges from matching courses
+        college_results = {}
+        for course in matching_courses:
+            college = course.college
+            if college.college_id not in college_results:
+                college_results[college.college_id] = {
+                    'college_id': college.college_id,
+                    'college_name': college.college_name,
+                    'location_city': college.location_city,
+                    'matching_courses': []
+                }
+            college_results[college.college_id]['matching_courses'].append({
+                'course_name': course.course_name,
+                'course_code': course.course_code,
+                'category': course.category
+            })
+        
+        # Also search in categories
+        category_matches = []
+        for category_code, category_name in College.COURSE_CATEGORY_CHOICES:
+            if query.lower() in category_name.lower() or query.lower() in category_code.lower():
+                category_colleges = College.objects.filter(
+                    courses_offered__contains=category_code
+                ).values('college_id', 'college_name', 'location_city')[:5]
+                
+                category_matches.append({
+                    'category_code': category_code,
+                    'category_name': category_name,
+                    'colleges': list(category_colleges)
+                })
+        
+        return Response({
+            'query': query,
+            'colleges': list(college_results.values()),
+            'category_matches': category_matches,
+            'total_results': len(college_results)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in search_colleges_by_courses: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import '../styles/auth.css';
+imimpor{ useAuth } from '../context/AuthContext';
+import t '../styles/auth.css';
 
 const API_BASE_URL = 'https://ice-foundation-1.onrender.com/api';
 
@@ -16,7 +17,8 @@ const passwordStrength = (value) => {
 const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong'];
 
 function Auth({ initialTab = 'login', onLoginSuccess } = {}) {
-  const [activeTab, setActiveTab] = useState(initialTab);
+  cons{ googleLogin } = useAuth();
+  const t [activeTab, setActiveTab] = useState(initialTab);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [registerFirstName, setRegisterFirstName] = useState('');
@@ -247,14 +249,7 @@ function Auth({ initialTab = 'login', onLoginSuccess } = {}) {
 
               <div className="social-buttons">
                 <button type="button" className="social-btn" disabled={loading}>
-                  <span className="social-icon">G</span>
-                  Google
-                </button>
-              </div>
 
-              <div className="divider">or with email</div>
-
-              <div className="form-field">
                 <label>Email address</label>
                 <div className="input-wrapper">
                   <svg className="input-icon" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
