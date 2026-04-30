@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.db.models import Avg, Count
 from django.utils.html import format_html
 from .models import College, Course, Fees, Hostel, UserProfile, TeamMember, TimelineEvent, StudentApplication
+from django.utils.safestring import mark_safe
 
 
 # ==================== COLLEGE ADMIN (ENHANCED) ====================
@@ -42,7 +43,7 @@ class CollegeAdmin(admin.ModelAdmin):
     def courses_offered_summary(self, obj):
         """Display course categories as colored badges"""
         if not obj.courses_offered:
-            return format_html('<span style="color: #999;">No categories selected</span>')
+            return mark_safe('<span style="color: #999;">No categories selected</span>')
         
         badges = []
         category_map = dict(College.COURSE_CATEGORY_CHOICES)
@@ -64,7 +65,7 @@ class CollegeAdmin(admin.ModelAdmin):
             color = color_map.get(category, '#666')
             badges.append(f'<span style="background:{color}; color:white; padding:2px 8px; border-radius:12px; margin:2px; font-size:11px;">{category_name}</span>')
         
-        return format_html(' '.join(badges))
+        return mark_safe(' '.join(badges))
     courses_offered_summary.short_description = 'Course Categories'
     
     def total_courses_count(self, obj):
