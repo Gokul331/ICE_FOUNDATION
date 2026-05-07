@@ -30,12 +30,24 @@ from .views import (
     get_application_detail_page,
     sync_applications_to_local,
     
-    # New views for course categories
+    # Views for course categories
     get_college_course_categories,
     get_colleges_by_course_category,
     get_courses_by_category,
     bulk_update_college_categories,
     get_course_category_stats,
+    
+    # NEW: College Image Views
+    get_college_gallery,
+    get_college_images_by_category,
+    get_college_slideshow_images,
+    get_featured_colleges,
+    get_colleges_with_gallery,
+    add_college_images,
+    update_college_cover_image,
+    update_college_banner_image,
+    delete_college_image,
+    bulk_upload_college_images,
 )
 
 from . import views
@@ -52,7 +64,24 @@ urlpatterns = [
     path('colleges/<int:college_id>/hostels/<int:room_type>/', get_hostel_by_room_type, name='get_hostel_by_room_type'),
     path('colleges/suggest/', suggest_colleges, name='suggest_colleges'),
     
-    # ==================== COLLEGE COURSE CATEGORIES (NEW) ====================
+    # ==================== COLLEGE IMAGES (NEW) ====================
+    # Gallery and Images
+    path('colleges/<int:college_id>/gallery/', get_college_gallery, name='college-gallery'),
+    path('colleges/<int:college_id>/gallery/<str:category>/', get_college_images_by_category, name='college-images-by-category'),
+    path('colleges/<int:college_id>/slideshow/', get_college_slideshow_images, name='college-slideshow'),
+    
+    # Featured and Gallery Listings
+    path('colleges/featured/', get_featured_colleges, name='featured-colleges'),
+    path('colleges/with-gallery/', get_colleges_with_gallery, name='colleges-with-gallery'),
+    
+    # Image Management (Admin only)
+    path('colleges/<int:college_id>/images/', add_college_images, name='add-college-images'),
+    path('colleges/<int:college_id>/cover/', update_college_cover_image, name='update-cover-image'),
+    path('colleges/<int:college_id>/banner/', update_college_banner_image, name='update-banner-image'),
+    path('colleges/<int:college_id>/images/<str:category>/<int:image_index>/', delete_college_image, name='delete-college-image'),
+    path('colleges/bulk-upload-images/', bulk_upload_college_images, name='bulk-upload-images'),
+    
+    # ==================== COLLEGE COURSE CATEGORIES ====================
     path('colleges/categories/', get_college_course_categories, name='get_college_course_categories'),
     path('colleges/by-category/', get_colleges_by_course_category, name='get_colleges_by_course_category'),
     path('colleges/categories/stats/', get_course_category_stats, name='get_course_category_stats'),
@@ -62,7 +91,7 @@ urlpatterns = [
     path('courses/', get_courses, name='get_courses'),
     path('courses/<int:course_id>/', get_course_detail, name='get_course_detail'),
     
-    # ==================== COURSE CATEGORIES (NEW) ====================
+    # ==================== COURSE CATEGORIES ====================
     path('courses/categories/', get_courses_by_category, name='get_courses_by_category'),
     path('courses/categories/<str:category>/', get_courses_by_category, name='get_courses_by_category_filtered'),
 
@@ -91,6 +120,8 @@ urlpatterns = [
     path('profile/me/', views.get_current_user_profile, name='current_user_profile'),
     path('change-password/', views.change_password, name='change_password'),
     path('profile/update/', update_profile, name='update_profile'),
+    path('profile/create-update/', views.create_or_update_profile, name='create_or_update_profile'),
+    path('profile/update/<int:profile_id>/', views.update_profile_by_id, name='update_profile_by_id'),
 
     # ==================== TIMELINE EVENTS ====================
     path('timeline/', timeline_events, name='timeline_events'),

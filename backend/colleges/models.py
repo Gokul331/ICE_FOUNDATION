@@ -48,7 +48,51 @@ class College(models.Model):
         blank=True, 
         help_text="List of course categories offered by the college"
     )
-    logo_url = models.URLField(max_length=500, null=True, blank=True)
+    
+    # ========== IMAGE FIELDS ==========
+    logo_url = models.URLField(max_length=500, null=True, blank=True, help_text="College logo URL")
+    
+    # Array of images for the college gallery
+    college_images = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Array of image URLs for college campus, facilities, etc."
+    )
+    
+    # Optional: separate fields for specific image types
+    cover_image = models.URLField(max_length=500, null=True, blank=True, help_text="Hero/cover image for college")
+    banner_image = models.URLField(max_length=500, null=True, blank=True, help_text="Banner image for college page")
+    campus_images = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Array of campus photos"
+    )
+    facility_images = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Array of facility/infrastructure photos"
+    )
+    hostel_images = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Array of hostel photos"
+    )
+    library_images = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Array of library photos"
+    )
+    lab_images = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Array of laboratory photos"
+    )
+    sports_images = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Array of sports facility photos"
+    )
+    
     location_city = models.CharField(max_length=100)
     location_state = models.CharField(max_length=100)
     location_pincode = models.CharField(max_length=10, null=True, blank=True)
@@ -126,10 +170,115 @@ class College(models.Model):
             .annotate(count=Count('category'))\
             .order_by('category')
     
+    # ========== IMAGE HELPER METHODS ==========
+    
+    @property
+    def all_images(self):
+        """Get all college images as a single list"""
+        images = []
+        if self.college_images:
+            images.extend(self.college_images)
+        if self.campus_images:
+            images.extend(self.campus_images)
+        if self.facility_images:
+            images.extend(self.facility_images)
+        return images
+    
+    @property
+    def has_gallery(self):
+        """Check if college has any gallery images"""
+        return bool(self.all_images)
+    
+    @property
+    def primary_image(self):
+        """Get the primary/cover image for the college"""
+        if self.cover_image:
+            return self.cover_image
+        if self.college_images and len(self.college_images) > 0:
+            return self.college_images[0]
+        if self.campus_images and len(self.campus_images) > 0:
+            return self.campus_images[0]
+        return self.logo_url or None
+    
+    def add_image(self, image_url, category='general'):
+        """Add an image to the specified category"""
+        if category == 'general':
+            if not self.college_images:
+                self.college_images = []
+            if image_url not in self.college_images:
+                self.college_images.append(image_url)
+        elif category == 'campus':
+            if not self.campus_images:
+                self.campus_images = []
+            if image_url not in self.campus_images:
+                self.campus_images.append(image_url)
+        elif category == 'facility':
+            if not self.facility_images:
+                self.facility_images = []
+            if image_url not in self.facility_images:
+                self.facility_images.append(image_url)
+        elif category == 'hostel':
+            if not self.hostel_images:
+                self.hostel_images = []
+            if image_url not in self.hostel_images:
+                self.hostel_images.append(image_url)
+        elif category == 'library':
+            if not self.library_images:
+                self.library_images = []
+            if image_url not in self.library_images:
+                self.library_images.append(image_url)
+        elif category == 'lab':
+            if not self.lab_images:
+                self.lab_images = []
+            if image_url not in self.lab_images:
+                self.lab_images.append(image_url)
+        elif category == 'sports':
+            if not self.sports_images:
+                self.sports_images = []
+            if image_url not in self.sports_images:
+                self.sports_images.append(image_url)
+        self.save()
+    
+    def remove_image(self, image_url, category='general'):
+        """Remove an image from the specified category"""
+        if category == 'general' and self.college_images:
+            if image_url in self.college_images:
+                self.college_images.remove(image_url)
+        elif category == 'campus' and self.campus_images:
+            if image_url in self.campus_images:
+                self.campus_images.remove(image_url)
+        elif category == 'facility' and self.facility_images:
+            if image_url in self.facility_images:
+                self.facility_images.remove(image_url)
+        elif category == 'hostel' and self.hostel_images:
+            if image_url in self.hostel_images:
+                self.hostel_images.remove(image_url)
+        elif category == 'library' and self.library_images:
+            if image_url in self.library_images:
+                self.library_images.remove(image_url)
+        elif category == 'lab' and self.lab_images:
+            if image_url in self.lab_images:
+                self.lab_images.remove(image_url)
+        elif category == 'sports' and self.sports_images:
+            if image_url in self.sports_images:
+                self.sports_images.remove(image_url)
+        self.save()
+    
+    def get_images_by_category(self, category):
+        """Get images by specific category"""
+        category_map = {
+            'general': self.college_images,
+            'campus': self.campus_images,
+            'facility': self.facility_images,
+            'hostel': self.hostel_images,
+            'library': self.library_images,
+            'lab': self.lab_images,
+            'sports': self.sports_images,
+        }
+        return category_map.get(category, [])
+    
     class Meta:
         ordering = ['college_name']
-
-
 # ==================== COURSE MODEL (UPDATED WITH CATEGORY FIELD) ====================
 class Course(models.Model):
     DEGREE_TYPE_CHOICES = [

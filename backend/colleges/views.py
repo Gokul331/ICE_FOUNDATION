@@ -30,7 +30,12 @@ from .serializers import (
     CollegeSerializer, CollegeListSerializer, CourseSerializer,
     UserProfileSerializer, TimelineEventSerializer, RegisterSerializer, LoginSerializer,
     FeesSerializer, FeesListSerializer, HostelSerializer, ApplicationFormSerializer,
-    StudentApplicationSerializer, StudentApplicationListSerializer
+    StudentApplicationSerializer, StudentApplicationListSerializer,
+    CollegeCourseFilterSerializer, 
+    CollegeBulkCourseUpdateSerializer,
+    CollegeWithCoursesSerializer,
+    CollegeWithFeesSerializer,
+    CollegeImageUpdateSerializer  # Add this line
 )
 from .utils.pdf_generator import generate_application_pdf
 from .utils.local_save import save_application_locally, save_application_media_files
@@ -120,14 +125,272 @@ def get_college_courses(request, college_id):
         return Response({'error': str(e)}, status=500)
 
 
-from django.db.models import Q, Count, Value
-from django.db.models.functions import Length
-from .serializers import (
-    CollegeCourseFilterSerializer, 
-    CollegeBulkCourseUpdateSerializer,
-    CollegeWithCoursesSerializer,
-    CollegeWithFeesSerializer
-)
+# ==================== COLLEGE IMAGE VIEWS ====================
+
+@api_view(['GET'])
+def get_college_gallery(request, college_id):
+    """Get all images for a specific college"""
+    try:
+        college = College.objects.get(college_id=college_id)
+        
+        gallery_data = {
+            'college_id': college.college_id,
+            'college_name': college.college_name,
+            'logo_url': college.logo_url,
+            'cover_image': college.cover_image,
+            'banner_image': college.banner_image,
+            'college_images': college.college_images or [],
+            'campus_images': college.campus_images or [],
+            'facility_images': college.facility_images or [],
+            'hostel_images': college.hostel_images or [],
+            'library_images': college.library_images or [],
+            'lab_images': college.lab_images or [],
+            'sports_images': college.sports_images or [],
+            'all_images': college.all_images,
+            'primary_image': college.primary_image,
+            'has_gallery': college.has_gallery
+        }
+        
+        return Response(gallery_data, status=status.HTTP_200_OK)
+        
+    except College.DoesNotExist:
+        return Response({'error': 'College not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error in get_college_gallery: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def get_college_images_by_category(request, college_id, category):
+    """Get images by specific category for a college"""
+    try:
+        college = College.objects.get(college_id=college_id)
+        
+        category_map = {
+            'general': college.college_images,
+            'campus': college.campus_images,
+            'facility': college.facility_images,
+            'hostel': college.hostel_images,
+            'library': college.library_images,
+            'lab': college.lab_images,
+            'sports': college.sports_images,
+        }
+        
+        if category not in category_map:
+            return Response({'error': f'Invalid category. Valid options: {list(category_map.keys())}'}, 
+                          status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({
+            'college_id': college.college_id,
+            'college_name': college.college_name,
+            'category': category,
+            'images': category_map.get(category, [])
+        }, status=status.HTTP_200_OK)
+        
+    except College.DoesNotExist:
+        return Response({'error': 'College not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error in get_college_images_by_category: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def add_college_images(request, college_id):
+    """Add images to a specific college category (Admin only)"""
+    try:
+        college = College.objects.get(college_id=college_id)
+        
+        serializer = CollegeImageUpdateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        data = serializer.validated_data
+        action = data['action']
+        category = data['category']
+        images = data.get('images', [])
+        image_url = data.get('image_url')
+        
+        # Get the appropriate image list
+        category_map = {
+            'general': 'college_images',
+            'campus': 'campus_images',
+            'facility': 'facility_images',
+            'hostel': 'hostel_images',
+            'library': 'library_images',
+            'lab': 'lab_images',
+            'sports': 'sports_images',
+        }
+        
+        if category not in category_map:
+            return Response({'error': f'Invalid category'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        field_name = category_map[category]
+        current_images = getattr(college, field_name) or []
+        
+        if action == 'add':
+            new_images = images or ([image_url] if image_url else [])
+            if not new_images:
+                return Response({'error': 'No images provided to add'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Add images (avoid duplicates)
+            for img in new_images:
+                if img not in current_images:
+                    current_images.append(img)
+            
+            setattr(college, field_name, current_images)
+            college.save()
+            
+            return Response({
+                'success': True,
+                'message': f'Added {len(new_images)} image(s) to {category}',
+                'category': category,
+                'images': current_images,
+                'total_images': len(current_images)
+            }, status=status.HTTP_200_OK)
+            
+        elif action == 'remove':
+            images_to_remove = images or ([image_url] if image_url else [])
+            if not images_to_remove:
+                return Response({'error': 'No images provided to remove'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Remove images
+            removed_count = 0
+            for img in images_to_remove:
+                if img in current_images:
+                    current_images.remove(img)
+                    removed_count += 1
+            
+            setattr(college, field_name, current_images)
+            college.save()
+            
+            return Response({
+                'success': True,
+                'message': f'Removed {removed_count} image(s) from {category}',
+                'category': category,
+                'images': current_images,
+                'total_images': len(current_images)
+            }, status=status.HTTP_200_OK)
+            
+        elif action == 'set':
+            if not images:
+                return Response({'error': 'No images provided to set'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            setattr(college, field_name, images)
+            college.save()
+            
+            return Response({
+                'success': True,
+                'message': f'Replaced images in {category} with {len(images)} image(s)',
+                'category': category,
+                'images': images,
+                'total_images': len(images)
+            }, status=status.HTTP_200_OK)
+        
+        return Response({'error': 'Invalid action'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    except College.DoesNotExist:
+        return Response({'error': 'College not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error in add_college_images: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['PUT'])
+@permission_classes([IsAdminUser])
+def update_college_cover_image(request, college_id):
+    """Update college cover/hero image (Admin only)"""
+    try:
+        college = College.objects.get(college_id=college_id)
+        cover_image_url = request.data.get('cover_image')
+        
+        if not cover_image_url:
+            return Response({'error': 'cover_image URL is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        college.cover_image = cover_image_url
+        college.save()
+        
+        return Response({
+            'success': True,
+            'message': 'Cover image updated successfully',
+            'college_id': college.college_id,
+            'cover_image': college.cover_image
+        }, status=status.HTTP_200_OK)
+        
+    except College.DoesNotExist:
+        return Response({'error': 'College not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error in update_college_cover_image: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['PUT'])
+@permission_classes([IsAdminUser])
+def update_college_banner_image(request, college_id):
+    """Update college banner image (Admin only)"""
+    try:
+        college = College.objects.get(college_id=college_id)
+        banner_image_url = request.data.get('banner_image')
+        
+        if not banner_image_url:
+            return Response({'error': 'banner_image URL is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        college.banner_image = banner_image_url
+        college.save()
+        
+        return Response({
+            'success': True,
+            'message': 'Banner image updated successfully',
+            'college_id': college.college_id,
+            'banner_image': college.banner_image
+        }, status=status.HTTP_200_OK)
+        
+    except College.DoesNotExist:
+        return Response({'error': 'College not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error in update_college_banner_image: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['DELETE'])
+@permission_classes([IsAdminUser])
+def delete_college_image(request, college_id, category, image_index):
+    """Delete a specific image from college gallery by index (Admin only)"""
+    try:
+        college = College.objects.get(college_id=college_id)
+        
+        category_map = {
+            'general': 'college_images',
+            'campus': 'campus_images',
+            'facility': 'facility_images',
+            'hostel': 'hostel_images',
+            'library': 'library_images',
+            'lab': 'lab_images',
+            'sports': 'sports_images',
+        }
+        
+        if category not in category_map:
+            return Response({'error': f'Invalid category. Valid options: {list(category_map.keys())}'}, 
+                          status=status.HTTP_400_BAD_REQUEST)
+        
+        field_name = category_map[category]
+        current_images = getattr(college, field_name) or []
+        
+        if image_index < 0 or image_index >= len(current_images):
+            return Response({'error': 'Image index out of range'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        removed_image = current_images.pop(image_index)
+        setattr(college, field_name, current_images)
+        college.save()
+        
+        return Response({
+            'success': True,
+            'message': f'Image deleted from {category}',
+            'category': category,
+            'removed_image': removed_image,
+            'remaining_images': len(current_images)
+        }, status=status.HTTP_200_OK)
+        
+    except College.DoesNotExist:
+        return Response({'error': 'College not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error in delete_college_image: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # ==================== COURSE CATEGORY VIEWS ====================
 
@@ -175,7 +438,6 @@ def get_college_course_categories(request):
     except Exception as e:
         logger.error(f"Error in get_college_course_categories: {str(e)}")
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['GET'])
 def get_colleges_by_course_category(request):
@@ -273,7 +535,6 @@ def get_colleges_by_course_category(request):
         logger.error(f"Error in get_colleges_by_course_category: {str(e)}")
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 @api_view(['GET'])
 def get_courses_by_category(request, category=None):
     """Get courses filtered by category"""
@@ -346,7 +607,6 @@ def get_courses_by_category(request, category=None):
     except Exception as e:
         logger.error(f"Error in get_courses_by_category: {str(e)}")
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['GET'])
 def get_course_category_stats(request):
@@ -438,7 +698,6 @@ def bulk_update_college_categories(request):
         logger.error(f"Error in bulk_update_college_categories: {str(e)}")
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 @api_view(['GET'])
 def get_college_with_courses_detail(request, college_id):
     """Get college with detailed course information grouped by category"""
@@ -475,7 +734,6 @@ def get_college_with_courses_detail(request, college_id):
     except Exception as e:
         logger.error(f"Error in get_college_with_courses_detail: {str(e)}")
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
@@ -668,6 +926,212 @@ def get_course_detail(request, course_id):
     except Course.DoesNotExist:
         return Response({'error': 'Course not found'}, status=404)
 
+
+# ==================== ADDITIONAL COLLEGE IMAGE VIEWS ====================
+
+@api_view(['GET'])
+def get_featured_colleges(request):
+    """Get featured colleges with images for homepage"""
+    try:
+        limit = int(request.GET.get('limit', 6))
+        
+        # Get colleges that have at least a cover image or logo
+        colleges = College.objects.filter(
+            Q(cover_image__isnull=False) | 
+            Q(college_images__isnull=False) |
+            Q(logo_url__isnull=False)
+        ).order_by('-created_at')[:limit]
+        
+        serializer = CollegeListSerializer(colleges, many=True)
+        
+        # Add primary image to each college
+        data = []
+        for college in colleges:
+            college_data = serializer.data[data.__len__()]
+            college_data['primary_image'] = college.primary_image
+            college_data['image_count'] = len(college.all_images)
+            data.append(college_data)
+        
+        return Response({
+            'success': True,
+            'count': len(data),
+            'colleges': data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error in get_featured_colleges: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+def get_college_slideshow_images(request, college_id):
+    """Get images suitable for slideshow/carousel display"""
+    try:
+        college = College.objects.get(college_id=college_id)
+        
+        # Collect all images for slideshow
+        slideshow_images = []
+        
+        # Add cover image first (if exists)
+        if college.cover_image:
+            slideshow_images.append({
+                'url': college.cover_image,
+                'type': 'cover',
+                'title': f'{college.college_name} - Campus View'
+            })
+        
+        # Add general college images
+        for idx, img in enumerate(college.college_images or []):
+            slideshow_images.append({
+                'url': img,
+                'type': 'general',
+                'title': f'{college.college_name} - View {idx + 1}'
+            })
+        
+        # Add campus images
+        for idx, img in enumerate(college.campus_images or []):
+            slideshow_images.append({
+                'url': img,
+                'type': 'campus',
+                'title': f'{college.college_name} - Campus {idx + 1}'
+            })
+        
+        # Add facility images
+        for idx, img in enumerate(college.facility_images or []):
+            slideshow_images.append({
+                'url': img,
+                'type': 'facility',
+                'title': f'{college.college_name} - Facility {idx + 1}'
+            })
+        
+        return Response({
+            'college_id': college.college_id,
+            'college_name': college.college_name,
+            'slideshow_images': slideshow_images,
+            'total_images': len(slideshow_images)
+        }, status=status.HTTP_200_OK)
+        
+    except College.DoesNotExist:
+        return Response({'error': 'College not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error in get_college_slideshow_images: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+def get_colleges_with_gallery(request):
+    """Get all colleges that have gallery images"""
+    try:
+        limit = int(request.GET.get('limit', 20))
+        offset = int(request.GET.get('offset', 0))
+        
+        # Filter colleges with any images
+        colleges = College.objects.filter(
+            Q(college_images__isnull=False) | 
+            Q(campus_images__isnull=False) | 
+            Q(facility_images__isnull=False) |
+            Q(cover_image__isnull=False)
+        )
+        
+        total_count = colleges.count()
+        colleges = colleges[offset:offset + limit]
+        
+        serializer = CollegeListSerializer(colleges, many=True)
+        
+        # Add image count and primary image
+        data = []
+        for college in colleges:
+            college_data = serializer.data[data.__len__()]
+            college_data['primary_image'] = college.primary_image
+            college_data['total_images'] = len(college.all_images)
+            college_data['image_categories'] = {
+                'general': len(college.college_images or []),
+                'campus': len(college.campus_images or []),
+                'facilities': len(college.facility_images or []),
+                'hostel': len(college.hostel_images or []),
+                'library': len(college.library_images or []),
+                'labs': len(college.lab_images or []),
+                'sports': len(college.sports_images or [])
+            }
+            data.append(college_data)
+        
+        return Response({
+            'total': total_count,
+            'limit': limit,
+            'offset': offset,
+            'has_next': offset + limit < total_count,
+            'colleges': data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error in get_colleges_with_gallery: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def bulk_upload_college_images(request):
+    """Bulk upload images for multiple colleges (Admin only)"""
+    try:
+        data = request.data
+        college_ids = data.get('college_ids', [])
+        image_urls = data.get('image_urls', [])
+        category = data.get('category', 'general')
+        
+        if not college_ids:
+            return Response({'error': 'college_ids is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not image_urls:
+            return Response({'error': 'image_urls is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        category_map = {
+            'general': 'college_images',
+            'campus': 'campus_images',
+            'facility': 'facility_images',
+            'hostel': 'hostel_images',
+            'library': 'library_images',
+            'lab': 'lab_images',
+            'sports': 'sports_images',
+        }
+        
+        if category not in category_map:
+            return Response({'error': f'Invalid category'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        field_name = category_map[category]
+        updated_colleges = []
+        
+        for college_id in college_ids:
+            try:
+                college = College.objects.get(college_id=college_id)
+                current_images = getattr(college, field_name) or []
+                
+                # Add new images
+                for img_url in image_urls:
+                    if img_url not in current_images:
+                        current_images.append(img_url)
+                
+                setattr(college, field_name, current_images)
+                college.save()
+                updated_colleges.append({
+                    'college_id': college.college_id,
+                    'college_name': college.college_name,
+                    'images_added': len(image_urls),
+                    'total_images': len(current_images)
+                })
+                
+            except College.DoesNotExist:
+                continue
+        
+        return Response({
+            'success': True,
+            'message': f'Updated {len(updated_colleges)} colleges with {len(image_urls)} images each',
+            'category': category,
+            'updated_colleges': updated_colleges
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error in bulk_upload_college_images: {str(e)}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # ==================== FEES VIEWS ====================
 

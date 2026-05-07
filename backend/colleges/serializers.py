@@ -14,12 +14,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# ==================== COLLEGE SERIALIZERS (UPDATED WITH JSONFIELD) ====================
+# ==================== COLLEGE SERIALIZERS (UPDATED WITH IMAGE FIELDS) ====================
 
 class CollegeSerializer(serializers.ModelSerializer):
     courses_offered_display = serializers.SerializerMethodField()
     type_display = serializers.SerializerMethodField()
     affiliation_display = serializers.SerializerMethodField()
+    all_images = serializers.SerializerMethodField()
+    primary_image = serializers.SerializerMethodField()
+    has_gallery = serializers.SerializerMethodField()
     
     class Meta:
         model = College
@@ -35,18 +38,53 @@ class CollegeSerializer(serializers.ModelSerializer):
     
     def get_affiliation_display(self, obj):
         return dict(College.AFFILIATION_CHOICES).get(obj.affiliation, obj.affiliation)
+    
+    def get_all_images(self, obj):
+        """Get all images combined"""
+        images = []
+        if obj.college_images:
+            images.extend(obj.college_images)
+        if obj.campus_images:
+            images.extend(obj.campus_images)
+        if obj.facility_images:
+            images.extend(obj.facility_images)
+        if obj.hostel_images:
+            images.extend(obj.hostel_images)
+        if obj.library_images:
+            images.extend(obj.library_images)
+        if obj.lab_images:
+            images.extend(obj.lab_images)
+        if obj.sports_images:
+            images.extend(obj.sports_images)
+        return images
+    
+    def get_primary_image(self, obj):
+        """Get primary/cover image"""
+        if obj.cover_image:
+            return obj.cover_image
+        if obj.college_images and len(obj.college_images) > 0:
+            return obj.college_images[0]
+        if obj.campus_images and len(obj.campus_images) > 0:
+            return obj.campus_images[0]
+        return obj.logo_url
+    
+    def get_has_gallery(self, obj):
+        """Check if college has any gallery images"""
+        return bool(self.get_all_images(obj))
 
 
 class CollegeListSerializer(serializers.ModelSerializer):
     courses_offered_display = serializers.SerializerMethodField()
     courses_count = serializers.SerializerMethodField()
+    primary_image = serializers.SerializerMethodField()
     
     class Meta:
         model = College
         fields = [
             'college_id', 'college_name', 'short_name', 'counselling_code', 
             'location_city', 'location_state', 'type', 'affiliation',
-            'placement_percentage', 'naac_grade', 'nirf_rank', 'logo_url', 
+            'placement_percentage', 'naac_grade', 'nirf_rank', 'logo_url',
+            'cover_image', 'college_images', 'primary_image',
             'hostel_available', 'courses_offered', 'courses_offered_display',
             'courses_count'
         ]
@@ -57,10 +95,110 @@ class CollegeListSerializer(serializers.ModelSerializer):
     
     def get_courses_count(self, obj):
         return len(obj.courses_offered) if obj.courses_offered else 0
+    
+    def get_primary_image(self, obj):
+        """Get primary/cover image for list view"""
+        if obj.cover_image:
+            return obj.cover_image
+        if obj.college_images and len(obj.college_images) > 0:
+            return obj.college_images[0]
+        if obj.campus_images and len(obj.campus_images) > 0:
+            return obj.campus_images[0]
+        return obj.logo_url
+
+
+class CollegeDetailSerializer(serializers.ModelSerializer):
+    """Detailed serializer for single college view with all images"""
+    courses_offered_display = serializers.SerializerMethodField()
+    type_display = serializers.SerializerMethodField()
+    affiliation_display = serializers.SerializerMethodField()
+    
+    # Image gallery fields
+    all_images = serializers.SerializerMethodField()
+    all_categorized_images = serializers.SerializerMethodField()
+    primary_image = serializers.SerializerMethodField()
+    has_gallery = serializers.SerializerMethodField()
+    
+    # Related data
+    courses_detail = serializers.SerializerMethodField()
+    fees = serializers.SerializerMethodField()
+    hostels = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = College
+        fields = '__all__'
+    
+    def get_courses_offered_display(self, obj):
+        course_map = dict(College.COURSE_CATEGORY_CHOICES)
+        return [course_map.get(course, course) for course in obj.courses_offered]
+    
+    def get_type_display(self, obj):
+        return dict(College.TYPE_CHOICES).get(obj.type, obj.type)
+    
+    def get_affiliation_display(self, obj):
+        return dict(College.AFFILIATION_CHOICES).get(obj.affiliation, obj.affiliation)
+    
+    def get_all_images(self, obj):
+        """Get all images combined"""
+        images = []
+        if obj.college_images:
+            images.extend(obj.college_images)
+        if obj.campus_images:
+            images.extend(obj.campus_images)
+        if obj.facility_images:
+            images.extend(obj.facility_images)
+        if obj.hostel_images:
+            images.extend(obj.hostel_images)
+        if obj.library_images:
+            images.extend(obj.library_images)
+        if obj.lab_images:
+            images.extend(obj.lab_images)
+        if obj.sports_images:
+            images.extend(obj.sports_images)
+        return images
+    
+    def get_all_categorized_images(self, obj):
+        """Get all images categorized by type"""
+        return {
+            'general': obj.college_images or [],
+            'campus': obj.campus_images or [],
+            'facilities': obj.facility_images or [],
+            'hostel': obj.hostel_images or [],
+            'library': obj.library_images or [],
+            'labs': obj.lab_images or [],
+            'sports': obj.sports_images or [],
+        }
+    
+    def get_primary_image(self, obj):
+        if obj.cover_image:
+            return obj.cover_image
+        if obj.college_images and len(obj.college_images) > 0:
+            return obj.college_images[0]
+        if obj.campus_images and len(obj.campus_images) > 0:
+            return obj.campus_images[0]
+        return obj.logo_url
+    
+    def get_has_gallery(self, obj):
+        return bool(self.get_all_images(obj))
+    
+    def get_courses_detail(self, obj):
+        if hasattr(obj, 'course_set'):
+            courses = obj.course_set.filter(is_active=True)
+            return CourseSerializer(courses, many=True).data
+        return []
+    
+    def get_fees(self, obj):
+        fees = Fees.objects.filter(college=obj).order_by('-academic_year')
+        return FeesListSerializer(fees, many=True).data
+    
+    def get_hostels(self, obj):
+        hostels = Hostel.objects.filter(college=obj, is_active=True)
+        return HostelSerializer(hostels, many=True).data
 
 
 class CollegeCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating colleges with validation"""
+    """Serializer for creating colleges with image fields validation"""
+    
     class Meta:
         model = College
         fields = '__all__'
@@ -73,6 +211,41 @@ class CollegeCreateSerializer(serializers.ModelSerializer):
                     f"'{category}' is not a valid course category. Valid options: {valid_categories}"
                 )
         return value
+    
+    def validate_college_images(self, value):
+        """Validate college images array"""
+        if value and len(value) > 50:
+            raise serializers.ValidationError("Maximum 50 images allowed")
+        return value
+    
+    def validate_campus_images(self, value):
+        if value and len(value) > 30:
+            raise serializers.ValidationError("Maximum 30 campus images allowed")
+        return value
+    
+    def validate_facility_images(self, value):
+        if value and len(value) > 30:
+            raise serializers.ValidationError("Maximum 30 facility images allowed")
+        return value
+
+
+class CollegeUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating college with partial updates"""
+    
+    class Meta:
+        model = College
+        fields = '__all__'
+        read_only_fields = ['college_id', 'created_at', 'updated_at']
+    
+    def validate_courses_offered(self, value):
+        if value is not None:
+            valid_categories = [choice[0] for choice in College.COURSE_CATEGORY_CHOICES]
+            for category in value:
+                if category not in valid_categories:
+                    raise serializers.ValidationError(
+                        f"'{category}' is not a valid course category"
+                    )
+        return value
 
 
 class CollegeWithCoursesSerializer(serializers.ModelSerializer):
@@ -80,6 +253,7 @@ class CollegeWithCoursesSerializer(serializers.ModelSerializer):
     courses_detail = serializers.SerializerMethodField()
     type_display = serializers.SerializerMethodField()
     affiliation_display = serializers.SerializerMethodField()
+    primary_image = serializers.SerializerMethodField()
     
     class Meta:
         model = College
@@ -90,7 +264,6 @@ class CollegeWithCoursesSerializer(serializers.ModelSerializer):
         return [course_map.get(course, course) for course in obj.courses_offered]
     
     def get_courses_detail(self, obj):
-        """If you have a separate Course model, return those details"""
         if hasattr(obj, 'course_set'):
             courses = obj.course_set.filter(is_active=True)
             return CourseSerializer(courses, many=True).data
@@ -101,6 +274,15 @@ class CollegeWithCoursesSerializer(serializers.ModelSerializer):
     
     def get_affiliation_display(self, obj):
         return dict(College.AFFILIATION_CHOICES).get(obj.affiliation, obj.affiliation)
+    
+    def get_primary_image(self, obj):
+        if obj.cover_image:
+            return obj.cover_image
+        if obj.college_images and len(obj.college_images) > 0:
+            return obj.college_images[0]
+        if obj.campus_images and len(obj.campus_images) > 0:
+            return obj.campus_images[0]
+        return obj.logo_url
 
 
 class CollegeWithFeesSerializer(serializers.ModelSerializer):
@@ -108,13 +290,18 @@ class CollegeWithFeesSerializer(serializers.ModelSerializer):
     courses_offered_display = serializers.SerializerMethodField()
     hostels = serializers.SerializerMethodField()
     type_display = serializers.SerializerMethodField()
+    primary_image = serializers.SerializerMethodField()
+    all_images = serializers.SerializerMethodField()
     
     class Meta:
         model = College
         fields = [
             'college_id', 'college_name', 'counselling_code', 
             'location_city', 'location_state', 'type', 'type_display',
-            'courses_offered', 'courses_offered_display', 'fees', 'hostels'
+            'courses_offered', 'courses_offered_display', 'fees', 'hostels',
+            'logo_url', 'cover_image', 'primary_image', 'all_images',
+            'college_images', 'campus_images', 'facility_images',
+            'hostel_images', 'library_images', 'lab_images', 'sports_images'
         ]
     
     def get_fees(self, obj):
@@ -131,6 +318,52 @@ class CollegeWithFeesSerializer(serializers.ModelSerializer):
     
     def get_type_display(self, obj):
         return dict(College.TYPE_CHOICES).get(obj.type, obj.type)
+    
+    def get_primary_image(self, obj):
+        if obj.cover_image:
+            return obj.cover_image
+        if obj.college_images and len(obj.college_images) > 0:
+            return obj.college_images[0]
+        if obj.campus_images and len(obj.campus_images) > 0:
+            return obj.campus_images[0]
+        return obj.logo_url
+    
+    def get_all_images(self, obj):
+        images = []
+        if obj.college_images:
+            images.extend(obj.college_images)
+        if obj.campus_images:
+            images.extend(obj.campus_images)
+        if obj.facility_images:
+            images.extend(obj.facility_images)
+        if obj.hostel_images:
+            images.extend(obj.hostel_images)
+        if obj.library_images:
+            images.extend(obj.library_images)
+        if obj.lab_images:
+            images.extend(obj.lab_images)
+        if obj.sports_images:
+            images.extend(obj.sports_images)
+        return images
+
+
+class CollegeImageUpdateSerializer(serializers.Serializer):
+    """Serializer for updating college images"""
+    action = serializers.ChoiceField(choices=['add', 'remove', 'set'])
+    category = serializers.ChoiceField(choices=[
+        'general', 'campus', 'facility', 'hostel', 'library', 'lab', 'sports'
+    ])
+    images = serializers.ListField(
+        child=serializers.URLField(),
+        required=False,
+        default=list
+    )
+    image_url = serializers.URLField(required=False)
+    
+    def validate_images(self, value):
+        if len(value) > 50:
+            raise serializers.ValidationError("Cannot add more than 50 images at once")
+        return value
 
 
 # ==================== COURSE SERIALIZERS ====================
@@ -143,13 +376,13 @@ class CourseSerializer(serializers.ModelSerializer):
     degree_type_display = serializers.SerializerMethodField()
     tuition_fee_management_formatted = serializers.SerializerMethodField()
     tuition_fee_government_formatted = serializers.SerializerMethodField()
+    college_details = serializers.SerializerMethodField()
     
     class Meta:
         model = Course
         fields = '__all__'
     
     def get_category_display(self, obj):
-        """Map course category to display name"""
         if hasattr(obj, 'category'):
             category_map = dict(College.COURSE_CATEGORY_CHOICES)
             return category_map.get(obj.category, obj.category)
@@ -173,12 +406,25 @@ class CourseSerializer(serializers.ModelSerializer):
         if obj.tuition_fee_government:
             return f"₹{obj.tuition_fee_government:,.2f}/year"
         return None
+    
+    def get_college_details(self, obj):
+        if obj.college:
+            return {
+                'college_id': obj.college.college_id,
+                'college_name': obj.college.college_name,
+                'logo_url': obj.college.logo_url,
+                'cover_image': obj.college.cover_image,
+                'location_city': obj.college.location_city,
+                'location_state': obj.college.location_state
+            }
+        return None
 
 
 class CourseWithFeesSerializer(serializers.ModelSerializer):
     college_fees = serializers.SerializerMethodField()
     college_hostels = serializers.SerializerMethodField()
     category_display = serializers.SerializerMethodField()
+    college_details = serializers.SerializerMethodField()
     
     class Meta:
         model = Course
@@ -195,6 +441,23 @@ class CourseWithFeesSerializer(serializers.ModelSerializer):
     def get_category_display(self, obj):
         category_map = dict(College.COURSE_CATEGORY_CHOICES)
         return category_map.get(obj.category, obj.category) if hasattr(obj, 'category') else None
+    
+    def get_college_details(self, obj):
+        if obj.college:
+            return {
+                'college_id': obj.college.college_id,
+                'college_name': obj.college.college_name,
+                'logo_url': obj.college.logo_url,
+                'cover_image': obj.college.cover_image,
+                'college_images': obj.college.college_images[:5] if obj.college.college_images else [],
+                'location_city': obj.college.location_city,
+                'location_state': obj.college.location_state,
+                'type': obj.college.type,
+                'naac_grade': obj.college.naac_grade,
+                'nirf_rank': obj.college.nirf_rank,
+                'placement_percentage': obj.college.placement_percentage
+            }
+        return None
 
 
 # ==================== FILTER SERIALIZERS ====================
@@ -211,6 +474,7 @@ class CollegeCourseFilterSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=College.TYPE_CHOICES, required=False)
     min_placement = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
     hostel_available = serializers.BooleanField(required=False)
+    has_images = serializers.BooleanField(required=False, help_text="Filter colleges with gallery images")
 
 
 class CollegeBulkCourseUpdateSerializer(serializers.Serializer):
@@ -342,7 +606,8 @@ class FeesSerializer(serializers.ModelSerializer):
                 'location_state': obj.college.location_state,
                 'type': obj.college.type,
                 'hostel_available': obj.college.hostel_available,
-                'courses_offered': obj.college.courses_offered
+                'courses_offered': obj.college.courses_offered,
+                'logo_url': obj.college.logo_url
             }
         return None
 
@@ -377,6 +642,7 @@ class FeeRangeSerializer(serializers.Serializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.ReadOnlyField(source='user.username')
+    email = serializers.ReadOnlyField(source='user.email')
     
     class Meta:
         model = UserProfile
@@ -709,11 +975,22 @@ class StudentApplicationDataSerializer(serializers.Serializer):
 class StudentApplicationSerializer(serializers.ModelSerializer):
     """Serializer for StudentApplication model with file uploads"""
     college_name = serializers.CharField(source='college.college_name', read_only=True)
+    college_logo = serializers.CharField(source='college.logo_url', read_only=True)
+    college_images = serializers.SerializerMethodField()
 
     class Meta:
         model = StudentApplication
         fields = '__all__'
         read_only_fields = ['application_id', 'submitted_at', 'updated_at']
+    
+    def get_college_images(self, obj):
+        if obj.college:
+            return {
+                'logo': obj.college.logo_url,
+                'cover': obj.college.cover_image,
+                'gallery': obj.college.college_images[:5] if obj.college.college_images else []
+            }
+        return None
 
     def validate_photo(self, value):
         if value and value.size > 5 * 1024 * 1024:
@@ -739,11 +1016,12 @@ class StudentApplicationSerializer(serializers.ModelSerializer):
 class StudentApplicationListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for listing applications"""
     college_name = serializers.CharField(source='college.college_name', read_only=True)
+    college_logo = serializers.CharField(source='college.logo_url', read_only=True)
 
     class Meta:
         model = StudentApplication
         fields = [
-            'application_id', 'college_name', 'quota_type', 'status',
+            'application_id', 'college_name', 'college_logo', 'quota_type', 'status',
             'first_name', 'last_name', 'email_id', 'mobile_number',
             'submitted_at', 'updated_at'
         ]

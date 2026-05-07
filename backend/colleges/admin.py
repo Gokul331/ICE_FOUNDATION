@@ -9,15 +9,50 @@ from django.utils.safestring import mark_safe
 class CollegeAdmin(admin.ModelAdmin):
     list_display = ('college_name', 'short_name', 'counselling_code', 'courses_offered_summary', 
                     'location_city', 'location_state', 'type', 'affiliation', 'placement_percentage', 
-                    'hostel_available', 'created_at')
+                    'image_preview', 'has_gallery_badge', 'hostel_available', 'created_at')
     search_fields = ('college_name', 'short_name', 'counselling_code', 'location_city', 'location_state')
     list_filter = ('location_state', 'type', 'affiliation', 'naac_grade', 'hostel_available', 'established_year')
-    readonly_fields = ('created_at', 'updated_at', 'courses_offered_summary', 'total_courses_count', 'sync_status')
+    readonly_fields = ('created_at', 'updated_at', 'courses_offered_summary', 'total_courses_count', 
+                      'sync_status', 'image_preview', 'gallery_preview')
     
     actions = ['sync_categories_from_courses', 'bulk_add_engineering_category', 'clear_categories']
     
     fieldsets = (
-        ('Basic Information', {'fields': ('college_name', 'short_name', 'counselling_code', 'logo_url', 'type', 'affiliation')}),
+        ('Basic Information', {
+            'fields': ('college_name', 'short_name', 'counselling_code', 'type', 'affiliation')
+        }),
+        ('Images', {
+            'fields': ('logo_url', 'cover_image', 'banner_image', 'image_preview', 'gallery_preview'),
+            'description': mark_safe('''
+                <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin-bottom: 10px;">
+                    <strong>🖼️ College Images Management:</strong><br>
+                    • <strong>Logo URL:</strong> College logo for branding<br>
+                    • <strong>Cover Image:</strong> Hero/cover image for college page<br>
+                    • <strong>Banner Image:</strong> Banner image for promotions<br>
+                    • <strong>Gallery Images:</strong> Additional images managed in separate tabs below
+                </div>
+            ''')
+        }),
+        ('Image Gallery', {
+            'fields': ('college_images', 'campus_images', 'facility_images', 'hostel_images', 
+                      'library_images', 'lab_images', 'sports_images'),
+            'classes': ('wide',),
+            'description': mark_safe('''
+                <div style="background: #f1f5f9; padding: 12px; border-radius: 6px;">
+                    <strong>📸 Image Gallery Categories:</strong><br>
+                    • <strong>College Images:</strong> General college photos<br>
+                    • <strong>Campus Images:</strong> Campus views and landscapes<br>
+                    • <strong>Facility Images:</strong> Infrastructure and facilities<br>
+                    • <strong>Hostel Images:</strong> Hostel accommodations<br>
+                    • <strong>Library Images:</strong> Library photos<br>
+                    • <strong>Lab Images:</strong> Laboratory photos<br>
+                    • <strong>Sports Images:</strong> Sports facilities<br>
+                    <br>
+                    <strong>📝 Format:</strong> Enter image URLs as a JSON array<br>
+                    <code>["https://example.com/image1.jpg", "https://example.com/image2.jpg"]</code>
+                </div>
+            ''')
+        }),
         ('Location', {'fields': ('location_city', 'location_state', 'location_pincode', 'address')}),
         ('Campus Details', {'fields': ('established_year', 'total_campus_area', 'hostel_available')}),
         ('Course Categories', {
@@ -37,6 +72,44 @@ class CollegeAdmin(admin.ModelAdmin):
         ('Contact & Web', {'fields': ('website_url', 'email_domain', 'contact_phone')}),
         ('Timestamps', {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)})
     )
+    
+    def image_preview(self, obj):
+        """Display image preview in admin list"""
+        if obj.cover_image:
+            return mark_safe(f'<img src="{obj.cover_image}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" />')
+        elif obj.logo_url:
+            return mark_safe(f'<img src="{obj.logo_url}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" />')
+        elif obj.college_images and len(obj.college_images) > 0:
+            return mark_safe(f'<img src="{obj.college_images[0]}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" />')
+        return mark_safe('<span style="color: #999;">No image</span>')
+    image_preview.short_description = 'Preview'
+    
+    def gallery_preview(self, obj):
+        """Display gallery preview in admin detail"""
+        total_images = len(obj.all_images)
+        if total_images == 0:
+            return mark_safe('<span style="color: #999;">No gallery images</span>')
+        
+        output = f'<div><strong>Total Images: {total_images}</strong></div>'
+        output += '<div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;">'
+        
+        # Show first 6 images as thumbnails
+        for img in obj.all_images[:6]:
+            output += f'<img src="{img}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd;" />'
+        
+        if total_images > 6:
+            output += f'<div style="width: 80px; height: 80px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; border-radius: 8px;">+{total_images - 6}</div>'
+        
+        output += '</div>'
+        return mark_safe(output)
+    gallery_preview.short_description = 'Gallery'
+    
+    def has_gallery_badge(self, obj):
+        """Display badge if college has gallery images"""
+        if obj.has_gallery:
+            return mark_safe('<span style="background: #4CAF50; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px;">✓ Has Gallery</span>')
+        return mark_safe('<span style="background: #999; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px;">No Gallery</span>')
+    has_gallery_badge.short_description = 'Gallery Status'
     
     def courses_offered_summary(self, obj):
         """Display course categories as colored badges"""
@@ -61,7 +134,6 @@ class CollegeAdmin(admin.ModelAdmin):
         for category in obj.courses_offered:
             category_name = category_map.get(category, category)
             color = color_map.get(category, '#666')
-            # Build HTML string then wrap with mark_safe
             badge_html = f'<span style="background:{color}; color:white; padding:2px 8px; border-radius:12px; margin:2px; font-size:11px; display:inline-block;">{category_name}</span>'
             badges.append(badge_html)
         
@@ -74,7 +146,6 @@ class CollegeAdmin(admin.ModelAdmin):
         if count == 0:
             return "0 active courses"
         courses_url = f"/admin/colleges/course/?college__id__exact={obj.college_id}"
-        # Use format_html for multiple arguments
         return format_html('<a href="{}">{} active courses</a>', courses_url, count)
     total_courses_count.short_description = 'Total Courses'
     
@@ -143,6 +214,7 @@ class CollegeAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related('courses')
 
+
 # ==================== COURSE ADMIN (ENHANCED) ====================
 class CollegeStateListFilter(admin.SimpleListFilter):
     title = 'College State'
@@ -160,7 +232,7 @@ class CollegeStateListFilter(admin.SimpleListFilter):
 class CourseAdmin(admin.ModelAdmin):
     list_display = ('course_name', 'course_code', 'college', 'category_badge', 'degree_name', 
                     'tuition_fee_management', 'tuition_fee_government', 'cutoff_oc', 
-                    'cutoff_bc', 'cutoff_sc',  # Added cutoff_bc and cutoff_sc here
+                    'cutoff_bc', 'cutoff_sc',
                     'intake_seats', 'is_active')
     search_fields = ('course_name', 'course_code', 'college__college_name')
     list_filter = (CollegeStateListFilter, 'college', 'category', 'degree_type', 'degree_name', 'is_active', 'college__type', 'college__affiliation')
@@ -217,7 +289,7 @@ class CourseAdmin(admin.ModelAdmin):
             'allied_science': '#009688'
         }
         color = color_map.get(obj.category, '#666')
-        return mark_safe('<span style="background:{}; color:white; padding:2px 8px; border-radius:12px; font-size:11px;">{}</span>', color, category_name)
+        return mark_safe(f'<span style="background:{color}; color:white; padding:2px 8px; border-radius:12px; font-size:11px;">{category_name}</span>')
     category_badge.short_description = 'Category'
     
     def get_queryset(self, request):
@@ -522,7 +594,7 @@ class StudentApplicationAdmin(admin.ModelAdmin):
 
     def view_pdf_link(self, obj):
         if obj.pdf_copy and obj.pdf_copy.name:
-            return mark_safe('<a href="{}" target="_blank">📄 View PDF</a>', obj.pdf_copy.url)
+            return mark_safe(f'<a href="{obj.pdf_copy.url}" target="_blank">📄 View PDF</a>')
         return "No PDF available"
     view_pdf_link.short_description = 'Application PDF'
 
@@ -530,7 +602,7 @@ class StudentApplicationAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('user', 'college')
 
 
-# ==================== DASHBOARD STATS (OPTIONAL) ====================
+# ==================== DASHBOARD STATS ====================
 class DashboardStats(admin.AdminSite):
     """Custom admin site with dashboard stats"""
     
@@ -538,6 +610,11 @@ class DashboardStats(admin.AdminSite):
         # Add custom context for dashboard
         context = {
             'total_colleges': College.objects.count(),
+            'colleges_with_images': College.objects.filter(
+                Q(college_images__isnull=False) | 
+                Q(campus_images__isnull=False) | 
+                Q(cover_image__isnull=False)
+            ).count(),
             'total_courses': Course.objects.filter(is_active=True).count(),
             'total_applications': StudentApplication.objects.count(),
             'pending_applications': StudentApplication.objects.filter(status='submitted').count(),
@@ -553,6 +630,6 @@ class DashboardStats(admin.AdminSite):
 
 
 # ==================== CUSTOM ADMIN SITE SETTINGS ====================
-admin.site.site_header = "ICE Foundation Administration"
-admin.site.site_title = "ICE Foundation Admin Portal"
-admin.site.index_title = "Welcome to ICE Foundation Admin Dashboard"
+admin.site.site_header = "ACE Consulting Administration"
+admin.site.site_title = "ACE Consulting Admin Portal"
+admin.site.index_title = "Welcome to ACE Consulting Admin Dashboard"
