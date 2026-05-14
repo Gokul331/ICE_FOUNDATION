@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { confirmPasswordReset } from '../services/api';
 import '../styles/auth.css';
 
@@ -24,18 +25,6 @@ function ResetPassword() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!newPassword || !confirmPassword) {
-      setStatusMessage('Please fill in all fields.');
-      setStatusType('error');
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      setStatusMessage('Password must be at least 8 characters long.');
-      setStatusType('error');
-      return;
-    }
-
     if (newPassword !== confirmPassword) {
       setStatusMessage('Passwords do not match.');
       setStatusType('error');
@@ -50,7 +39,7 @@ function ResetPassword() {
         new_password: newPassword,
         confirm_password: confirmPassword,
       });
-      setStatusMessage('Password reset successful! You can now sign in with your new password.');
+      setStatusMessage('Password reset successful! Redirecting to login...');
       setStatusType('success');
       setTimeout(() => navigate('/login'), 3000);
     } catch (error) {
@@ -62,52 +51,61 @@ function ResetPassword() {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card-3d">
-        <div className="auth-brand-panel">
-          <div className="brand-bg-3d">
-            <div className="bg-circle circle-1"></div>
-            <div className="bg-circle circle-2"></div>
-            <div className="bg-circle circle-3"></div>
-          </div>
-          <div className="brand-content">
-            <div className="brand-logo-3d">ICE</div>
-            <div className="brand-title">
-              ICE Foundation
-              <small>Your Bridge to Success</small>
+    <div className="auth-page-premium">
+      <div className="auth-split-layout">
+        
+        {/* ── VISUAL SIDE ── */}
+        <div className="auth-visual-side">
+          <div className="visual-content">
+            <Link to="/" className="auth-logo-top">
+              <div className="logo-dot-premium" />
+              ACE <span>COUNSULTING</span>
+            </Link>
+            
+            <motion.div 
+              className="visual-text-box"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <h2>Secure your <br /><span>Journey</span></h2>
+              <p>Almost there. Create a new strong password to protect your account.</p>
+            </motion.div>
+
+            <div className="visual-footer-stats">
+              <div className="v-stat">
+                <strong>256-bit</strong>
+                <span>Encryption</span>
+              </div>
+              <div className="v-stat">
+                <strong>100%</strong>
+                <span>Secure</span>
+              </div>
             </div>
-          </div>
-          <div className="brand-tagline">
-            <div className="tagline-text">Create new password.</div>
-            <p className="tagline-subtext">Enter your new password below.</p>
           </div>
         </div>
 
-        <div className="auth-form-panel">
-          <div className="form-header">
-            <Link to="/login" className="back-home-btn">Back to login</Link>
-          </div>
-
-          {statusMessage && (
-            <div className={`status-message ${statusType}`}>
-              {statusMessage}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="auth-form">
-            <div className="form-welcome">
-              <h2>Set new password</h2>
+        {/* ── FORM SIDE ── */}
+        <div className="auth-form-side">
+          <motion.div 
+            className="form-container-inner"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            <div className="form-header">
+              <h3>Set New Password</h3>
               <p>Create a strong password for your account.</p>
             </div>
 
-            <div className="form-field">
-              <label>New password</label>
-              <div className="input-wrapper">
-                <svg className="input-icon" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                  <circle cx="12" cy="16" r="1"/>
-                  <path d="m9 11 3-3 3 3"/>
-                </svg>
+            {statusMessage && (
+              <div className={`auth-alert ${statusType}`}>
+                {statusMessage}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="premium-form">
+              <div className="input-group-premium" style={{ position: 'relative' }}>
+                <label>New Password</label>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={newPassword}
@@ -116,25 +114,17 @@ function ResetPassword() {
                   required
                   disabled={loading || !isValid}
                 />
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  disabled={loading}
+                <button 
+                  type="button" 
+                  className="pwd-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? 'Hide' : 'Show'}
                 </button>
               </div>
-            </div>
 
-            <div className="form-field">
-              <label>Confirm new password</label>
-              <div className="input-wrapper">
-                <svg className="input-icon" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                  <circle cx="12" cy="16" r="1"/>
-                  <path d="m9 11 3-3 3 3"/>
-                </svg>
+              <div className="input-group-premium">
+                <label>Confirm Password</label>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={confirmPassword}
@@ -144,16 +134,20 @@ function ResetPassword() {
                   disabled={loading || !isValid}
                 />
               </div>
-            </div>
 
-            <button type="submit" className="submit-btn" disabled={loading || !isValid}>
-              {loading ? 'Resetting...' : 'Reset password'}
-            </button>
+              <button type="submit" className="btn-auth-primary" disabled={loading || !isValid}>
+                {loading ? 'Resetting...' : 'Reset Password'}
+              </button>
 
-            <p className="terms-note" style={{ textAlign: 'center', marginTop: '1rem' }}>
-              <Link to="/login" className="terms-link">Back to sign in</Link>
-            </p>
-          </form>
+              <div className="auth-divider">
+                <span>Or</span>
+              </div>
+
+              <Link to="/login" className="btn-google-auth" style={{ textDecoration: 'none' }}>
+                Back to Login
+              </Link>
+            </form>
+          </motion.div>
         </div>
       </div>
     </div>
@@ -161,3 +155,4 @@ function ResetPassword() {
 }
 
 export default ResetPassword;
+

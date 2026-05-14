@@ -1,447 +1,266 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-imimpor{ useAuth } from '../context/AuthContext';
-import t '../styles/auth.css';
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import "../styles/auth.css";
 
-const API_BASE_URL = 'https://ice-foundation-1.onrender.com/api';
+const API_BASE_URL = "https://ice-foundation-1.onrender.com/api";
 
-const passwordStrength = (value) => {
-  let score = 0;
-  if (value.length >= 8) score += 1;
-  if (/[A-Z]/.test(value)) score += 1;
-  if (/[0-9]/.test(value)) score += 1;
-  if (/[^A-Za-z0-9]/.test(value)) score += 1;
-  return score;
-};
-
-const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong'];
-
-function Auth({ initialTab = 'login', onLoginSuccess } = {}) {
-  cons{ googleLogin } = useAuth();
-  const t [activeTab, setActiveTab] = useState(initialTab);
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [registerFirstName, setRegisterFirstName] = useState('');
-  const [registerLastName, setRegisterLastName] = useState('');
-  const [registerEmail, setRegisterEmail] = useState('');
-  const [registerPhone, setRegisterPhone] = useState('');
-  const [registerPassword, setRegisterPassword] = useState('');
-  const [agreeTerms, setAgreeTerms] = useState(false);
-  const [showLoginPassword, setShowLoginPassword] = useState(false);
-  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
-  const [statusMessage, setStatusMessage] = useState(null);
-  const [statusType, setStatusType] = useState('');
+function Auth({ initialTab = "login", onLoginSuccess } = {}) {
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    firstName: "",
+    lastName: "",
+    phone: "",
+    agreeTerms: false
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [status, setStatus] = useState({ message: null, type: "" });
   const [loading, setLoading] = useState(false);
-  const [cardFlipped, setCardFlipped] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     setActiveTab(initialTab);
+    window.scrollTo(0, 0);
   }, [initialTab]);
-
-  const strengthValue = useMemo(
-    () => passwordStrength(registerPassword),
-    [registerPassword]
-  );
 
   const switchTab = (tab) => {
     setActiveTab(tab);
-    setStatusMessage(null);
-    setStatusType('');
-    setCardFlipped(tab === 'register');
+    setStatus({ message: null, type: "" });
   };
 
-  const handleLogin = async (e) => {
+  const handleAction = async (e) => {
     e.preventDefault();
-    if (!loginEmail || !loginPassword) {
-      setStatusMessage('Please enter your email and password.');
-      setStatusType('error');
-      return;
-    }
-
     setLoading(true);
+    setStatus({ message: null, type: "" });
+
+    const endpoint = activeTab === "login" ? "/login/" : "/register/";
+    const body = activeTab === "login" 
+      ? { username: formData.email, password: formData.password }
+      : {
+          username: formData.email,
+          email: formData.email,
+          password: formData.password,
+          password2: formData.password,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone_number: formData.phone,
+        };
+
     try {
-      const response = await fetch(`${API_BASE_URL}/login/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: loginEmail,
-          password: loginPassword
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Login failed');
-      }
-
-      const data = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setStatusMessage('Signed in successfully.');
-        setStatusType('success');
-        setTimeout(() => {
-          if (onLoginSuccess) {
-            onLoginSuccess();
-          } else {
-            navigate('/');
-          }
-        }, 800);
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      setStatusMessage(error.message || 'Unable to sign in. Please try again later.');
-      setStatusType('error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    if (!registerEmail || !registerPassword || !agreeTerms) {
-      setStatusMessage('Please complete all fields and accept the terms.');
-      setStatusType('error');
-      return;
-    }
-
-    if (registerPassword.length < 8) {
-      setStatusMessage('Password must be at least 8 characters long.');
-      setStatusType('error');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/register/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: registerEmail,
-          email: registerEmail,
-          password: registerPassword,
-          password2: registerPassword,
-          first_name: registerFirstName,
-          last_name: registerLastName,
-          phone_number: registerPhone,
-        }),
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
 
       const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Authentication failed");
 
-      if (response.ok) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setStatusMessage('Account created successfully! Redirecting...');
-        setStatusType('success');
-        setTimeout(() => {
-          if (onLoginSuccess) {
-            onLoginSuccess();
-          } else {
-            navigate('/');
-          }
-        }, 1000);
-      } else {
-        let errorMsg = 'Registration failed.';
-        if (data.password) errorMsg = data.password[0];
-        else if (data.username) errorMsg = data.username[0];
-        else if (data.email) errorMsg = data.email[0];
-        else if (data.error) errorMsg = data.error;
-        setStatusMessage(errorMsg);
-        setStatusType('error');
-      }
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      setStatus({ message: activeTab === "login" ? "Welcome back!" : "Account created!", type: "success" });
+
+      setTimeout(() => {
+        if (onLoginSuccess) onLoginSuccess();
+        else navigate("/");
+      }, 800);
     } catch (error) {
-      console.error('Registration error:', error);
-      setStatusMessage('Unable to register. Please make sure backend is running.');
-      setStatusType('error');
+      setStatus({ message: error.message, type: "error" });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card-3d">
-        {/* Left Panel - Brand Section */}
-        <div className="auth-brand-panel">
-          <div className="brand-bg-3d">
-            <div className="bg-circle circle-1"></div>
-            <div className="bg-circle circle-2"></div>
-            <div className="bg-circle circle-3"></div>
-          </div>
-
-          <div className="brand-content">
-            <div className="brand-logo-3d">ICE</div>
-            <div className="brand-title">
-              ICE Foundation
-              <small>Your Bridge to Success</small>
-            </div>
-          </div>
-
-          <div className="brand-tagline">
-            <div className="tagline-text">Find your perfect college.</div>
-            <p className="tagline-subtext">Expert guidance for 12th-grade students across India.</p>
-          </div>
-
-          <div className="brand-stats">
-            <div className="stat-card">
-              <div className="stat-number">100+</div>
-              <div className="stat-label">Partner Colleges</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-number">5k - 40k</div>
-              <div className="stat-label">Scholarships offered</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Panel - Form Section with 3D Flip */}
-        <div className={`auth-form-panel ${cardFlipped ? 'flipped' : ''}`}>
-          <div className="form-header">
-            <div className="tab-buttons">
-              <button
-                type="button"
-                onClick={() => switchTab('login')}
-                className={`tab-btn ${activeTab === 'login' ? 'active' : ''}`}
-                disabled={loading}
+    <div className="auth-page-premium">
+      <div className="auth-split-layout">
+        
+        {/* ── LEFT SIDE: BRAND ── */}
+        <motion.div 
+          className="auth-visual-side premium-3d-wrap"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <div className="visual-overlay" />
+          <div className="visual-content floating-3d">
+            <Link to="/" className="auth-logo-top">
+              <span className="logo-dot-premium" />
+              ACE <span>COUNSULTING</span>
+            </Link>
+            
+            <div className="visual-text-box">
+              <motion.h2
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3 }}
               >
-                Sign in
-              </button>
-              <button
-                type="button"
-                onClick={() => switchTab('register')}
-                className={`tab-btn ${activeTab === 'register' ? 'active' : ''}`}
-                disabled={loading}
+                Building Your <br />
+                <span>Educational Future</span>
+              </motion.h2>
+              <motion.p
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.4 }}
               >
-                Create account
-              </button>
+                Join 1000+ students who have achieved their educational dreams with expert guidance.
+              </motion.p>
             </div>
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="back-home-btn"
-              disabled={loading}
-            >
-              Back to home
-            </button>
+
+            <div className="visual-footer-stats">
+              <div className="v-stat">
+                <strong>100+</strong>
+                <span>Colleges</span>
+              </div>
+              <div className="v-stat">
+                <strong>24/7</strong>
+                <span>Support</span>
+              </div>
+              <div className="v-stat">
+                <strong>95%</strong>
+                <span>Success</span>
+              </div>
+            </div>
           </div>
+        </motion.div>
 
-          {statusMessage && (
-            <div className={`status-message ${statusType}`}>
-              {statusMessage}
-            </div>
-          )}
-
-          {activeTab === 'login' ? (
-            <form onSubmit={handleLogin} className="auth-form">
-              <div className="form-welcome">
-                <h2>Welcome back</h2>
-                <p>
-                  No account? <button type="button" onClick={() => switchTab('register')} className="link-btn" disabled={loading}>Register free</button>
-                </p>
-              </div>
-
-              <div className="social-buttons">
-                <button type="button" className="social-btn" disabled={loading}>
-
-                <label>Email address</label>
-                <div className="input-wrapper">
-                  <svg className="input-icon" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                    <polyline points="22,6 12,13 2,6"/>
-                  </svg>
-                  <input
-                    type="email"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-
-              <div className="form-field">
-                <label>Password</label>
-                <div className="input-wrapper">
-                  <svg className="input-icon" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                    <circle cx="12" cy="16" r="1"/>
-                    <path d="m9 11 3-3 3 3"/>
-                  </svg>
-                  <input
-                    type={showLoginPassword ? 'text' : 'password'}
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="Your password"
-                    required
-                    disabled={loading}
-                  />
-                  <button
-                    type="button"
-                    className="password-toggle"
-                    onClick={() => setShowLoginPassword((prev) => !prev)}
-                    disabled={loading}
-                  >
-                    {showLoginPassword ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="forgot-password">
-                <Link to="/forgot-password" className="forgot-link">
-                  Forgot password?
-                </Link>
-              </div>
-
-              <button type="submit" className="submit-btn" disabled={loading}>
-                {loading ? 'Signing in...' : 'Sign in'}
+        {/* ── RIGHT SIDE: FORM ── */}
+        <div className="auth-form-side">
+          <div className="form-container-inner">
+            <div className="auth-nav-pills">
+              <button 
+                className={activeTab === "login" ? "active" : ""} 
+                onClick={() => switchTab("login")}
+              >
+                Sign In
               </button>
-            </form>
-          ) : (
-            <form onSubmit={handleRegister} className="auth-form">
-              <div className="form-welcome">
-                <h2>Join ICE Foundation</h2>
-                <p>
-                  Have an account? <button type="button" onClick={() => switchTab('login')} className="link-btn" disabled={loading}>Sign in</button>
-                </p>
-              </div>
+              <button 
+                className={activeTab === "register" ? "active" : ""} 
+                onClick={() => switchTab("register")}
+              >
+                Create Account
+              </button>
+            </div>
 
-              <div className="name-fields">
-                <div className="form-field">
-                  <label>First name</label>
-                  <div className="input-wrapper">
-                    <svg className="input-icon" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
-                      <circle cx="12" cy="7" r="4"/>
-                    </svg>
-                    <input
-                      type="text"
-                      value={registerFirstName}
-                      onChange={(e) => setRegisterFirstName(e.target.value)}
-                      placeholder="Arjun"
-                      disabled={loading}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="auth-form-wrapper"
+              >
+                <div className="form-header">
+                  <h3>{activeTab === "login" ? "Welcome Back" : "Get Started"}</h3>
+                  <p>{activeTab === "login" ? "Manage your applications effortlessly." : "Start your journey to the perfect college today."}</p>
+                </div>
+
+                {status.message && (
+                  <div className={`auth-alert ${status.type}`}>
+                    {status.message}
+                  </div>
+                )}
+
+                <form onSubmit={handleAction} className="premium-form">
+                  {activeTab === "register" && (
+                    <div className="form-row-dual">
+                      <div className="input-group-premium">
+                        <label>First Name</label>
+                        <input 
+                          type="text" 
+                          placeholder="John" 
+                          value={formData.firstName}
+                          onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div className="input-group-premium">
+                        <label>Last Name</label>
+                        <input 
+                          type="text" 
+                          placeholder="Doe" 
+                          value={formData.lastName}
+                          onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                          required
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="input-group-premium">
+                    <label>Email Address</label>
+                    <input 
+                      type="email" 
+                      placeholder="name@example.com" 
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      required
                     />
                   </div>
-                </div>
-                <div className="form-field">
-                  <label>Last name</label>
-                  <div className="input-wrapper">
-                    <svg className="input-icon" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
-                      <circle cx="12" cy="7" r="4"/>
-                    </svg>
-                    <input
-                      type="text"
-                      value={registerLastName}
-                      onChange={(e) => setRegisterLastName(e.target.value)}
-                      placeholder="Kumar"
-                      disabled={loading}
+
+                  {activeTab === "register" && (
+                    <div className="input-group-premium">
+                      <label>Phone Number</label>
+                      <input 
+                        type="tel" 
+                        placeholder="+91 00000 00000" 
+                        value={formData.phone}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        required
+                      />
+                    </div>
+                  )}
+
+                  <div className="input-group-premium relative">
+                    <label>Password</label>
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      placeholder="••••••••" 
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      required
                     />
+                    <button 
+                      type="button" 
+                      className="pwd-toggle"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? "Hide" : "Show"}
+                    </button>
                   </div>
-                </div>
-              </div>
 
-              <div className="form-field">
-                <label>Email address</label>
-                <div className="input-wrapper">
-                  <svg className="input-icon" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                    <polyline points="22,6 12,13 2,6"/>
-                  </svg>
-                  <input
-                    type="email"
-                    value={registerEmail}
-                    onChange={(e) => setRegisterEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-              </div>
+                  {activeTab === "login" && (
+                    <div className="form-extra-links">
+                      <Link to="/forgot-password">Forgot password?</Link>
+                    </div>
+                  )}
 
-              <div className="form-field">
-                <label>Phone number</label>
-                <div className="input-wrapper">
-                  <svg className="input-icon" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                    <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.17-1.17a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92v2z"/>
-                  </svg>
-                  <input
-                    type="tel"
-                    value={registerPhone}
-                    onChange={(e) => setRegisterPhone(e.target.value)}
-                    placeholder="9876543210"
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-
-              <div className="form-field">
-                <label>Password</label>
-                <div className="input-wrapper">
-                  <svg className="input-icon" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                    <circle cx="12" cy="16" r="1"/>
-                    <path d="m9 11 3-3 3 3"/>
-                  </svg>
-                  <input
-                    type={showRegisterPassword ? 'text' : 'password'}
-                    value={registerPassword}
-                    onChange={(e) => setRegisterPassword(e.target.value)}
-                    placeholder="Min. 8 characters"
-                    required
-                    disabled={loading}
-                  />
-                  <button
-                    type="button"
-                    className="password-toggle"
-                    onClick={() => setShowRegisterPassword((prev) => !prev)}
-                    disabled={loading}
-                  >
-                    {showRegisterPassword ? 'Hide' : 'Show'}
+                  <button type="submit" className="btn-auth-primary" disabled={loading}>
+                    {loading ? "Processing..." : (activeTab === "login" ? "Sign In" : "Create Account")}
                   </button>
-                </div>
-                <div className="password-strength">
-                  <div className="strength-bar">
-                    <div className="strength-fill" style={{ width: `${strengthValue * 25}%` }} />
+
+                  <div className="auth-divider">
+                    <span>or continue with</span>
                   </div>
-                  <div className="strength-label">
-                    {strengthLabel[strengthValue] || 'Enter a password'}
+
+                  <button type="button" className="btn-google-auth">
+                    <svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                    Google Account
+                  </button>
+
+                  <div className="auth-back-home">
+                    <Link to="/">← Back to Home</Link>
                   </div>
-                </div>
-              </div>
-
-              <label className="terms-checkbox">
-                <input
-                  type="checkbox"
-                  checked={agreeTerms}
-                  onChange={(e) => setAgreeTerms(e.target.checked)}
-                  disabled={loading}
-                />
-                <span>
-                  I agree to the <Link to="/terms" className="terms-link">Terms of Service</Link> and <Link to="/privacy" className="terms-link">Privacy Policy</Link>
-                </span>
-              </label>
-
-              <button type="submit" className="submit-btn" disabled={loading}>
-                {loading ? 'Creating account...' : 'Create account'}
-              </button>
-
-              <p className="terms-note">
-                By continuing you agree to our <Link to="/terms" className="terms-link">Terms</Link> & <Link to="/privacy" className="terms-link">Privacy Policy</Link>
-              </p>
-            </form>
-          )}
+                </form>
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-export default Auth;
+export default Auth; 

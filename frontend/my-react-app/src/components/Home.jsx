@@ -1,71 +1,160 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { getColleges, getCollegeCourses } from "../services/api";
+import { motion, useInView, AnimatePresence } from "framer-motion";
+import { getColleges } from "../services/api";
 import "../styles/home.css";
 import Navbar from "./Navbar";
+import Footer from "./Footer";
+
+/* ── animation helpers ── */
+const fadeUp = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
+};
+const fadeIn = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.5 } },
+};
+const stagger = (delay = 0) => ({
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.1, delayChildren: delay } },
+});
+const cardHover = { y: -8, boxShadow: "0 20px 40px rgba(37,86,105,0.12)" };
+
+function SectionReveal({ children, className, delay = 0 }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: "-80px" });
+  return (
+    <motion.div
+      ref={ref}
+      className={className}
+      initial="hidden"
+      animate={inView ? "visible" : "hidden"}
+      variants={stagger(delay)}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 function Home() {
   const [colleges, setColleges] = useState([]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const scrollContainerRef = useRef(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const heroSlides = [
+    {
+      image: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1600&q=80",
+      badge: "Trusted by 100+ colleges across Tamil Nadu",
+      lines: ["Bridge the gap to", "your dream", "college journey"],
+      desc: "Personalized guidance, scholarship support, and admissions strategy from experts who know what top colleges want.",
+      primaryLabel: "Start Your College Plan",
+      primaryTo: "/register",
+      authLabel: "Book Free Consultation",
+      authTo: "/college-suggestion",
+    },
+    {
+      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1600&q=80",
+      badge: "5000+ Scholarships Available",
+      lines: ["Discover the", "right library", "for your future"],
+      desc: "Explore thousands of resources, scholarship opportunities and academic support to help you succeed in your higher education journey.",
+      primaryLabel: "Find Scholarships",
+      primaryTo: "/college-suggestion",
+      authLabel: "Explore Colleges",
+      authTo: "/colleges",
+    },
+    {
+      image: "https://images.unsplash.com/photo-1532094349884-543290270f7d?w=1600&q=80",
+      badge: "World-Class Laboratory Facilities",
+      lines: ["Hands-on learning", "in cutting-edge", "laboratories"],
+      desc: "Find colleges equipped with state-of-the-art labs for Engineering, Medical, and Allied Sciences to ignite your passion for research.",
+      primaryLabel: "Explore Engineering",
+      primaryTo: "/courses",
+      authLabel: "View Colleges",
+      authTo: "/colleges",
+    },
+    {
+      image: "https://images.unsplash.com/photo-1562774053-701939374585?w=1600&q=80",
+      badge: "95% Student Success Rate",
+      lines: ["Your dream campus", "is just one step", "away"],
+      desc: "From application to admission, our expert counselors walk you through every stage of your college journey with confidence.",
+      primaryLabel: "Get Expert Guidance",
+      primaryTo: "/contact",
+      authLabel: "Browse Colleges",
+      authTo: "/colleges",
+    },
+  ];
 
   useEffect(() => {
-    const fetchCollegesAndCourses = async () => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => setShowScrollTop(window.scrollY > 500);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const fetchColleges = async () => {
       try {
         setLoading(true);
-        setError(null);
-        
-        const collegesData = await getColleges();
-        const collegesArray = Array.isArray(collegesData)
-          ? collegesData
-          : collegesData.results || [];
-
-        // Fetch courses for each college (limit to first 8 for performance)
-        const collegesWithCourses = await Promise.all(
-          collegesArray.slice(0, 8).map(async (college) => {
-            try {
-              const courses = await getCollegeCourses(college.college_id);
-              // Get only first 3 courses for display
-              const topCourses = Array.isArray(courses) ? courses.slice(0, 3) : [];
-              return {
-                ...college,
-                courses: topCourses,
-              };
-            } catch (err) {
-              console.error(`Error fetching courses for college ${college.college_id}:`, err);
-              return { ...college, courses: [] };
-            }
-          }),
+        const data = await getColleges();
+        const arr = Array.isArray(data) ? data : data.results || [];
+        setColleges(
+          arr.slice(0, 12).map((c) => ({
+            ...c,
+            displayImage: c.cover_image || c.college_images?.[0] || c.logo_url || null,
+          }))
         );
-
-        setColleges(collegesWithCourses);
-        setLoading(false);
       } catch (err) {
-        console.error("Error fetching colleges:", err);
-        setError("Failed to load colleges. Please try again later.");
-        setColleges([]);
+        setError("Failed to load colleges.");
+      } finally {
         setLoading(false);
       }
     };
-
-    fetchCollegesAndCourses();
+    fetchColleges();
   }, []);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    const storedToken = localStorage.getItem("token");
-    
-    if (storedUser && storedToken) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (err) {
-        console.error("Error parsing user data:", err);
-        localStorage.removeItem("user");
-        localStorage.removeItem("token");
-      }
+    const stored = localStorage.getItem("user");
+    const token = localStorage.getItem("token");
+    if (stored && token) {
+      try { setUser(JSON.parse(stored)); } catch {}
     }
   }, []);
+
+  const checkScrollPosition = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setShowLeftArrow(scrollLeft > 20);
+      setShowRightArrow(scrollLeft + clientWidth < scrollWidth - 20);
+      setScrollProgress((scrollLeft / (scrollWidth - clientWidth)) * 100);
+    }
+  };
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener("scroll", checkScrollPosition);
+      checkScrollPosition();
+      return () => container.removeEventListener("scroll", checkScrollPosition);
+    }
+  }, [colleges]);
+
+  const scrollColleges = (dir) => {
+    scrollContainerRef.current?.scrollBy({ left: dir * 380, behavior: "smooth" });
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -74,476 +163,568 @@ function Home() {
     window.location.href = "/";
   };
 
-  // Function to get college initials for logo fallback
-  const getCollegeInitials = (name) => {
-    if (!name) return "CO";
-    const words = name.split(" ");
-    if (words.length === 1) {
-      return words[0].substring(0, 2).toUpperCase();
-    }
-    return words
-      .map((word) => word.charAt(0))
-      .join("")
-      .substring(0, 2)
-      .toUpperCase();
-  };
+  const placeholder = (name) =>
+    `https://via.placeholder.com/400x300/f8fafc/255669?text=${encodeURIComponent(name || "College")}`;
+
+  const serviceItems = [
+    { icon: "🎓", title: "Admission Guidance", desc: "Expert guidance to navigate the complex admission process of top-tier colleges and universities." },
+    { icon: "🎯", title: "Career Counseling", desc: "Personalized counseling sessions to align your interests and strengths with the right career path." },
+    { icon: "📚", title: "Course Selection", desc: "Helping you choose from a wide range of courses that best suit your academic background and goals." },
+    { icon: "🏛️", title: "University Selection", desc: "Strategic selection of institutions based on rankings, infrastructure, placements, and your profile." },
+    { icon: "💰", title: "Scholarship Support", desc: "Information and assistance for securing various merit-based and need-based scholarships." },
+    { icon: "📝", title: "Documentation", desc: "Complete support for application forms, SOPs, and all required documentation for a smooth process." },
+  ];
+
+  const processSteps = [
+    { number: "01", title: "Initial Consultation", desc: "Discuss your goals, interests, and academic background with our experts." },
+    { number: "02", title: "Profile Analysis", desc: "Comprehensive evaluation of your scores and profile to match with top institutions." },
+    { number: "03", title: "Documentation", desc: "Support in preparing and submitting application forms with precision." },
+    { number: "04", title: "Admission Success", desc: "Get your offer letter and secure your seat in your dream college." },
+  ];
 
   return (
     <div className="home-container">
       <Navbar user={user} onLogout={handleLogout} />
 
-      {/* HERO SECTION - Split Layout */}
+      {/* ── HERO ── */}
       <section className="hero-split">
-        <div className="hero-split-left">
-          <div className="hero-badge-dark">
-            <span className="badge-pulse"></span>
-            Partnership with 100+ colleges across Tamilnadu
-          </div>
-          <h1 className="hero-title">
-            <span className="line-1">Discover</span>
-            <span className="line-2">Your Perfect</span>
-            <span className="line-3">Future College</span>
-          </h1>
-          <p className="hero-desc">
-            AI-powered college recommendations, scholarship discovery, and
-            expert guidance — all in one place. Your dream institution awaits.
-          </p>
-          <div className="hero-buttons">
-            {user ? (
-              <Link to="/college-suggestion" className="btn-dark">
-                Get Personalized Suggestions
-              </Link>
-            ) : (
-              <Link to="/register" className="btn-dark">
-                Start Your Journey
-              </Link>
-            )}
-            <Link to="/colleges" className="btn-outline">
-              <span>Explore Colleges</span>
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+        {/* Background images */}
+        <div className="hero-background">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentSlide}
+              className="hero-bg-image active"
+              style={{ backgroundImage: `url(${heroSlides[currentSlide].image})` }}
+              initial={{ opacity: 0, scale: 1.08 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.2, ease: "easeInOut" }}
+            />
+          </AnimatePresence>
+          <div className="hero-bg-overlay" />
+          <div className="hero-bg-gradient" />
+        </div>
+
+        {/* Slide content — animates on slide change */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`content-${currentSlide}`}
+            className="hero-split-left"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="hero-badge floating-3d">
+              <span className="badge-pulse" />
+              Direct Admission 2024-25 Open
+            </div>
+
+            <h1 className="hero-title">
+              <span className="line-1">{heroSlides[currentSlide].lines[0]}</span>
+              <span className="line-2">{heroSlides[currentSlide].lines[1]}</span>
+              <span className="line-3">{heroSlides[currentSlide].lines[2]}</span>
+            </h1>
+
+            <p className="hero-desc">{heroSlides[currentSlide].desc}</p>
+
+            <div className="hero-buttons">
+              <Link
+                to={user ? heroSlides[currentSlide].authTo : heroSlides[currentSlide].primaryTo}
+                className="btn-dark"
               >
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </Link>
+                {user ? heroSlides[currentSlide].authLabel : heroSlides[currentSlide].primaryLabel}
+              </Link>
+              <Link to="/colleges" className="btn-outline">
+                <span>Explore Colleges</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </Link>
+            </div>
+
+            <div className="hero-trust">
+              {[["100+", "Colleges"], ["5k–40k", "Scholarships"], ["95%", "Success Rate"]].map(
+                ([num, label], i) => (
+                  <div key={i} className="trust-item">
+                    <span className="trust-num">{num}</span>
+                    <span className="trust-label">{label}</span>
+                  </div>
+                )
+              )}
+            </div>
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Slide controls */}
+        <div className="hero-slide-controls">
+          <button
+            className="hero-arrow"
+            onClick={() => setCurrentSlide((p) => (p - 1 + heroSlides.length) % heroSlides.length)}
+            aria-label="Previous slide"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <div className="hero-dots">
+            {heroSlides.map((_, i) => (
+              <button
+                key={i}
+                className={`hero-dot${i === currentSlide ? " active" : ""}`}
+                onClick={() => setCurrentSlide(i)}
+                aria-label={`Go to slide ${i + 1}`}
+              />
+            ))}
           </div>
-          <div className="hero-trust">
-            <div className="trust-item">
-              <span className="trust-num">100+</span>
-              <span className="trust-label">Colleges</span>
-            </div>
-            <div className="trust-divider"></div>
-            <div className="trust-item">
-              <span className="trust-num">5k - 40k</span>
-              <span className="trust-label">Scholarships</span>
-            </div>
-            <div className="trust-divider"></div>
-            <div className="trust-item">
-              <span className="trust-num">95%</span>
-              <span className="trust-label">Success Rate</span>
-            </div>
-          </div>
+          <button
+            className="hero-arrow"
+            onClick={() => setCurrentSlide((p) => (p + 1) % heroSlides.length)}
+            aria-label="Next slide"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
         </div>
-        <div className="hero-split-right">
-          <div className="hero-visual-wrapper">
-            {/* 3D Roadmap */}
-            <div className="hero-roadmap">
-              <div className="roadmap-header">
-                <span className="roadmap-title">Your Path</span>
-              </div>
 
-              <div className="roadmap-track">
-                <div className="roadmap-line"></div>
-
-                <div className="roadmap-step">
-                  <div className="step-marker">
-                    <span className="step-num">01</span>
-                  </div>
-                  <div className="step-content">
-                    <div className="step-icon">📝</div>
-                    <div className="step-info">
-                      <h4>Create Profile</h4>
-                      <p>Tell us about your interests</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="roadmap-step">
-                  <div className="step-marker">
-                    <span className="step-num">02</span>
-                  </div>
-                  <div className="step-content">
-                    <div className="step-icon">🎯</div>
-                    <div className="step-info">
-                      <h4>Get Matched</h4>
-                      <p>AI finds best colleges</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="roadmap-step">
-                  <div className="step-marker">
-                    <span className="step-num">03</span>
-                  </div>
-                  <div className="step-content">
-                    <div className="step-icon">✅</div>
-                    <div className="step-info">
-                      <h4>Apply & Secure</h4>
-                      <p>One-click applications</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="roadmap-destination">
-                  <span>🎓</span>
-                  <span>Dream College</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Floating Visual Cards */}
-            <div className="hero-visual">
-              <div className="visual-card card-1">
-                <div className="vc-icon">🎓</div>
-                <div className="vc-text">Top Ranked</div>
-              </div>
-              <div className="visual-card card-2">
-                <div className="vc-icon">💰</div>
-                <div className="vc-text">Scholarships</div>
-              </div>
-              <div className="visual-card card-3">
-                <div className="vc-icon">📚</div>
-                <div className="vc-text">Courses</div>
-              </div>
-              <div className="visual-card card-4">
-                <div className="vc-icon">🏆</div>
-                <div className="vc-text">Expert Guide</div>
-              </div>
-              <div className="visual-bg-circle"></div>
-              <div className="visual-bg-dots"></div>
-            </div>
+        {/* Right visual cards */}
+        <motion.div
+          className="hero-split-right"
+          initial={{ opacity: 0, x: 60 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div className="hero-visual">
+            {[
+              { icon: "🎓", text: "Top Ranked", cls: "card-1" },
+              { icon: "💰", text: "Scholarships", cls: "card-2" },
+              { icon: "📚", text: "Courses", cls: "card-3" },
+              { icon: "🏆", text: "Expert Guide", cls: "card-4" },
+            ].map((c, i) => (
+              <motion.div
+                key={i}
+                className={`visual-card ${c.cls}`}
+                initial={{ opacity: 0, scale: 0.7 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.6 + i * 0.15, type: "spring", stiffness: 260, damping: 20 }}
+                whileHover={{ scale: 1.05, boxShadow: "0 20px 40px rgba(37,86,105,0.15)" }}
+              >
+                <div className="vc-icon">{c.icon}</div>
+                <div className="vc-text">{c.text}</div>
+              </motion.div>
+            ))}
+            <div className="visual-bg-circle-1" />
+            <div className="visual-bg-circle-2" />
           </div>
-        </div>
+        </motion.div>
       </section>
 
-      {/* MARQUEE SECTION */}
+      {/* ── MARQUEE ── */}
       <section className="marquee-section">
-        <div className="marquee-track">
-          <span>Engineering</span>
-          <span className="dot">•</span>
-          <span>Medical</span>
-          <span className="dot">•</span>
-          <span>Nursing</span>
-          <span className="dot">•</span>
-          <span>Allied Health Science</span>
-          <span className="dot">•</span>
-          <span>Arts & Science</span>
-          <span className="dot">•</span>
-          <span>Polytechnic</span>
-          <span className="dot">•</span>
-          <span>Law</span>
-          <span className="dot">•</span>
-          <span>Engineering</span>
-          <span className="dot">•</span>
-          <span>Medical</span>
-          <span className="dot">•</span>
-          <span>Nursing</span>
-          <span className="dot">•</span>
-          <span>Allied Health Science</span>
-          <span className="dot">•</span>
-          <span>Arts & Science</span>
-          <span className="dot">•</span>
-          <span>Polytechnic</span>
-          <span className="dot">•</span>
-          <span>Law</span>
-          <span className="dot">•</span>
+        <div className="marquee-wrapper">
+          {[0, 1].map((copy) => (
+            <div key={copy} className="marquee-track" aria-hidden={copy === 1}>
+              {["Engineering", "Medical", "Nursing", "Allied Health Science", "Arts & Science", "Polytechnic", "Law", "Architecture", "MBA", "Pharmacy"].map((item, i) => (
+                <span key={i} className="marquee-item">
+                  <span className="marquee-dot">◆</span>
+                  {item}
+                </span>
+              ))}
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* COLLEGES SECTION */}
-      <section className="colleges-alt">
-        <div className="colleges-alt-container">
-          <div className="section-header-alt">
-            <div className="section-label">Featured</div>
-            <h2>Top Colleges For You</h2>
-            <p>
-              Explore India's premier institutions hand-picked based on your
-              profile.
-            </p>
-          </div>
+      {/* ── COLLEGES HORIZONTAL SCROLL ── */}
+      <section className="colleges-horizontal-section">
+        <div className="colleges-horizontal-container">
+          <SectionReveal className="section-header-horizontal">
+            <motion.div className="section-label-premium" variants={fadeUp}>
+              <span className="label-dot" />
+              Featured Institutions
+              <span className="label-count">{colleges.length > 0 ? `${colleges.length} colleges` : ""}</span>
+            </motion.div>
+            <motion.h2 className="section-title-premium" variants={fadeUp}>
+              Discover Top Colleges
+              <span className="title-highlight"> Near You</span>
+            </motion.h2>
+            <motion.p className="section-subtitle-premium" variants={fadeUp}>
+              Handpicked premier institutions with world-class infrastructure,
+              exceptional faculty, and outstanding placement records.
+            </motion.p>
+          </SectionReveal>
 
           {loading && (
-            <div className="loading-container">
-              <div className="loading-spinner"></div>
-              <p>Loading colleges...</p>
+            <div className="horizontal-loading">
+              <div style={{ display: "flex", gap: "24px", overflow: "hidden" }}>
+                {[1,2,3,4].map(i => (
+                  <div key={i} style={{ flex: "0 0 320px", height: "350px", background: "var(--bg-alt)", borderRadius: "24px", animation: "pulse 1.5s infinite" }} />
+                ))}
+              </div>
             </div>
           )}
-          
+
           {error && (
-            <div className="error-container">
-              <div className="error-icon">!</div>
+            <div className="error-premium" style={{ textAlign: "center", padding: "60px 20px" }}>
+              <h3>Unable to load colleges</h3>
               <p>{error}</p>
-              <button onClick={() => window.location.reload()} className="retry-btn">
+              <button onClick={() => window.location.reload()} className="btn-dark" style={{ marginTop: "20px" }}>
                 Try Again
               </button>
             </div>
           )}
 
           {!loading && !error && colleges.length > 0 && (
-            <div className="colleges-list">
-              {colleges.map((college, index) => (
-                <Link
-                  key={college.college_id}
-                  to={`/colleges/${college.college_id}`}
-                  className="college-item"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <div className="college-item-card">
-                    <div className="college-item-logo">
-                      {college.logo_url ? (
-                        <img
-                          src={college.logo_url}
-                          alt={college.college_name}
-                          onError={(e) => {
-                            e.target.style.display = "none";
-                            if (e.target.parentElement) {
-                              const span = e.target.parentElement.querySelector("span");
-                              if (span) span.style.display = "flex";
-                            }
-                          }}
-                        />
-                      ) : null}
-                      <span style={{ display: college.logo_url ? "none" : "flex" }}>
-                        {getCollegeInitials(college.college_name)}
-                      </span>
-                      <h4>{college.college_name || "College Name"}</h4>
-                    </div>
-                    <div className="college-item-info">
-                      <p>
-                        {college.location_city || "City"},{" "}
-                        {college.location_state || "State"}
-                      </p>
-                      {college.courses && college.courses.length > 0 && (
-                        <>
-                          <div className="college-label">Popular courses :</div>
-                          <div className="college-item-courses">
-                            {college.courses.slice(0, 2).map((c, i) => (
-                              <span key={i}>
-                                {c.course_name || c.course_code || "Course"}
-                              </span>
-                            ))}
-                            {college.courses.length > 2 && (
-                              <span className="more-courses">
-                                +{college.courses.length - 2} more
-                              </span>
+            <>
+              <AnimatePresence>
+                {showLeftArrow && (
+                  <motion.button
+                    className="horizontal-scroll-arrow left"
+                    onClick={() => scrollColleges(-1)}
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
+                  </motion.button>
+                )}
+              </AnimatePresence>
+
+              <AnimatePresence>
+                {showRightArrow && (
+                  <motion.button
+                    className="horizontal-scroll-arrow right"
+                    onClick={() => scrollColleges(1)}
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
+                  </motion.button>
+                )}
+              </AnimatePresence>
+
+              <div className="horizontal-scroll-wrapper">
+                <div className="horizontal-scroll-track" ref={scrollContainerRef}>
+                  {colleges.map((college, index) => (
+                    <motion.div
+                      key={college.college_id}
+                      initial={{ opacity: 0, x: 40 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.07, duration: 0.5, ease: "easeOut" }}
+                      whileHover={cardHover}
+                      style={{ flex: "0 0 350px" }}
+                    >
+                      <Link to={`/colleges/${college.college_id}`} className="horizontal-college-card" style={{ flex: "unset", display: "block" }}>
+                        <div className="horizontal-card-inner">
+                          <div className="horizontal-card-image">
+                            <img
+                              src={college.displayImage || college.campus_images}
+                              alt={college.college_name}
+                              loading="lazy"
+                              onError={(e) => { e.target.src = placeholder(college.college_name); }}
+                            />
+                            <div className="image-overlay" />
+                            {college.type && (
+                              <div className={`horizontal-badge ${college.type}`}>
+                                {college.type === "government" && "🏛️ Government"}
+                                {college.type === "private" && "🏢 Private"}
+                                {college.type === "autonomous" && "🎓 Autonomous"}
+                                {college.type === "aided" && "🤝 Aided"}
+                              </div>
                             )}
                           </div>
-                        </>
-                      )}
-                      {(!college.courses || college.courses.length === 0) && (
-                        <div className="college-label">Multiple courses available</div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="college-item-right">
-                    <span className="college-item-arrow">→</span>
-                  </div>
+                          <div className="horizontal-card-content">
+                            <h3 className="horizontal-college-title">{college.college_name || "College Name"}</h3>
+                            <div className="horizontal-college-location">
+                              <svg className="location-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                <circle cx="12" cy="10" r="3" fill="currentColor" />
+                              </svg>
+                              <span>{college.location_city || "City"}, {college.location_state || "State"}</span>
+                            </div>
+                            <div className="horizontal-college-stats">
+                              {college.rating && <div className="stat-item"><span>⭐</span><span>{college.rating}</span></div>}
+                              {college.placement_rate && <div className="stat-item"><span>📊</span><span>{college.placement_rate}% Placed</span></div>}
+                              {college.fees && <div className="stat-item"><span>💰</span><span>₹{college.fees.toLocaleString()}</span></div>}
+                            </div>
+                            <div className="horizontal-card-action">
+                              <span>Explore College</span>
+                              <svg className="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M5 12h14M12 5l7 7-7 7" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="scroll-progress-indicator">
+                <div className="scroll-progress-bar">
+                  <motion.div
+                    className="scroll-progress-fill"
+                    style={{ width: `${scrollProgress}%` }}
+                    animate={{ width: `${scrollProgress}%` }}
+                    transition={{ duration: 0.2 }}
+                  />
+                </div>
+              </div>
+
+              <motion.div className="view-all-horizontal" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+                <Link to="/colleges" className="btn-premium-primary">
+                  <span>Explore All Colleges</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                 </Link>
-              ))}
-            </div>
+              </motion.div>
+            </>
           )}
+        </div>
+      </section>
 
-          {!loading && !error && colleges.length === 0 && (
-            <div className="no-colleges-container">
-              <div className="no-colleges-icon">🏫</div>
-              <h3>No Colleges Found</h3>
-              <p>We couldn't find any colleges at the moment. Please check back later.</p>
-            </div>
-          )}
+      {/* ── WHAT WE DO SECTION ── */}
+      <section className="services-section premium-3d-wrap">
+        <div className="services-container">
+          <SectionReveal className="section-header-centered">
+            <motion.div className="section-label-premium" variants={fadeUp}>
+              <span className="label-dot" />
+              Our Expertise
+            </motion.div>
+            <motion.h2 className="section-title-premium" variants={fadeUp}>
+              What <span className="title-highlight">We Do</span>
+            </motion.h2>
+            <motion.p className="section-subtitle-premium" variants={fadeUp}>
+              Providing comprehensive support for your educational journey with personalized solutions and expert advice.
+            </motion.p>
+          </SectionReveal>
 
-          <div className="view-all-wrap">
-            <Link to="/colleges" className="btn-dark-outline">
-              View All Colleges
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+          <div className="services-grid">
+            {serviceItems.map((service, i) => (
+              <motion.div
+                key={i}
+                className="service-card card-3d"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
+                whileHover={{ y: -10 }}
               >
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </Link>
+                <div className="service-icon-wrapper">
+                  <div className="service-icon-bg" />
+                  <span className="service-icon">{service.icon}</span>
+                </div>
+                <h3 className="service-card-title">{service.title}</h3>
+                <p className="service-card-desc">{service.desc}</p>
+                <div className="service-card-line" />
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* BENTO GRID FEATURES */}
-      <section className="bento-section">
-        <div className="bento-container">
-          <div className="section-label">Why Choose Us</div>
-          <h2 className="section-title">Everything You Need in One Platform</h2>
+      {/* ── ADMISSION PROCESS SECTION ── */}
+      <section className="process-section premium-3d-wrap">
+        <div className="process-container">
+          <SectionReveal className="section-header-centered">
+            <motion.div className="section-label-premium" variants={fadeUp}>
+              <span className="label-dot" />
+              How It Works
+            </motion.div>
+            <motion.h2 className="section-title-premium" variants={fadeUp}>
+              Admission <span className="title-highlight">Process</span>
+            </motion.h2>
+          </SectionReveal>
 
-          <div className="bento-grid">
-            <div className="bento-card bento-large">
-              <div className="flex gap-2 items-center">
-                <div className="bento-icon">📈</div>
-                <h3>Cutoff Prediction & College Suggestion</h3>
-              </div>
-              <p>
-                Using historical cutoff data and trend analysis, our AI predicts
-                your chances of admission at top colleges based on your entrance
-                exam scores and category. Get realistic expectations and backup
-                options instantly.
-              </p>
-              <ul className="feature-list">
-                <li>
-                  🎯 Personalized college suggestions based on your profile
-                </li>
-                <li>
-                  📊 Real-time cutoff predictions for JEE, NEET, TNEA, and more
-                </li>
-                <li>💡 Data-driven insights to optimize your applications</li>
-                <li>
-                  📈 Track cutoff trends from previous years for informed
-                  decisions
-                </li>
-              </ul>
-              <div className="bento-visual">
-                <Link to="/college-suggestion" className="btn-dark-outline">
-                  Find Your Match →
-                </Link>
-              </div>
-            </div>
-            <div className="bento-card">
-              <div className="flex gap-2 items-center">
-                <div className="bento-icon">💎</div>
-                <h3>Scholarship Finder</h3>
-              </div>
-              <p>
-                Discover scholarships up to 40 lakhs with our comprehensive
-                database.
-              </p>
-            </div>
-
-            <div className="bento-card">
-              <div className="flex gap-2 items-center">
-                <div className="bento-icon">📊</div>
-                <h3>Rankings & Reviews</h3>
-              </div>
-              <p>
-                Real student reviews and official rankings to make informed
-                decisions.
-              </p>
-            </div>
-
-            <div className="bento-card">
-              <div className="flex gap-2 items-center">
-                <div className="bento-icon">🎯</div>
-                <h3>Expert Counseling</h3>
-              </div>
-              <p>
-                Get guidance from education experts with decades of experience.
-              </p>
-            </div>
-
-            <div className="bento-card">
-              <div className="flex gap-2 items-center">
-                <div className="bento-icon">⚡</div>
-                <h3>Quick Apply</h3>
-              </div>
-              <p>
-                Apply to multiple colleges with a single application form. Save
-                time and effort with our streamlined process.
-              </p>
-              <div className="quick-apply-logos">
-                <span>IIT</span>
-                <span>NIT</span>
-                <span>IIIT</span>
-                <span>AIIMS</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-      
-      {/* STATS SECTION */}
-      <section className="stats-section">
-        <div className="stats-container">
-          <div className="stat-card">
-            <span className="stat-number">100+</span>
-            <span className="stat-text">Partner Colleges</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-number">₹5k - 40k</span>
-            <span className="stat-text">Scholarship Amount</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-number">24/7</span>
-            <span className="stat-text">Support Available</span>
+          <div className="process-steps">
+            <div className="process-line-connector" />
+            {processSteps.map((step, i) => (
+              <motion.div
+                key={i}
+                className="process-step-item card-3d"
+                initial={{ opacity: 0, x: i % 2 === 0 ? -40 : 40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.2, duration: 0.6 }}
+              >
+                <div className="step-number-box">
+                  <span className="step-number">{step.number}</span>
+                </div>
+                <div className="step-content">
+                  <h3 className="step-title">{step.title}</h3>
+                  <p className="step-desc">{step.desc}</p>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* CTA SECTION */}
-      <section className="cta-alt">
-        <div className="cta-alt-bg"></div>
-        <div className="cta-alt-content">
-          <h2>Ready to Transform Your Future?</h2>
-          <p>
-            Join thousands of students who found their dream colleges through
-            ICE Foundation.
-          </p>
-          <div className="cta-alt-buttons">
-            <Link to="/register" className="btn-white">
-              Get Started Free
-            </Link>
-            <Link to="/contact" className="btn-white-outline">
-              Talk to Expert
-            </Link>
+      {/* ── SUCCESS STORY CTA ── */}
+      <section className="success-cta-section">
+        {/* Animated background orbs */}
+        <div className="success-bg-orb orb-1" />
+        <div className="success-bg-orb orb-2" />
+        <div className="success-bg-orb orb-3" />
+        {/* Floating dots */}
+        {[...Array(12)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="floating-dot"
+            style={{
+              left: `${8 + i * 8}%`,
+              top: `${20 + (i % 3) * 25}%`,
+              width: i % 3 === 0 ? 6 : 4,
+              height: i % 3 === 0 ? 6 : 4,
+            }}
+            animate={{ y: [-8, 8, -8], opacity: [0.4, 0.9, 0.4] }}
+            transition={{ duration: 3 + i * 0.4, repeat: Infinity, delay: i * 0.25 }}
+          />
+        ))}
+
+        <div className="success-cta-inner">
+          {/* Header */}
+          <motion.div
+            className="success-cta-header"
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="success-badge">
+              <span className="badge-star">★</span>
+              Trusted Education Consultancy
+            </div>
+            <h2 className="success-cta-title">
+              Start Your <span className="success-highlight">Success Story</span> Today
+            </h2>
+            <p className="success-cta-sub">
+              Join <strong>1000+ students</strong> who have achieved their educational dreams with ACE COUNSULTING.
+              Expert guidance for every step of your admission journey.
+            </p>
+          </motion.div>
+
+          {/* Contact Cards */}
+          <div className="success-contact-grid">
+            {[
+              {
+                icon: "📞",
+                label: "Call Us",
+                lines: ["+91 83309 14141", "+91 98667 45085"],
+                sub: "Available 24/7 for your queries",
+                color: "#255669",
+                action: "tel:+918330914141",
+                actionLabel: "Call Now",
+              },
+              {
+                icon: "💬",
+                label: "WhatsApp",
+                lines: ["Chat with us"],
+                sub: "Instant responses & file sharing",
+                color: "#25D366",
+                action: "https://wa.me/918330914141",
+                actionLabel: "Open WhatsApp",
+              },
+              {
+                icon: "📍",
+                label: "Visit Us",
+                lines: ["Chennai & Andhra Pradesh"],
+                sub: "Multiple locations for your convenience\nWalk-in consultations welcome",
+                color: "#ff7300",
+                action: "/contact",
+                actionLabel: "Get Directions",
+                internal: true,
+              },
+            ].map((card, i) => (
+              <motion.div
+                key={i}
+                className="success-contact-card"
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.15, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={{ y: -10, transition: { duration: 0.25 } }}
+              >
+                <div className="contact-card-glow" style={{ background: card.color }} />
+                <div className="contact-card-icon" style={{ background: `${card.color}18`, color: card.color }}>
+                  {card.icon}
+                </div>
+                <div className="contact-card-label">{card.label}</div>
+                <div className="contact-card-lines">
+                  {card.lines.map((l, j) => (
+                    <div key={j} className="contact-card-line">{l}</div>
+                  ))}
+                </div>
+                <p className="contact-card-sub">{card.sub}</p>
+                {card.internal ? (
+                  <Link to={card.action} className="contact-card-btn" style={{ background: card.color }}>
+                    {card.actionLabel}
+                  </Link>
+                ) : (
+                  <a href={card.action} className="contact-card-btn" target="_blank" rel="noreferrer" style={{ background: card.color }}>
+                    {card.actionLabel}
+                  </a>
+                )}
+              </motion.div>
+            ))}
           </div>
+
+          {/* Main CTA Button */}
+          <motion.div
+            className="success-cta-bottom"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.5, duration: 0.6 }}
+          >
+            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+              <Link to="/register" className="success-main-btn">
+                <span className="btn-shimmer" />
+                Get Free Consultation
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+            </motion.div>
+            <p className="success-cta-fine">No registration fee · 100% free consultation · Trusted by 1000+ students</p>
+          </motion.div>
+
+          {/* Stats strip */}
+          <motion.div
+            className="success-stats-strip"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.7, duration: 0.5 }}
+          >
+            {[["1000+", "Students Helped"], ["100+", "Colleges"], ["95%", "Success Rate"], ["24/7", "Support"]].map(([num, label], i) => (
+              <div key={i} className="success-stat">
+                <span className="success-stat-num">{num}</span>
+                <span className="success-stat-label">{label}</span>
+              </div>
+            ))}
+          </motion.div>
         </div>
       </section>
 
-      {/* FOOTER - DARK DESIGN */}
-      <footer className="footer-dark">
-        <div className="footer-dark-content">
-          <div className="footer-dark-main">
-            <div className="footer-dark-brand">
-              <div className="footer-dark-logo">
-                <span className="footer-logo-main">ICE</span>
-                <span className="footer-logo-sub">Foundation</span>
-              </div>
-              <p className="footer-tagline">
-                Smart College Prediction.
-                <br />
-                Expert Guidance. Seamless Admissions.
-              </p>
-            </div>
+      <Footer />
 
-            <div className="footer-dark-links">
-              <div className="footer-dark-col">
-                <h4>Company</h4>
-                <Link to="/about">About</Link>
-                <Link to="/colleges">Colleges</Link>
-                <Link to="/contact">Contact</Link>
-              </div>
-              <div className="footer-dark-col">
-                <h4>Legal</h4>
-                <a href="#">Privacy Policy</a>
-                <a href="#">Terms of Service</a>
-                <a href="#">Cookie Policy</a>
-              </div>
-            </div>
-          </div>
-
-          <div className="footer-dark-bottom">
-            <span>© 2025 ICE Foundation. All rights reserved.</span>
-          </div>
-        </div>
-      </footer>
+      {/* ── Scroll to Top ── */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.button
+            className="scroll-to-top show"
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 19V5M5 12l7-7 7 7" />
+            </svg>
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

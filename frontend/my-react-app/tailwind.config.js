@@ -104,6 +104,7 @@ export default {
         'dark-lg': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
       },
       animation: {
+        // Existing animations
         'fade-in': 'fadeIn 0.5s ease-in',
         'slide-up': 'slideUp 0.5s ease-out',
         'slide-down': 'slideDown 0.5s ease-out',
@@ -114,6 +115,18 @@ export default {
         'spin-slow': 'spin 3s linear infinite',
         'ping-slow': 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite',
         'bounce-slow': 'bounce 2s infinite',
+        
+        // Carousel specific animations
+        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+        'fade-in-up-delay-200': 'fadeInUp 0.8s ease-out 0.2s forwards',
+        'fade-in-up-delay-400': 'fadeInUp 0.8s ease-out 0.4s forwards',
+        'fade-in-up-delay-600': 'fadeInUp 0.8s ease-out 0.6s forwards',
+        'fade-in-up-delay-800': 'fadeInUp 0.8s ease-out 0.8s forwards',
+        'marquee': 'marquee 30s linear infinite',
+        'move-dots': 'moveDots 20s linear infinite',
+        'ken-burns': 'kenBurns 5s ease-in-out infinite alternate',
+        'gradient-shift': 'gradientShift 3s ease infinite',
+        'progress-bar': 'progressBar 5s linear forwards',
       },
       keyframes: {
         fadeIn: {
@@ -144,6 +157,61 @@ export default {
           '0%': { backgroundPosition: '-1000px 0' },
           '100%': { backgroundPosition: '1000px 0' },
         },
+        
+        // Carousel keyframes
+        fadeInUp: {
+          '0%': {
+            opacity: '0',
+            transform: 'translateY(30px)',
+          },
+          '100%': {
+            opacity: '1',
+            transform: 'translateY(0)',
+          },
+        },
+        marquee: {
+          '0%': {
+            transform: 'translateX(0)',
+          },
+          '100%': {
+            transform: 'translateX(-50%)',
+          },
+        },
+        moveDots: {
+          '0%': {
+            backgroundPosition: '0 0',
+          },
+          '100%': {
+            backgroundPosition: '30px 30px',
+          },
+        },
+        kenBurns: {
+          '0%': {
+            transform: 'scale(1)',
+          },
+          '100%': {
+            transform: 'scale(1.1)',
+          },
+        },
+        gradientShift: {
+          '0%': {
+            backgroundPosition: '0% 50%',
+          },
+          '50%': {
+            backgroundPosition: '100% 50%',
+          },
+          '100%': {
+            backgroundPosition: '0% 50%',
+          },
+        },
+        progressBar: {
+          '0%': {
+            width: '0%',
+          },
+          '100%': {
+            width: '100%',
+          },
+        },
       },
       spacing: {
         'safe-top': 'max(1rem, env(safe-area-inset-top))',
@@ -165,6 +233,15 @@ export default {
         'tightest': '-0.03em',
         'tighter': '-0.02em',
         'tight': '-0.01em',
+      },
+      transitionDuration: {
+        '5000': '5000ms',
+      },
+      scale: {
+        '200': '2',
+      },
+      backgroundSize: {
+        '200': '200%',
       },
     },
   },
