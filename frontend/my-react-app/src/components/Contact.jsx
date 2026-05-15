@@ -76,9 +76,9 @@ const Contact = () => {
         <div className="container">
           <div className="info-cards-grid">
             {[
-              { icon: "📞", label: "Call Us", val: "+91 83309 14141", sub: "Available 24/7 for queries" },
-              { icon: "✉️", label: "Email Us", val: "hello@visionbridge.in", sub: "Quick response within 24h" },
-              { icon: "📍", label: "Visit Us", val: "Chennai & Andhra Pradesh", sub: "Walk-in consultations welcome" }
+              { icon: "📞", label: "Call Us", val: "+91 87786 35855", sub: "Available 24/7 for queries" },
+              { icon: "✉️", label: "Email Us", val: "hello@aceconsulting.in", sub: "Quick response within 24h" },
+              { icon: "📍", label: "Visit Us", val: "Namakkal, Tamil Nadu", sub: "Walk-in consultations welcome" }
             ].map((item, i) => (
               <SectionReveal key={i} className="info-card-premium" delay={i * 0.1}>
                 <div className="info-card-icon">{item.icon}</div>
@@ -128,11 +128,11 @@ const Contact = () => {
                       <div className="form-row-dual">
                         <div className="input-group-premium">
                           <label>Full Name</label>
-                          <input type="text" placeholder="e.g. John Doe" required />
+                          <input type="text" placeholder="Enter your name" required />
                         </div>
                         <div className="input-group-premium">
                           <label>Phone Number</label>
-                          <input type="tel" placeholder="+91 00000 00000" required />
+                          <input type="tel" placeholder="9876543210" required />
                         </div>
                       </div>
 
@@ -204,11 +204,11 @@ const Contact = () => {
                       <div className="pulse" />
                       <div className="dot" />
                     </div>
-                    <span>Chennai Office</span>
+                    <span>Namakkal Office</span>
                   </div>
                 </div>
                 <div className="map-card-footer">
-                  <p>ACE COUNSULTING Pvt Ltd. <br />Multiple locations across Chennai & Andhra Pradesh.</p>
+                  <p>ACE COUNSULTING Pvt Ltd. <br />Namakkal, Tamil Nadu</p>
                   <button className="btn-outline-premium">Get Directions</button>
                 </div>
               </SectionReveal>

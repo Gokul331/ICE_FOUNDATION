@@ -170,7 +170,7 @@ function Auth({ initialTab = "login", onLoginSuccess } = {}) {
                         <label>First Name</label>
                         <input 
                           type="text" 
-                          placeholder="John" 
+                          placeholder="" 
                           value={formData.firstName}
                           onChange={(e) => setFormData({...formData, firstName: e.target.value})}
                           required
@@ -180,7 +180,7 @@ function Auth({ initialTab = "login", onLoginSuccess } = {}) {
                         <label>Last Name</label>
                         <input 
                           type="text" 
-                          placeholder="Doe" 
+                          placeholder="" 
                           value={formData.lastName}
                           onChange={(e) => setFormData({...formData, lastName: e.target.value})}
                           required
@@ -193,7 +193,7 @@ function Auth({ initialTab = "login", onLoginSuccess } = {}) {
                     <label>Email Address</label>
                     <input 
                       type="email" 
-                      placeholder="name@example.com" 
+                      placeholder="example@gmail.com" 
                       value={formData.email}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
                       required
@@ -205,7 +205,7 @@ function Auth({ initialTab = "login", onLoginSuccess } = {}) {
                       <label>Phone Number</label>
                       <input 
                         type="tel" 
-                        placeholder="+91 00000 00000" 
+                        placeholder="9876543210" 
                         value={formData.phone}
                         onChange={(e) => setFormData({...formData, phone: e.target.value})}
                         required
@@ -217,7 +217,7 @@ function Auth({ initialTab = "login", onLoginSuccess } = {}) {
                     <label>Password</label>
                     <input 
                       type={showPassword ? "text" : "password"} 
-                      placeholder="••••••••" 
+                      placeholder="" 
                       value={formData.password}
                       onChange={(e) => setFormData({...formData, password: e.target.value})}
                       required
@@ -251,7 +251,12 @@ function Auth({ initialTab = "login", onLoginSuccess } = {}) {
                   </button>
 
                   <div className="auth-back-home">
-                    <Link to="/">← Back to Home</Link>
+                    <Link to="/">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="18" height="18">
+                        <path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      Back to Home
+                    </Link>
                   </div>
                 </form>
               </motion.div>

@@ -5,6 +5,10 @@ import { getColleges } from "../services/api";
 import "../styles/home.css";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
+import img1 from "/1.jpg";
+import img2 from "/2.jpg";
+import img3 from "/3.jpg";
+import img4 from "/4.jpg";
 
 /* ── animation helpers ── */
 const fadeUp = {
@@ -51,7 +55,7 @@ function Home() {
 
   const heroSlides = [
     {
-      image: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1600&q=80",
+      image: img1,
       badge: "Trusted by 100+ colleges across Tamil Nadu",
       lines: ["Bridge the gap to", "your dream", "college journey"],
       desc: "Personalized guidance, scholarship support, and admissions strategy from experts who know what top colleges want.",
@@ -61,7 +65,7 @@ function Home() {
       authTo: "/college-suggestion",
     },
     {
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1600&q=80",
+      image: img2,
       badge: "5000+ Scholarships Available",
       lines: ["Discover the", "right library", "for your future"],
       desc: "Explore thousands of resources, scholarship opportunities and academic support to help you succeed in your higher education journey.",
@@ -71,7 +75,7 @@ function Home() {
       authTo: "/colleges",
     },
     {
-      image: "https://images.unsplash.com/photo-1532094349884-543290270f7d?w=1600&q=80",
+      image: img3,
       badge: "World-Class Laboratory Facilities",
       lines: ["Hands-on learning", "in cutting-edge", "laboratories"],
       desc: "Find colleges equipped with state-of-the-art labs for Engineering, Medical, and Allied Sciences to ignite your passion for research.",
@@ -81,7 +85,7 @@ function Home() {
       authTo: "/colleges",
     },
     {
-      image: "https://images.unsplash.com/photo-1562774053-701939374585?w=1600&q=80",
+      image: img4,
       badge: "95% Student Success Rate",
       lines: ["Your dream campus", "is just one step", "away"],
       desc: "From application to admission, our expert counselors walk you through every stage of your college journey with confidence.",
@@ -193,13 +197,18 @@ function Home() {
           <AnimatePresence mode="wait">
             <motion.div
               key={currentSlide}
-              className="hero-bg-image active"
-              style={{ backgroundImage: `url(${heroSlides[currentSlide].image})` }}
-              initial={{ opacity: 0, scale: 1.08 }}
+              className="hero-bg-image-wrapper"
+              initial={{ opacity: 0, scale: 1.05 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 1.2, ease: "easeInOut" }}
-            />
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 1.5, ease: [0.4, 0, 0.2, 1] }}
+            >
+              <img 
+                src={heroSlides[currentSlide].image} 
+                alt="Hero Slide" 
+                className="hero-full-img"
+              />
+            </motion.div>
           </AnimatePresence>
           <div className="hero-bg-overlay" />
           <div className="hero-bg-gradient" />
@@ -217,7 +226,7 @@ function Home() {
           >
             <div className="hero-badge floating-3d">
               <span className="badge-pulse" />
-              Direct Admission 2024-25 Open
+              Direct Admission 2025-26 Open
             </div>
 
             <h1 className="hero-title">
@@ -244,7 +253,7 @@ function Home() {
             </div>
 
             <div className="hero-trust">
-              {[["100+", "Colleges"], ["5k–40k", "Scholarships"], ["95%", "Success Rate"]].map(
+              {[["10+", "Colleges"], ["5k–40k", "Scholarships"], ["95%", "Success Rate"]].map(
                 ([num, label], i) => (
                   <div key={i} className="trust-item">
                     <span className="trust-num">{num}</span>
@@ -257,35 +266,38 @@ function Home() {
         </AnimatePresence>
 
         {/* Slide controls */}
-        <div className="hero-slide-controls">
-          <button
-            className="hero-arrow"
-            onClick={() => setCurrentSlide((p) => (p - 1 + heroSlides.length) % heroSlides.length)}
-            aria-label="Previous slide"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-          <div className="hero-dots">
-            {heroSlides.map((_, i) => (
-              <button
-                key={i}
-                className={`hero-dot${i === currentSlide ? " active" : ""}`}
-                onClick={() => setCurrentSlide(i)}
-                aria-label={`Go to slide ${i + 1}`}
-              />
-            ))}
+        <div className="hero-navigation-center-bottom">
+          <div className="hero-nav-container">
+            <button
+              className="hero-nav-arrow"
+              onClick={() => setCurrentSlide((p) => (p - 1 + heroSlides.length) % heroSlides.length)}
+              aria-label="Previous slide"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            
+            <div className="hero-nav-dots">
+              {heroSlides.map((_, i) => (
+                <button
+                  key={i}
+                  className={`hero-nav-dot${i === currentSlide ? " active" : ""}`}
+                  onClick={() => setCurrentSlide(i)}
+                />
+              ))}
+            </div>
+
+            <button
+              className="hero-nav-arrow"
+              onClick={() => setCurrentSlide((p) => (p + 1) % heroSlides.length)}
+              aria-label="Next slide"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           </div>
-          <button
-            className="hero-arrow"
-            onClick={() => setCurrentSlide((p) => (p + 1) % heroSlides.length)}
-            aria-label="Next slide"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
         </div>
 
         {/* Right visual cards */}
@@ -297,7 +309,7 @@ function Home() {
         >
           <div className="hero-visual">
             {[
-              { icon: "🎓", text: "Top Ranked", cls: "card-1" },
+              { icon: "🎓", text: "Top Universities", cls: "card-1" },
               { icon: "💰", text: "Scholarships", cls: "card-2" },
               { icon: "📚", text: "Courses", cls: "card-3" },
               { icon: "🏆", text: "Expert Guide", cls: "card-4" },
@@ -608,10 +620,10 @@ function Home() {
               {
                 icon: "📞",
                 label: "Call Us",
-                lines: ["+91 83309 14141", "+91 98667 45085"],
+                lines: ["+91 87786 35855 ", "+91 93600 38049"],
                 sub: "Available 24/7 for your queries",
                 color: "#255669",
-                action: "tel:+918330914141",
+                action: "tel:+918778635855",
                 actionLabel: "Call Now",
               },
               {
@@ -620,14 +632,14 @@ function Home() {
                 lines: ["Chat with us"],
                 sub: "Instant responses & file sharing",
                 color: "#25D366",
-                action: "https://wa.me/918330914141",
+                action: "https://wa.me/+918778635855",
                 actionLabel: "Open WhatsApp",
               },
               {
                 icon: "📍",
                 label: "Visit Us",
-                lines: ["Chennai & Andhra Pradesh"],
-                sub: "Multiple locations for your convenience\nWalk-in consultations welcome",
+                lines: ["Namakkal, Tamil Nadu"],
+                sub: "Walk-in consultations welcome",
                 color: "#ff7300",
                 action: "/contact",
                 actionLabel: "Get Directions",
@@ -695,7 +707,7 @@ function Home() {
             viewport={{ once: true }}
             transition={{ delay: 0.7, duration: 0.5 }}
           >
-            {[["1000+", "Students Helped"], ["100+", "Colleges"], ["95%", "Success Rate"], ["24/7", "Support"]].map(([num, label], i) => (
+            {[["1000+", "Students Helped"], ["10+", "Colleges"], ["95%", "Success Rate"], ["24/7", "Support"]].map(([num, label], i) => (
               <div key={i} className="success-stat">
                 <span className="success-stat-num">{num}</span>
                 <span className="success-stat-label">{label}</span>

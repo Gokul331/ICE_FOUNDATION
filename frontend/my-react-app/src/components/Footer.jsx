@@ -15,11 +15,9 @@ const Footer = () => {
             </Link>
             <p className="footer-description">
               Empowering students to achieve their academic dreams through personalized guidance, 
-              scholarship support, and expert admission strategies since 2016.
+              scholarship support, and expert admission strategies since 2026.
             </p>
             <div className="footer-social">
-              <a href="#" aria-label="Facebook">📘</a>
-              <a href="#" aria-label="Twitter">🐦</a>
               <a href="#" aria-label="Instagram">📸</a>
               <a href="#" aria-label="LinkedIn">🔗</a>
             </div>
@@ -48,10 +46,10 @@ const Footer = () => {
           <div className="footer-contact-col">
             <h4>Contact Info</h4>
             <div className="footer-contact-info">
-              <p>📍 Chennai & Andhra Pradesh, India</p>
+              <p>📍 Namakkal, Tamil Nadu</p>
               <p>✉️ info@aceconsulting.in</p>
-              <p>📞 +91 83309 14141</p>
-              <p>📞 +91 98667 45085</p>
+              <p>📞 +91 87786 35855</p>
+              <p>📞 +91 93600 38849</p>
             </div>
           </div>
         </div>

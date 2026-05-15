@@ -41,7 +41,7 @@ function About() {
               About Us
             </div>
             <h1>Bridging Dreams to <br /><span className="title-highlight">Distinguished Careers</span></h1>
-            <p>Empowering students with expert guidance for engineering and medical admissions across India since 2016.</p>
+            <p>Empowering students with expert guidance for engineering and medical admissions across Tamil Nadu since 2026.</p>
           </SectionReveal>
         </div>
       </section>
@@ -53,13 +53,13 @@ function About() {
             <SectionReveal className="story-content" delay={0.1}>
               <h2>Who <span className="title-highlight">We Are</span></h2>
               <p>
-                <strong>ACE CONSULTING</strong> is a MICRO, SMALL and MEDIUM ENTERPRISES (MSME), Government of India-registered concern specializing in admission services for engineering and medical programs, including MBBS, primarily in Chennai, Tamil Nadu, and Andhra Pradesh. As an MSME-registered entity, we benefit from government initiatives, ensuring credibility and access to resources that enhance our service quality.
+                <strong>ACE CONSULTING</strong> is a MICRO, SMALL and MEDIUM ENTERPRISES (MSME), Government of India-registered concern specializing in admission services for engineering and medical programs, including MBBS, primarily in Tamil Nadu. As an MSME-registered entity, we benefit from government initiatives, ensuring credibility and access to resources that enhance our service quality.
               </p>
               <p>
                 We guide students aspiring for engineering and medical courses by providing tailored admission assistance, including counseling on college selection, documentation, and logistical support. Leveraging our local expertise and networks, we help students navigate competitive exams and gain entry to reputable institutions.
               </p>
               <p>
-                In medical admissions, we facilitate placements in both renowned Indian medical colleges and private institutions across India and abroad. Operating in Tamil Nadu and Andhra Pradesh, we align our services with regional academic requirements to help students achieve their professional education goals.
+                In medical admissions, we facilitate placements in both renowned Indian medical colleges and private institutions across Tamil Nadu. Operating in Tamil Nadu, we align our services with regional academic requirements to help students achieve their professional education goals.
               </p>
             </SectionReveal>
             <SectionReveal className="story-visual" delay={0.3}>
@@ -150,10 +150,10 @@ function About() {
               </div>
               <ul className="focus-list">
                 <li>Tamil Nadu Engineering Colleges</li>
-                <li>Andhra Pradesh Medical Colleges</li>
-                <li>Chennai & Surrounding Areas</li>
-                <li>International/NRI Admissions</li>
-                <li>Career Readiness Programs</li>
+                <li>Tamil Nadu Medical Colleges</li>
+                <li>Namakkal - Salem - Erode - Trichy</li>
+                <li>Coimbatore & Surrounding Areas</li>
+                
               </ul>
             </SectionReveal>
           </div>
@@ -170,10 +170,10 @@ function About() {
             <div className="cta-contact-grid">
               <div className="cta-contact-item">
                 <span className="cta-icon">📞</span>
-                <div className="cta-text">
+                <div className="cta-text gap-10">
                   <strong>Call Us</strong>
-                  <span>+91 83309 14141</span>
-                  <span>+91 98667 45085</span>
+                  <span>+91 87786 35855 | </span>
+                  <span>+91 93600 38849</span>
                 </div>
               </div>
               <div className="cta-contact-item">
@@ -187,7 +187,7 @@ function About() {
                 <span className="cta-icon">📍</span>
                 <div className="cta-text">
                   <strong>Visit Us</strong>
-                  <span>Chennai & Andhra Pradesh</span>
+                  <span>Namakkal, Tamil Nadu</span>
                 </div>
               </div>
             </div>
