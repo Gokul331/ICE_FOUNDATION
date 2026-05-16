@@ -38,8 +38,25 @@
 .hero-full-img {
   width: 100%;
   height: 100%;
-  object-fit: contain; /* Ensures full image visibility */
-  opacity: 0.8; /* Subtle transparency for better text legibility */
+  object-fit: contain; /* Ensures full image visibility on desktop */
+  opacity: 0.7;
+  transition: all 0.5s ease;
+}
+
+/* Mobile Background Fix */
+@media (max-width: 1024px) {
+  .hero-full-img {
+    object-fit: cover; /* Acts as a true background on mobile to avoid 'separated' look */
+    opacity: 0.5; /* Lower opacity on mobile for better text contrast */
+  }
+  
+  .hero-background {
+    background: #020617; /* Deeper dark for mobile background */
+  }
+
+  .hero-bg-overlay {
+    background: linear-gradient(to bottom, rgba(15, 23, 42, 0.85) 0%, rgba(37, 86, 105, 0.7) 100%);
+  }
 }
 
 .hero-bg-overlay {
@@ -1163,26 +1180,48 @@
 
 /* ── RESPONSIVE ── */
 @media (max-width: 1024px) {
-  .hero-split { flex-direction: column; text-align: center; padding-top: 100px; padding-bottom: 60px; }
-  .hero-split-left { max-width: 100%; padding: 0 0 40px; }
-  .hero-title { align-items: center; }
-  .hero-buttons { justify-content: center; }
-  .hero-trust { justify-content: center; }
-  .hero-desc { margin-left: auto; margin-right: auto; }
-  .hero-visual { margin-top: 40px; }
+  .hero-split { flex-direction: column; text-align: center; padding-top: 80px; padding-bottom: 40px; }
+  .hero-split-left { max-width: 100%; padding: 0 0 20px; }
+  .hero-title { font-size: clamp(2.5rem, 6vw, 4rem); align-items: center; }
+  .hero-desc { font-size: 1.1rem; margin-left: auto; margin-right: auto; max-width: 95%; }
+  .hero-buttons { justify-content: center; gap: 12px; }
+  .btn-dark, .btn-outline { height: 48px; padding: 0 24px; font-size: 14px; }
+  .hero-split-right { display: none; } /* Hide floating cards on mobile to focus on background + text */
+  .hero-visual { display: none; }
   .hero-slide-controls { left: 50%; transform: translateX(-50%); bottom: 20px; }
+  .hero-navigation-center-bottom { bottom: 30px; }
   .process-line-connector { left: 40px; }
 }
 
 @media (max-width: 768px) {
-  .hero-title { font-size: 3rem; }
-  .services-grid { grid-template-columns: 1fr; }
-  .process-step-item { flex-direction: column; gap: 24px; text-align: center; }
-  .step-number-box { margin: 0 auto; width: 80px; height: 80px; font-size: 1.8rem; }
-  .process-line-connector { display: none; }
-  .success-cta-section { margin: 20px 16px 40px; border-radius: 40px; padding: 80px 0; }
-  .success-contact-grid { grid-template-columns: 1fr; }
-  .horizontal-college-card { flex: 0 0 320px; }
-  .horizontal-scroll-arrow { display: none; }
-  .success-stats-strip { gap: 30px; }
+  .hero-title { font-size: 2.2rem; margin-bottom: 16px; }
+  .hero-desc { font-size: 1rem; line-height: 1.6; }
+  .hero-badge { padding: 8px 16px; font-size: 0.8rem; margin-bottom: 24px; }
+  .trust-num { font-size: 1.6rem; }
+  .trust-label { font-size: 0.7rem; }
+  .hero-trust { gap: 20px; }
+  
+  .services-grid { grid-template-columns: 1fr; gap: 16px; }
+  .service-card { padding: 30px 20px; border-radius: 24px; }
+  .service-icon-wrapper { width: 60px; height: 60px; font-size: 1.8rem; }
+  .service-card-title { font-size: 1.3rem; }
+  
+  .process-step-item { flex-direction: column; gap: 16px; text-align: center; margin-bottom: 30px; }
+  .step-number-box { margin: 0 auto; width: 60px; height: 60px; font-size: 1.4rem; border-radius: 20px; }
+  .step-content { padding: 24px; border-radius: 24px; }
+  .step-title { font-size: 1.4rem; }
+  .step-desc { font-size: 1rem; }
+  
+  .success-cta-section { margin: 10px 10px 30px; border-radius: 30px; padding: 60px 0; }
+  .success-cta-title { font-size: 2rem; }
+  .success-cta-sub { font-size: 1rem; }
+  .success-contact-card { padding: 30px 20px; border-radius: 24px; }
+  .success-main-btn { padding: 16px 32px; font-size: 1rem; }
+  .success-stat-num { font-size: 2rem; }
+  .success-stat-label { font-size: 0.75rem; }
+  
+  .horizontal-college-card { flex: 0 0 280px; }
+  .horizontal-card-content { padding: 20px; }
+  .horizontal-college-title { font-size: 1.2rem; }
+  .marquee-item { font-size: 1rem; gap: 12px; }
 }
