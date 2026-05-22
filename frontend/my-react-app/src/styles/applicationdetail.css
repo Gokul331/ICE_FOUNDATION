@@ -375,3 +375,17 @@
   .info-display-grid { grid-template-columns: 1fr; }
   .header-text-box h1 { font-size: 2.8rem; }
 }
+
+@media (max-width: 768px) {
+  .detail-hero { padding: 80px 0 30px; }
+  .detail-header-row { flex-direction: column; align-items: flex-start; gap: 15px; }
+  .header-text-box h1 { font-size: 2.2rem; }
+  .timeline-card { padding: 20px; border-radius: 20px; }
+  .t-dot { width: 40px; height: 40px; font-size: 1rem; }
+  .t-label { font-size: 0.75rem; text-align: center; }
+  .card-header-premium { padding: 20px; }
+  .card-body-premium { padding: 20px; }
+  .docs-grid { grid-template-columns: 1fr; }
+  .sidebar-premium-card { padding: 20px; border-radius: 24px; }
+  .btn-action-premium { padding: 14px; font-size: 0.9rem; }
+}

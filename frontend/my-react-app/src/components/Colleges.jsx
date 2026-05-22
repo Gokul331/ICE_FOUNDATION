@@ -165,9 +165,24 @@ function Colleges() {
       <div className="filters-sticky-bar">
         <div className="container">
           <div className="filters-layout">
+
+            {/* Sticky search box */}
+            <div className="sticky-search-box">
+              <svg className="sticky-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+              </svg>
+              <input
+                type="text"
+                className="sticky-search-input"
+                placeholder="Search colleges or cities..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
             <div className="filter-chips">
               {["All", "Government", "Private", "Autonomous"].map(t => (
-                <button 
+                <button
                   key={t}
                   className={`filter-chip ${filters.type === t ? "active" : ""}`}
                   onClick={() => setFilters({ type: t })}
@@ -176,6 +191,7 @@ function Colleges() {
                 </button>
               ))}
             </div>
+
             <div className="sort-view-controls">
               <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                 <option value="name">Sort: Name A-Z</option>
@@ -190,6 +206,7 @@ function Colleges() {
                 </button>
               </div>
             </div>
+
           </div>
         </div>
       </div>

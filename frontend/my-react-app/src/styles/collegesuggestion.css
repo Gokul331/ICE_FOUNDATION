@@ -284,7 +284,104 @@
 }
 
 @media (max-width: 768px) {
-  .sug-form-row { grid-template-columns: 1fr; }
-  .results-header-box h2 { font-size: 2rem; }
-  .suggestions-grid { grid-template-columns: 1fr; }
+  /* Hero section padding */
+  .suggestion-hero {
+    padding: 90px 16px 48px;
+  }
+
+  /* Hero form side: full width, centered, subtle card lift */
+  .hero-form-side {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0;
+  }
+
+  /* Glass form card: friendly rounded card look on mobile */
+  .glass-form-card {
+    padding: 24px 18px 28px;
+    border-radius: 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10);
+    background: #fff;
+    border: 1px solid var(--border);
+  }
+
+  .glass-form-card h3 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    margin-bottom: 18px;
+    text-align: center;
+    color: var(--text);
+    letter-spacing: -0.3px;
+  }
+
+  /* Form layout: single column, generous spacing */
+  .sug-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .sug-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .sug-form-group label {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+  }
+
+  .sug-form-group input,
+  .sug-form-group select {
+    padding: 12px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    background: var(--bg-alt);
+    color: var(--text);
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .sug-form-group input:focus,
+  .sug-form-group select:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(37, 86, 105, 0.08);
+  }
+
+  /* Row fields: stack on mobile */
+  .sug-form-row {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  /* CTA button: full width, pill shape */
+  .btn-premium-action {
+    width: 100%;
+    padding: 15px;
+    font-size: 15px;
+    font-weight: 800;
+    border-radius: 50px;
+    margin-top: 6px;
+    letter-spacing: 0.3px;
+  }
+
+  /* Hero text adjustments */
+  .hero-text-side h1 { font-size: 1.9rem; line-height: 1.15; }
+  .hero-text-side p  { font-size: 1rem; margin-bottom: 28px; }
+  .hero-stats-mini   { gap: 20px; flex-wrap: wrap; justify-content: center; }
+  .mini-stat strong  { font-size: 1.5rem; }
+
+  /* Results section */
+  .results-header-box h2 { font-size: 1.6rem; }
+  .suggestions-grid      { grid-template-columns: 1fr; }
 }

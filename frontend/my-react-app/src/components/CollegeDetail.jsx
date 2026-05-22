@@ -224,7 +224,6 @@ function CollegeDetail() {
                     <thead>
                       <tr>
                         <th>Specialization</th>
-                        <th>Duration</th>
                         <th>Annual Fee</th>
                         <th>Action</th>
                       </tr>
@@ -233,7 +232,6 @@ function CollegeDetail() {
                       {courses.map((crs, i) => (
                         <tr key={i}>
                           <td><strong>{crs.course_name}</strong></td>
-                          <td>{crs.duration_years} Years</td>
                           <td>{formatCurrency(selectedQuota === 'management' ? crs.tuition_fee_management : crs.tuition_fee_government)}</td>
                           <td><button className="btn-table-apply" onClick={() => handleApplyNow(crs)}>Apply</button></td>
                         </tr>
@@ -241,6 +239,61 @@ function CollegeDetail() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Additional Fees Section */}
+                {(fees || (hostels && hostels.length > 0)) && (
+                  <div className="additional-fees-container" style={{ marginTop: '40px', paddingTop: '30px', borderTop: '1px solid var(--border)' }}>
+                    <h3 style={{ fontSize: '1.4rem', marginBottom: '20px' }}>Extra Fees & Accommodations</h3>
+                    
+                    <div className="cd-details-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+                      
+                      {/* Transport Fees */}
+                      {fees && (fees.transport_fee_min > 0 || fees.transport_fee_max > 0) && (
+                        <div className="detail-box">
+                          <label>Transport Fees</label>
+                          <span>
+                            {fees.transport_fee_min === fees.transport_fee_max 
+                              ? formatCurrency(fees.transport_fee_min) 
+                              : `${formatCurrency(fees.transport_fee_min)} - ${formatCurrency(fees.transport_fee_max)}`}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Admission & Application Fees */}
+                      {fees && fees.admission_fee > 0 && (
+                        <div className="detail-box">
+                          <label>Admission Fee (One-time)</label>
+                          <span>{formatCurrency(fees.admission_fee)}</span>
+                        </div>
+                      )}
+                      
+                      {fees && fees.application_fee > 0 && (
+                        <div className="detail-box">
+                          <label>Application Fee</label>
+                          <span>{formatCurrency(fees.application_fee)}</span>
+                        </div>
+                      )}
+
+                      {/* Miscellaneous */}
+                      {fees && fees.miscellaneous_fee > 0 && (
+                        <div className="detail-box">
+                          <label>Miscellaneous Fee</label>
+                          <span>{formatCurrency(fees.miscellaneous_fee)}</span>
+                        </div>
+                      )}
+
+                      {/* Hostel Fees */}
+                      {hostels && hostels.map((hostel, idx) => (
+                        <div className="detail-box" key={`hostel-${idx}`}>
+                          <label>{hostel.name} {hostel.room_type_display ? `(${hostel.room_type_display})` : ''} Hostel</label>
+                          <span>{formatCurrency(hostel.fee_per_year)} / Year</span>
+                        </div>
+                      ))}
+
+                    </div>
+                  </div>
+                )}
+
               </SectionReveal>
             </motion.div>
           )}

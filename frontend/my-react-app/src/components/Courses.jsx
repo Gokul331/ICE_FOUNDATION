@@ -134,20 +134,6 @@ function Courses() {
             </div>
             <h1>Your Future <span className="title-highlight">Starts Here</span></h1>
             <p>Browse through specialized programs designed to empower your career journey.</p>
-            
-            <div className="hero-search-box">
-              <div className="search-input-wrapper">
-                <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-                </svg>
-                <input 
-                  type="text" 
-                  placeholder="Search courses or specializations..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
           </motion.div>
         </div>
       </section>
@@ -156,9 +142,24 @@ function Courses() {
       <div className="filters-sticky-bar">
         <div className="container">
           <div className="filters-layout">
+
+            {/* Sticky search box */}
+            <div className="sticky-search-box">
+              <svg className="sticky-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+              </svg>
+              <input
+                type="text"
+                className="sticky-search-input"
+                placeholder="Search courses or specializations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
             <div className="filter-chips">
               {["All", "UG", "PG", "Diploma"].map(t => (
-                <button 
+                <button
                   key={t}
                   className={`filter-chip ${filters.stream === t ? "active" : ""}`}
                   onClick={() => setFilters({ ...filters, stream: t })}
@@ -167,6 +168,7 @@ function Courses() {
                 </button>
               ))}
             </div>
+
             <div className="sort-view-controls">
               <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                 <option value="name">Sort: A-Z</option>
@@ -181,6 +183,7 @@ function Courses() {
                 </button>
               </div>
             </div>
+
           </div>
         </div>
       </div>

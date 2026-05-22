@@ -85,6 +85,47 @@
   box-shadow: 0 4px 20px rgba(0,0,0,0.02);
 }
 
+/* ── STICKY SEARCH BOX ── */
+.sticky-search-box {
+  flex: 1 1 280px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-alt);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 9px 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.sticky-search-box:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 86, 105, 0.08);
+  background: #fff;
+}
+
+.sticky-search-icon {
+  width: 18px;
+  height: 18px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.sticky-search-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sticky-search-input::placeholder {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
 .filters-layout {
   display: flex;
   justify-content: space-between;
@@ -394,9 +435,108 @@
 }
 
 @media (max-width: 768px) {
-  .colleges-grid { grid-template-columns: 1fr; }
+  /* Hero */
+  .colleges-hero {
+    padding: 90px 16px 48px;
+  }
+
+  .colleges-hero-content h1 {
+    font-size: 2rem;
+    margin-bottom: 12px;
+  }
+
+  .colleges-hero-content p {
+    font-size: 1rem;
+    margin-bottom: 24px;
+  }
+
+  /* Search box: full-width pill on mobile */
+  .hero-search-box {
+    flex-direction: row;
+    width: 100%;
+    max-width: 100%;
+    padding: 6px 6px 6px 4px;
+    border-radius: 50px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.20);
+    align-items: center;
+  }
+
+  .search-input-wrapper {
+    padding: 0 12px;
+    gap: 10px;
+  }
+
+  .search-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  .search-input-wrapper input {
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 0;
+  }
+
+  /* Filters bar */
+  .filters-sticky-bar {
+    padding: 10px 0;
+    top: 60px;
+  }
+
+  .filters-layout {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .filter-chips {
+    overflow-x: auto;
+    padding-bottom: 4px;
+    gap: 8px;
+    scrollbar-width: none;
+  }
+
+  .filter-chips::-webkit-scrollbar { display: none; }
+
+  .filter-chip {
+    padding: 7px 16px;
+    font-size: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .sort-view-controls {
+    justify-content: space-between;
+  }
+
+  .sort-select {
+    font-size: 13px;
+    padding: 7px 12px;
+  }
+
+  /* Sticky search on mobile: full width, pill shape */
+  .sticky-search-box {
+    flex: none;
+    width: 100%;
+    border-radius: 50px;
+    padding: 10px 16px;
+    background: var(--bg-alt);
+  }
+
+  .sticky-search-input {
+    font-size: 14px;
+  }
+
+  /* Results & Cards */
+  .results-section { padding: 30px 0 60px; }
+  .colleges-grid { grid-template-columns: 1fr; gap: 16px; }
   .colleges-list .college-card-premium { flex-direction: column; }
-  .colleges-list .card-image-box { width: 100%; height: 200px; }
-  .filters-layout { flex-direction: column; align-items: stretch; }
-  .sort-view-controls { justify-content: space-between; }
+  .colleges-list .card-image-box { width: 100%; height: 180px; }
+
+  .card-details { padding: 16px; }
+  .card-name { font-size: 1.1rem; margin-bottom: 12px; }
+  .card-stats { padding: 12px; gap: 8px; margin-bottom: 14px; border-radius: 12px; }
+  .c-stat-val { font-size: 13px; }
+  .btn-view, .btn-apply-card { padding: 10px; font-size: 12px; }
 }
