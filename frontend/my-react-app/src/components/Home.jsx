@@ -141,23 +141,36 @@ function Home() {
   const checkScrollPosition = () => {
     if (scrollContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      const maxScroll = Math.max(scrollWidth - clientWidth, 1);
       setShowLeftArrow(scrollLeft > 20);
       setShowRightArrow(scrollLeft + clientWidth < scrollWidth - 20);
-      setScrollProgress((scrollLeft / (scrollWidth - clientWidth)) * 100);
+      setScrollProgress((scrollLeft / maxScroll) * 100);
     }
   };
 
   useEffect(() => {
     const container = scrollContainerRef.current;
-    if (container) {
-      container.addEventListener("scroll", checkScrollPosition);
-      checkScrollPosition();
-      return () => container.removeEventListener("scroll", checkScrollPosition);
+    if (!container) {
+      return;
     }
-  }, [colleges]);
+
+    const updateScrollState = () => {
+      requestAnimationFrame(checkScrollPosition);
+    };
+
+    updateScrollState();
+    container.addEventListener("scroll", updateScrollState);
+    window.addEventListener("resize", updateScrollState);
+
+    return () => {
+      container.removeEventListener("scroll", updateScrollState);
+      window.removeEventListener("resize", updateScrollState);
+    };
+  }, [colleges, loading]);
 
   const scrollColleges = (dir) => {
     scrollContainerRef.current?.scrollBy({ left: dir * 380, behavior: "smooth" });
+    requestAnimationFrame(checkScrollPosition);
   };
 
   const handleLogout = () => {
@@ -413,8 +426,8 @@ function Home() {
                 )}
               </AnimatePresence>
 
-              <div className="horizontal-scroll-wrapper">
-                <div className="horizontal-scroll-track" ref={scrollContainerRef}>
+              <div className="horizontal-scroll-wrapper" ref={scrollContainerRef}>
+                <div className="horizontal-scroll-track">
                   {colleges.map((college, index) => (
                     <motion.div
                       key={college.college_id}
@@ -452,11 +465,7 @@ function Home() {
                               </svg>
                               <span>{college.location_city || "City"}, {college.location_state || "State"}</span>
                             </div>
-                            <div className="horizontal-college-stats">
-                              {college.rating && <div className="stat-item"><span>⭐</span><span>{college.rating}</span></div>}
-                              {college.placement_rate && <div className="stat-item"><span>📊</span><span>{college.placement_rate}% Placed</span></div>}
-                              {college.fees && <div className="stat-item"><span>💰</span><span>₹{college.fees.toLocaleString()}</span></div>}
-                            </div>
+                           <div className = "horizontal-card-separator"></div>
                             <div className="horizontal-card-action">
                               <span>Explore College</span>
                               <svg className="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

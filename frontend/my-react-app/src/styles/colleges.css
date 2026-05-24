@@ -432,21 +432,23 @@
   justify-content: center;
   width: 30px;
   height: 30px;
+  gap: 4px;
   margin-top: 6px;
   border-radius: 999px;
-  background: rgba(37, 86, 105, 0.08);
+  
   color: var(--primary);
   transition: background 0.2s ease, transform 0.2s ease, color 0.2s ease;
 }
 
 .website-link:hover {
-  background: rgba(37, 86, 105, 0.15);
+
   transform: translateY(-1px);
   color: var(--primary-dark);
 }
 
 .website-icon {
-  font-size: 14px;
+  font-size: 12px;
+  align-self: center;
 }
 
 .card-actions {

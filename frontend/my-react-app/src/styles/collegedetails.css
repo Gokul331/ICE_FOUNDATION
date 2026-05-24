@@ -222,6 +222,7 @@
 .detail-box span {
   font-size: 0.95rem;
   font-weight: 700;
+  text-transform: uppercase;
 }
 
 /* ── COURSES TABLE ── */

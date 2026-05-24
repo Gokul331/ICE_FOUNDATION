@@ -141,8 +141,8 @@ function CollegeDetail() {
               </div>
               <div className="cd-quick-stats">
                 <div className="stat-item">
-                  <strong>{college.nirf_rank || "NR"}</strong>
-                  <span>NIRF Rank</span>
+                  <strong>{college.counselling_code || "-"}</strong>
+                  <span>Counseling Code</span>
                 </div>
                 <div className="stat-item">
                   <strong>{college.placement_percentage || "90"}%</strong>
@@ -197,11 +197,11 @@ function CollegeDetail() {
                   </div>
                   <div className="detail-box">
                     <label>Affiliation</label>
-                    <span>{college.affiliation || "N/A"}</span>
+                    <span>{college.affiliation || "-"}</span>
                   </div>
                   <div className="detail-box">
                     <label>NAAC Grade</label>
-                    <span>{college.naac_grade || "A+"}</span>
+                    <span>{college.naac_grade || "N/A"}</span>
                   </div>
                 </div>
               </SectionReveal>
