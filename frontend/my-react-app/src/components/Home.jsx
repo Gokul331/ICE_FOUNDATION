@@ -71,7 +71,7 @@ function Home() {
       desc: "Explore thousands of resources, scholarship opportunities and academic support to help you succeed in your higher education journey.",
       primaryLabel: "Find Scholarships",
       primaryTo: "/college-suggestion",
-      authLabel: "Explore Colleges",
+      authLabel: "Explore Colleges",cd 
       authTo: "/colleges",
     },
     {
