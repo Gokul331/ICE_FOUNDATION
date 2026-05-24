@@ -5,12 +5,80 @@ import Navbar from "./Navbar";
 import { getColleges, getCollegeCourses } from "../services/api";
 import Footer from "./Footer";
 import "../styles/colleges.css";
+import { FaBars, FaExternalLinkAlt, FaHeart, FaMapMarkerAlt, FaSearch, FaTh } from "react-icons/fa";
 
 /* ── animation helpers ── */
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
 };
+
+function CollegeImageDisplay({ college, getLogoLetters }) {
+  const allImages = Array.isArray(college.all_images) ? college.all_images.filter(Boolean) : [];
+  const fallbackLogo = college.logo_url || "";
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [hasLogoError, setHasLogoError] = useState(false);
+
+  const rotationInterval = 5000;
+  const zoomAmount = 1.03;
+
+  useEffect(() => {
+    if (allImages.length <= 1) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
+    }, rotationInterval);
+
+    return () => window.clearInterval(interval);
+  }, [allImages.length, rotationInterval]);
+
+  const hasImages = allImages.length > 0;
+  const activeImage = hasImages ? allImages[currentImageIndex] : fallbackLogo;
+  const shouldShowLogo = !hasImages && Boolean(fallbackLogo) && !hasLogoError;
+
+  return (
+    <div className="card-image-box">
+      {shouldShowLogo ? (
+        <motion.div
+          className="card-image-logo-shell"
+          initial={{ opacity: 0, scale: 0.985 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
+        >
+          <img
+            src={activeImage}
+            alt={college.college_name || college.name}
+            className="card-image logo-image"
+            onError={() => setHasLogoError(true)}
+          />
+          <div className="logo-label-overlay">logo</div>
+        </motion.div>
+      ) : hasImages ? (
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={activeImage}
+            src={activeImage}
+            alt={college.college_name || college.name}
+            className="card-image"
+            initial={{ opacity: 0, scale: zoomAmount + 0.02 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: zoomAmount }}
+            transition={{ duration: 0.45, ease: "easeOut" }}
+          />
+        </AnimatePresence>
+      ) : (
+        <div className="card-image-placeholder">
+          <div className="card-image-placeholder-badge">
+            {getLogoLetters(college.college_name || college.name)}
+          </div>
+          <div className="logo-label-overlay">logo</div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function SectionReveal({ children, className, delay = 0 }) {
   const ref = useRef(null);
@@ -146,9 +214,7 @@ function Colleges() {
             
             <div className="hero-search-box">
               <div className="search-input-wrapper">
-                <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-                </svg>
+                <FaSearch className="search-icon" />
                 <input 
                   type="text" 
                   placeholder="Search by college name or city..." 
@@ -168,9 +234,7 @@ function Colleges() {
 
             {/* Sticky search box */}
             <div className="sticky-search-box">
-              <svg className="sticky-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-              </svg>
+              <FaSearch className="sticky-search-icon" />
               <input
                 type="text"
                 className="sticky-search-input"
@@ -199,10 +263,10 @@ function Colleges() {
               </select>
               <div className="view-toggle">
                 <button className={`vt-btn ${viewMode === "grid" ? "active" : ""}`} onClick={() => setViewMode("grid")}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                  <FaTh />
                 </button>
                 <button className={`vt-btn ${viewMode === "list" ? "active" : ""}`} onClick={() => setViewMode("list")}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                  <FaBars />
                 </button>
               </div>
             </div>
@@ -233,19 +297,16 @@ function Colleges() {
                 {filteredAndSortedColleges.map((college, i) => (
                   <SectionReveal key={college.college_id || college.id} className="college-card-wrapper" delay={i % 6 * 0.05}>
                     <div className="college-card-premium card-3d">
-                      <div className="card-image-box">
-                        <img 
-                          src={college.image_url || `https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=600&q=80`} 
-                          alt="College" 
-                        />
+                      <CollegeImageDisplay college={college} getLogoLetters={getLogoLetters} />
+                      
                         <div className="card-badge">{college.type || "Private"}</div>
                         <motion.button 
                           className="card-wishlist"
                           whileTap={{ scale: 0.8 }}
                         >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+                          <FaHeart />
                         </motion.button>
-                      </div>
+                     
                       
                       <div className="card-details">
                         <div className="card-top">
@@ -253,7 +314,7 @@ function Colleges() {
                             {getLogoLetters(college.college_name || college.name)}
                           </div>
                           <div className="card-loc">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            <FaMapMarkerAlt />
                             {college.location_city || college.district}, {college.state || "TN"}
                           </div>
                         </div>
@@ -262,16 +323,25 @@ function Colleges() {
                         
                         <div className="card-stats">
                           <div className="c-stat">
-                            <span className="c-stat-val">{college.nirf_rank || "NR"}</span>
-                            <span className="c-stat-label">NIRF</span>
+                             <span className="c-stat-label">TNEA Code</span>
+                            <span className="c-stat-val">{college.counselling_code}</span>
+                           
                           </div>
                           <div className="c-stat">
+                            <span className="c-stat-label">Placement</span>
                             <span className="c-stat-val">{college.placement_percentage || "90"}%</span>
-                            <span className="c-stat-label">Placed</span>
+                            
                           </div>
                           <div className="c-stat">
-                            <span className="c-stat-val">Grade</span>
-                            <span className="c-stat-label">{college.naac_grade || "A+"}</span>
+                            <span className="c-stat-label">Website</span>
+                            <a
+                              href={college.website_url || "#"}
+                              className="website-link"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <FaExternalLinkAlt className="website-icon"/>
+                            </a>
                           </div>
                         </div>
                         
