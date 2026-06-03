@@ -1,60 +1,42 @@
 from django.contrib import admin
-from django.db.models import Avg, Count
+from django.db.models import Count, Q
 from django.utils.html import format_html
-from .models import College, Course, Fees, Hostel, UserProfile, TeamMember, TimelineEvent, StudentApplication
+from .models import College, Course, UserProfile, EnquiryForm
 from django.utils.safestring import mark_safe
 
 
 @admin.register(College)
 class CollegeAdmin(admin.ModelAdmin):
-    list_display = ('college_name', 'short_name', 'counselling_code', 'courses_offered_summary', 
-                    'location_city', 'location_state', 'type', 'affiliation', 'placement_percentage', 
-                    'image_preview', 'has_gallery_badge', 'hostel_available', 'created_at')
-    search_fields = ('college_name', 'short_name', 'counselling_code', 'location_city', 'location_state')
-    list_filter = ('location_state', 'type', 'affiliation', 'naac_grade', 'hostel_available', 'established_year')
+    list_display = ('college_name', 'short_name', 'location_city', 'location_state', 
+                    'courses_offered_summary', 'image_preview', 'has_gallery_badge', 'address')
+    search_fields = ('college_name', 'short_name', 'location_city', 'location_state')
+    list_filter = ('location_state',)
     readonly_fields = ('created_at', 'updated_at', 'courses_offered_summary', 'total_courses_count', 
-                      'sync_status', 'image_preview', 'gallery_preview')
+                      'sync_status', 'image_preview', 'gallery_preview', 'all_images_preview')
     
     actions = ['sync_categories_from_courses', 'bulk_add_engineering_category', 'clear_categories']
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('college_name', 'short_name', 'counselling_code', 'type', 'affiliation')
+            'fields': ('college_name', 'short_name')
         }),
         ('Images', {
-            'fields': ('logo_url', 'cover_image', 'banner_image', 'image_preview', 'gallery_preview'),
+            'fields': ('banner_image', 'image_preview', 'college_images', 'campus_images', 'gallery_preview'),
             'description': mark_safe('''
                 <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin-bottom: 10px;">
                     <strong>🖼️ College Images Management:</strong><br>
-                    • <strong>Logo URL:</strong> College logo for branding<br>
-                    • <strong>Cover Image:</strong> Hero/cover image for college page<br>
-                    • <strong>Banner Image:</strong> Banner image for promotions<br>
-                    • <strong>Gallery Images:</strong> Additional images managed in separate tabs below
-                </div>
-            ''')
-        }),
-        ('Image Gallery', {
-            'fields': ('college_images', 'campus_images', 'facility_images', 'hostel_images', 
-                      'library_images', 'lab_images', 'sports_images'),
-            'classes': ('wide',),
-            'description': mark_safe('''
-                <div style="background: #f1f5f9; padding: 12px; border-radius: 6px;">
-                    <strong>📸 Image Gallery Categories:</strong><br>
-                    • <strong>College Images:</strong> General college photos<br>
-                    • <strong>Campus Images:</strong> Campus views and landscapes<br>
-                    • <strong>Facility Images:</strong> Infrastructure and facilities<br>
-                    • <strong>Hostel Images:</strong> Hostel accommodations<br>
-                    • <strong>Library Images:</strong> Library photos<br>
-                    • <strong>Lab Images:</strong> Laboratory photos<br>
-                    • <strong>Sports Images:</strong> Sports facilities<br>
+                    • <strong>Banner Image:</strong> Single banner image URL for college page<br>
+                    • <strong>College Images:</strong> JSON array of general college photos<br>
+                    • <strong>Campus Images:</strong> JSON array of campus photos<br>
                     <br>
-                    <strong>📝 Format:</strong> Enter image URLs as a JSON array<br>
+                    <strong>📝 JSON Format Example:</strong><br>
                     <code>["https://example.com/image1.jpg", "https://example.com/image2.jpg"]</code>
                 </div>
             ''')
         }),
-        ('Location', {'fields': ('location_city', 'location_state', 'location_pincode', 'address')}),
-        ('Campus Details', {'fields': ('established_year', 'total_campus_area', 'hostel_available')}),
+        ('Location', {
+            'fields': ('location_city', 'location_state', 'location_pincode', 'address')
+        }),
         ('Course Categories', {
             'fields': ('courses_offered', 'courses_offered_summary', 'total_courses_count', 'sync_status'),
             'description': mark_safe('''
@@ -67,20 +49,20 @@ class CollegeAdmin(admin.ModelAdmin):
                 </div>
             ''')
         }),
-        ('Rankings & Accreditation', {'fields': ('naac_grade', 'nirf_rank')}),
-        ('Placement', {'fields': ('placement_percentage', 'median_salary', 'highest_salary', 'avg_salary')}),
-        ('Contact & Web', {'fields': ('website_url', 'email_domain', 'contact_phone')}),
-        ('Timestamps', {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)})
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'), 
+            'classes': ('collapse',)
+        })
     )
     
     def image_preview(self, obj):
         """Display image preview in admin list"""
-        if obj.cover_image:
-            return mark_safe(f'<img src="{obj.cover_image}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" />')
-        elif obj.logo_url:
-            return mark_safe(f'<img src="{obj.logo_url}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" />')
+        if obj.banner_image:
+            return mark_safe(f'<img src="{obj.banner_image}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" />')
         elif obj.college_images and len(obj.college_images) > 0:
             return mark_safe(f'<img src="{obj.college_images[0]}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" />')
+        elif obj.campus_images and len(obj.campus_images) > 0:
+            return mark_safe(f'<img src="{obj.campus_images[0]}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" />')
         return mark_safe('<span style="color: #999;">No image</span>')
     image_preview.short_description = 'Preview'
     
@@ -102,7 +84,38 @@ class CollegeAdmin(admin.ModelAdmin):
         
         output += '</div>'
         return mark_safe(output)
-    gallery_preview.short_description = 'Gallery'
+    gallery_preview.short_description = 'Gallery Preview'
+    
+    def all_images_preview(self, obj):
+        """Display all images by category"""
+        output = '<div style="background: #f8fafc; padding: 12px; border-radius: 6px;">'
+        
+        # College Images
+        if obj.college_images:
+            output += '<strong>📸 College Images:</strong><br>'
+            output += '<div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 20px 0;">'
+            for img in obj.college_images[:4]:
+                output += f'<img src="{img}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd;" />'
+            if len(obj.college_images) > 4:
+                output += f'<div style="width: 100px; height: 100px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; border-radius: 8px;">+{len(obj.college_images) - 4}</div>'
+            output += '</div>'
+        
+        # Campus Images
+        if obj.campus_images:
+            output += '<strong>🏫 Campus Images:</strong><br>'
+            output += '<div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 20px 0;">'
+            for img in obj.campus_images[:4]:
+                output += f'<img src="{img}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd;" />'
+            if len(obj.campus_images) > 4:
+                output += f'<div style="width: 100px; height: 100px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; border-radius: 8px;">+{len(obj.campus_images) - 4}</div>'
+            output += '</div>'
+        
+        if not obj.college_images and not obj.campus_images:
+            output += '<span style="color: #999;">No images uploaded</span>'
+        
+        output += '</div>'
+        return mark_safe(output)
+    all_images_preview.short_description = 'All Images Preview'
     
     def has_gallery_badge(self, obj):
         """Display badge if college has gallery images"""
@@ -181,7 +194,7 @@ class CollegeAdmin(admin.ModelAdmin):
                 
                 if current_categories != actual_categories:
                     college.courses_offered = list(actual_categories)
-                    college.save(update_fields=['courses_offered', 'updated_at'])
+                    college.save(update_fields=['courses_offered'])
                     updated_count += 1
             except Exception as e:
                 errors += 1
@@ -198,7 +211,7 @@ class CollegeAdmin(admin.ModelAdmin):
             if 'engineering' not in categories:
                 categories.append('engineering')
                 college.courses_offered = categories
-                college.save(update_fields=['courses_offered', 'updated_at'])
+                college.save(update_fields=['courses_offered'])
                 updated_count += 1
         self.message_user(request, f'Added Engineering category to {updated_count} colleges.')
     bulk_add_engineering_category.short_description = 'Add "Engineering" category'
@@ -207,7 +220,7 @@ class CollegeAdmin(admin.ModelAdmin):
         """Admin action to clear all categories"""
         for college in queryset:
             college.courses_offered = []
-            college.save(update_fields=['courses_offered', 'updated_at'])
+            college.save(update_fields=['courses_offered'])
         self.message_user(request, f'Cleared categories for {queryset.count()} colleges.')
     clear_categories.short_description = 'Clear all categories'
     
@@ -215,53 +228,18 @@ class CollegeAdmin(admin.ModelAdmin):
         return super().get_queryset(request).prefetch_related('courses')
 
 
-# ==================== COURSE ADMIN (ENHANCED) ====================
-class CollegeStateListFilter(admin.SimpleListFilter):
-    title = 'College State'
-    parameter_name = 'college_state'
-    def lookups(self, request, model_admin):
-        states = set(college.location_state for college in College.objects.all() if college.location_state)
-        return [(state, state) for state in sorted(states)]
-    def queryset(self, request, queryset):
-        if self.value():
-            return queryset.filter(college__location_state=self.value())
-        return queryset
-
-
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ('course_name', 'course_code', 'college', 'category_badge', 'degree_name', 
-                    'tuition_fee_management', 'tuition_fee_government', 'cutoff_oc', 
-                    'cutoff_bc', 'cutoff_sc',
-                    'intake_seats', 'is_active')
-    search_fields = ('course_name', 'course_code', 'college__college_name')
-    list_filter = (CollegeStateListFilter, 'college', 'category', 'degree_type', 'degree_name', 'is_active', 'college__type', 'college__affiliation')
+    list_display = ('course_code', 'course_name', 'college', 'category_badge', 'degree_type', 'is_active')
+    search_fields = ('course_code', 'course_name', 'college__college_name')
+    list_filter = ('college', 'category', 'degree_type', 'is_active')
     readonly_fields = ('created_at', 'updated_at', 'category_badge')
-    list_editable = ('tuition_fee_management', 'tuition_fee_government', 'cutoff_oc', 'cutoff_bc', 'cutoff_sc', 'intake_seats', 'is_active')
+    list_editable = ('is_active',)
     list_per_page = 25
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('college', 'course_code', 'course_name', 'category', 'category_badge', 'degree_type', 'degree_name', 'duration_years')
-        }),
-        ('Fee Information', {
-            'fields': ('tuition_fee_management', 'tuition_fee_government'),
-            'description': '''
-                <div style="background: #e8f5e9; padding: 8px 12px; border-radius: 6px;">
-                    <strong>📘 Fee Structure:</strong><br>
-                    • <strong>Management Quota Fee:</strong> Annual fee for students admitted through management quota<br>
-                    • <strong>Government Quota Fee:</strong> Annual fee for students admitted through government counselling
-                </div>
-            '''
-        }),
-        ('Seats & Cutoff Marks', {
-            'fields': ('intake_seats', 'cutoff_oc', 'cutoff_bc', 'cutoff_bcm', 'cutoff_mbc', 
-                      'cutoff_sc', 'cutoff_sca', 'cutoff_st'),
-            'classes': ('wide',)
-        }),
-        ('Scholarship Information', {
-            'fields': ('scholarship_amount', 'scholarship_criteria'),
-            'classes': ('collapse',)
+            'fields': ('college', 'course_code', 'course_name', 'category', 'category_badge', 'degree_type')
         }),
         ('Status', {
             'fields': ('is_active',)
@@ -302,334 +280,75 @@ class CourseAdmin(admin.ModelAdmin):
             obj.college.sync_courses_offered()
 
 
-# ==================== HOSTEL ADMIN ====================
-@admin.register(Hostel)
-class HostelAdmin(admin.ModelAdmin):
-    list_display = ('name', 'college', 'gender', 'room_type_display', 
-                    'fee_per_year', 'total_rooms', 'total_capacity', 'is_active')
-    list_filter = ('gender', 'room_type', 'is_active', 'college')
-    search_fields = ('name', 'college__college_name')
-    readonly_fields = ('created_at', 'updated_at', 'total_capacity', 'total_fee_with_deposit')
-    
-    fieldsets = (
-        ('Basic Information', {
-            'fields': ('college', 'name', 'gender')
-        }),
-        ('Room Details', {
-            'fields': ('room_type', 'total_rooms', 'capacity_per_room')
-        }),
-        ('Fee Structure', {
-            'fields': ('fee_per_semester', 'fee_per_year', 'caution_deposit'),
-            'description': 'Hostel fees per student (per year or per semester)'
-        }),
-        ('Status', {
-            'fields': ('is_active',)
-        }),
-        ('System Information', {
-            'fields': ('created_at', 'updated_at', 'total_capacity', 'total_fee_with_deposit'),
-            'classes': ('collapse',)
-        })
-    )
-    
-    def room_type_display(self, obj):
-        return obj.room_type_display
-    room_type_display.short_description = 'Room Type'
-    room_type_display.admin_order_field = 'room_type'
-    
-    def total_capacity(self, obj):
-        return obj.total_capacity
-    total_capacity.short_description = 'Total Capacity'
-    
-    def total_fee_with_deposit(self, obj):
-        return f"₹{obj.total_fee_with_deposit:,.2f}/year"
-    total_fee_with_deposit.short_description = 'Total with Deposit'
-
-
-# ==================== FEES ADMIN ====================
-@admin.register(Fees)
-class FeesAdmin(admin.ModelAdmin):
-    list_display = ('college', 'academic_year', 'admission_fee_display', 
-                    'total_fee_display', 'transport_fee_range_display', 
-                    'payment_frequency', 'created_at')
-    search_fields = ('college__college_name', 'college__short_name', 'academic_year')
-    list_filter = ('academic_year', 'payment_frequency', 'college__location_state', 'college__type')
-    readonly_fields = ('created_at', 'updated_at', 'total_fee_calculated')
-    
-    fieldsets = (
-        ('College Information', {
-            'fields': ('college', 'academic_year')
-        }),
-        ('Application & Admission Fees', {
-            'fields': ('application_fee', 'admission_fee'),
-            'description': 'One-time fees paid during application and admission process'
-        }),
-        ('Academic Fees', {
-            'fields': ('book_fee', 'exam_fee', 'lab_fee', 'sports_fee'),
-            'description': 'Annual academic and facility fees'
-        }),
-        ('Miscellaneous Fees', {
-            'fields': ('miscellaneous_fee', 'miscellaneous_description'),
-            'description': 'Other miscellaneous charges'
-        }),
-        ('Additional Fees (JSON Format)', {
-            'fields': ('additional_fees',),
-            'description': '''
-                <div style="background: #f8fafc; padding: 12px; border-radius: 6px;">
-                    <strong>📘 Additional Fees Format:</strong><br>
-                    Enter additional fees as JSON:<br><br>
-                    <code>
-                    {
-                        "caution_deposit": {"amount": 5000, "refundable": true, "description": "Library caution deposit"},
-                        "alumni_fee": {"amount": 1000, "description": "Alumni association fee"},
-                        "medical_fee": {"amount": 2000, "description": "Medical insurance"}
-                    }
-                    </code>
-                </div>
-            ''',
-            'classes': ('wide',)
-        }),
-        ('Transport Facility', {
-            'fields': ('transport_fee_min', 'transport_fee_max'),
-            'description': 'Transport fee range based on distance (min to max)'
-        }),
-        ('Payment Settings', {
-            'fields': ('payment_frequency', 'fee_notes'),
-        }),
-        ('System Information', {
-            'fields': ('created_at', 'updated_at', 'total_fee_calculated'),
-            'classes': ('collapse',)
-        })
-    )
-    
-    def admission_fee_display(self, obj):
-        return f"₹ {obj.admission_fee:,.2f}" if obj.admission_fee else "Not Set"
-    admission_fee_display.short_description = 'Admission Fee'
-    
-    def total_fee_display(self, obj):
-        return f"₹ {obj.total_fee:,.2f}"
-    total_fee_display.short_description = 'Total Fee'
-    
-    def transport_fee_range_display(self, obj):
-        if obj.transport_fee_min == obj.transport_fee_max:
-            if obj.transport_fee_min == 0:
-                return "Not Available"
-            return f"₹ {obj.transport_fee_min:,.2f}"
-        return f"₹ {obj.transport_fee_min:,.2f} - ₹ {obj.transport_fee_max:,.2f}"
-    transport_fee_range_display.short_description = 'Transport Fee Range'
-    
-    def total_fee_calculated(self, obj):
-        courses = Course.objects.filter(college=obj.college, is_active=True)
-        breakdown = obj.get_fee_breakdown()
-        
-        html = '<div style="background: #f8fafc; padding: 12px; border-radius: 6px; border-left: 3px solid #3AAAD4;">'
-        html += '<strong style="font-size: 14px;">📊 Fee Breakdown (Academic Year: {})</strong><br/><br/>'.format(obj.academic_year)
-        
-        html += '<strong>💰 One-time Fees:</strong><br/>'
-        html += '• Application Fee: ₹ {:,.2f}<br/>'.format(breakdown['one_time_fees']['application_fee'])
-        html += '• Admission Fee: ₹ {:,.2f}<br/>'.format(breakdown['one_time_fees']['admission_fee'])
-        html += '<strong>Total One-time: ₹ {:,.2f}</strong><br/><br/>'.format(breakdown['one_time_fees']['total_one_time'])
-        
-        html += '<strong>📚 Annual Fees:</strong><br/>'
-        html += '• Book Fee: ₹ {:,.2f}<br/>'.format(breakdown['annual_fees']['book_fee'])
-        html += '• Exam Fee: ₹ {:,.2f}<br/>'.format(breakdown['annual_fees']['exam_fee'])
-        html += '• Lab Fee: ₹ {:,.2f}<br/>'.format(breakdown['annual_fees']['lab_fee'])
-        html += '• Sports Fee: ₹ {:,.2f}<br/>'.format(breakdown['annual_fees']['sports_fee'])
-        if breakdown['annual_fees']['miscellaneous_fee'] > 0:
-            html += '• Miscellaneous: ₹ {:,.2f}<br/>'.format(breakdown['annual_fees']['miscellaneous_fee'])
-        html += '<strong>Total Annual: ₹ {:,.2f}</strong><br/><br/>'.format(breakdown['annual_fees']['total_annual'])
-        
-        if breakdown['additional_fees']:
-            html += '<strong>📝 Additional Fees:</strong><br/>'
-            for fee in breakdown['additional_fees']:
-                refundable = " (Refundable)" if fee['refundable'] else ""
-                html += '• {}: ₹ {:,.2f}{}<br/>'.format(fee['name'], fee['amount'], refundable)
-            html += '<br/>'
-        
-        if obj.transport_fee_min == obj.transport_fee_max:
-            transport_text = f"₹ {obj.transport_fee_min:,.2f}" if obj.transport_fee_min > 0 else "Not Available"
-        else:
-            transport_text = f"₹ {obj.transport_fee_min:,.2f} - ₹ {obj.transport_fee_max:,.2f}"
-        html += '• <strong>Transport Fee Range:</strong> {}<br/><br/>'.format(transport_text)
-        
-        html += '<hr style="margin: 10px 0; border-color: #e2e8f0;">'
-        html += '<strong>🎯 Grand Total: ₹ {:,.2f}</strong><br/>'.format(breakdown['grand_total'])
-        
-        hostel_count = Hostel.objects.filter(college=obj.college, is_active=True).count()
-        if hostel_count > 0:
-            html += '<br/><div style="background: #e3f2fd; padding: 8px; border-radius: 4px; margin-top: 8px;">'
-            html += '🏠 <strong>Note:</strong> Hostel fees are managed separately. '
-            html += 'This college has {} hostel option(s) with different room types.'.format(hostel_count)
-            html += '</div>'
-        
-        if courses.exists():
-            html += '<br/><div style="background: #f1f5f9; padding: 8px; border-radius: 4px; margin-top: 8px;">'
-            html += '📚 <strong>Note:</strong> Tuition fees are course-specific. '
-            html += 'This college offers {} active course(s) with their own tuition fee structures.'.format(courses.count())
-            html += '</div>'
-        
-        html += '</div>'
-        return mark_safe(html)
-    total_fee_calculated.short_description = 'Fee Calculator'
-    
-    def save_model(self, request, obj, form, change):
-        if obj.transport_fee_max < obj.transport_fee_min:
-            obj.transport_fee_max = obj.transport_fee_min
-        
-        if obj.transport_fee_min is None:
-            obj.transport_fee_min = 0
-        if obj.transport_fee_max is None:
-            obj.transport_fee_max = 0
-        
-        if obj.additional_fees is None:
-            obj.additional_fees = {}
-        
-        super().save_model(request, obj, form, change)
-    
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related('college')
-
-
-# ==================== USER PROFILE ADMIN ====================
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('first_name', 'last_name', 'email', 'phone_number', 'city', 'state', 'created_at')
+    list_display = ('first_name', 'last_name', 'email', 'phone_number', 'city', 'created_at')
     search_fields = ('first_name', 'last_name', 'email', 'phone_number', 'city')
-    list_filter = ('gender', 'state', 'city')
+    list_filter = ('gender', 'city')
     readonly_fields = ('created_at', 'updated_at')
     
     fieldsets = (
-        ('Personal Information', {'fields': ('user', 'first_name', 'last_name', 'date_of_birth', 'gender')}),
-        ('Contact Information', {'fields': ('email', 'phone_number', 'whatsapp_number')}),
-        ('Address', {'fields': ('address', 'city', 'state', 'pincode')}),
-        ('Timestamps', {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)})
+        ('Personal Information', {
+            'fields': ('user', 'first_name', 'last_name', 'date_of_birth', 'gender')
+        }),
+        ('Contact Information', {
+            'fields': ('email', 'phone_number', 'whatsapp_number')
+        }),
+        ('Address', {
+            'fields': ('address', 'city', 'pincode')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'), 
+            'classes': ('collapse',)
+        })
     )
 
 
-# ==================== TEAM MEMBER ADMIN ====================
-@admin.register(TeamMember)
-class TeamMemberAdmin(admin.ModelAdmin):
-    list_display = ('user', 'role', 'designation', 'is_active', 'joined_at')
-    search_fields = ('user__username', 'user__email', 'designation')
-    list_filter = ('role', 'is_active')
-    readonly_fields = ('joined_at',)
-
-
-# ==================== TIMELINE EVENT ADMIN ====================
-@admin.register(TimelineEvent)
-class TimelineEventAdmin(admin.ModelAdmin):
-    list_display = ('title', 'event_type', 'college', 'start_date', 'is_active')
-    search_fields = ('title', 'description')
-    list_filter = ('event_type', 'is_active', 'college')
-    date_hierarchy = 'start_date'
-    readonly_fields = ('created_at', 'updated_at')
-    
-    fieldsets = (
-        ('Event Information', {'fields': ('title', 'event_type', 'description')}),
-        ('College', {'fields': ('college',)}),
-        ('Date & Time', {'fields': ('start_date', 'end_date')}),
-        ('Status', {'fields': ('is_active',)}),
-        ('Timestamps', {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)})
-    )
-
-
-# ==================== STUDENT APPLICATION ADMIN ====================
-@admin.register(StudentApplication)
-class StudentApplicationAdmin(admin.ModelAdmin):
-    list_display = ('application_id', 'user', 'college', 'course_name', 'quota_type', 'status',
-                   'first_name', 'last_name', 'email_id', 'mobile_number', 'submitted_at')
-    search_fields = ('application_id', 'user__username', 'user__email', 'first_name',
-                    'last_name', 'email_id', 'mobile_number', 'college__college_name', 'course_name')
-    list_filter = ('status', 'quota_type', 'community', 'gender', 'college__location_state')
-    readonly_fields = ('application_id', 'submitted_at', 'updated_at', 'view_pdf_link')
+@admin.register(EnquiryForm)
+class EnquiryFormAdmin(admin.ModelAdmin):
+    list_display = ('application_id', 'first_name', 'last_name', 'email_id', 'mobile_number', 
+                    'college', 'course_name', 'submitted_at')
+    search_fields = ('application_id', 'first_name', 'last_name', 'email_id', 'mobile_number', 
+                    'college__college_name', 'course_name')
+    list_filter = ('college', 'gender', 'community')
+    readonly_fields = ('application_id', 'submitted_at', 'updated_at')
     date_hierarchy = 'submitted_at'
     list_per_page = 25
 
     fieldsets = (
         ('Application Info', {
-            'fields': ('application_id', 'user', 'college', 'course_name', 'quota_type', 'status', 'view_pdf_link')
+            'fields': ('application_id', 'user', 'college', 'course_name', 'department_name')
         }),
         ('Bio-data', {
             'fields': ('first_name', 'last_name', 'gender', 'date_of_birth', 'mobile_number',
-                      'email_id', 'blood_group', 'nationality', 'community', 'sub_caste',
-                      'marital_status', 'mother_tongue', 'aadhar_number', 'first_graduation')
+                      'email_id', 'blood_group', 'community', 'aadhar_number')
         }),
         ("Parent's Details", {
-            'fields': ('father_name', 'father_mobile', 'father_occupation',
-                      'mother_name', 'mother_mobile', 'mother_occupation', 'family_annual_income')
+            'fields': ('father_name', 'father_mobile', 'mother_name', 'mother_mobile')
         }),
         ('Address', {
-            'fields': ('address_line1', 'address_line2', 'city', 'state', 'pincode')
+            'fields': ('address_line1', 'address_line2', 'city', 'pincode')
         }),
-        ('10th Details', {
-            'fields': ('tenth_school_name', 'tenth_board', 'tenth_year_of_passing',
-                      'tenth_result_status', 'tenth_marks_percentage')
-        }),
-        ('12th Details', {
-            'fields': ('twelfth_school_name', 'twelfth_board', 'twelfth_year_of_passing',
-                      'twelfth_result_status', 'twelfth_marks_percentage')
-        }),
-        ('Diploma Details', {
-            'fields': ('has_diploma', 'diploma_college_name', 'diploma_board_university',
-                      'diploma_year_of_passing', 'diploma_result_status', 'diploma_marks_percentage'),
-            'classes': ('collapse',)
-        }),
-        ('UG Details', {
-            'fields': ('has_ug', 'ug_college_name', 'ug_board_university',
-                      'ug_year_of_passing', 'ug_result_status', 'ug_marks_percentage'),
-            'classes': ('collapse',)
+        ('Education Details', {
+            'fields': ('tenth_marks_percentage', 'twelfth_marks_percentage', 
+                      'has_diploma', 'diploma_marks_percentage',
+                      'has_ug', 'ug_marks_percentage')
         }),
         ('Document Uploads', {
-            'fields': ('photo', 'aadhar_card', 'tenth_marksheet', 'twelfth_marksheet',
-                      'diploma_marksheet', 'ug_marksheet', 'community_marksheet'),
+            'fields': ('photo', 'aadhar_card'),
             'classes': ('collapse',)
-        }),
-        ('Declaration', {
-            'fields': ('declaration_accepted',)
         }),
         ('Timestamps', {
             'fields': ('submitted_at', 'updated_at'),
             'classes': ('collapse',)
         })
     )
-
-    def view_pdf_link(self, obj):
-        if obj.pdf_copy and obj.pdf_copy.name:
-            return mark_safe(f'<a href="{obj.pdf_copy.url}" target="_blank">📄 View PDF</a>')
-        return "No PDF available"
-    view_pdf_link.short_description = 'Application PDF'
-
+    
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'college')
 
 
-# ==================== DASHBOARD STATS ====================
-class DashboardStats(admin.AdminSite):
-    """Custom admin site with dashboard stats"""
-    
-    def index(self, request, extra_context=None):
-        # Add custom context for dashboard
-        context = {
-            'total_colleges': College.objects.count(),
-            'colleges_with_images': College.objects.filter(
-                Q(college_images__isnull=False) | 
-                Q(campus_images__isnull=False) | 
-                Q(cover_image__isnull=False)
-            ).count(),
-            'total_courses': Course.objects.filter(is_active=True).count(),
-            'total_applications': StudentApplication.objects.count(),
-            'pending_applications': StudentApplication.objects.filter(status='submitted').count(),
-            'colleges_by_type': College.objects.values('type').annotate(count=Count('type')),
-            'top_course_categories': College.objects.annotate(
-                cat_count=Count('courses_offered')
-            ).order_by('-cat_count')[:5],
-        }
-        
-        extra_context = extra_context or {}
-        extra_context.update(context)
-        return super().index(request, extra_context)
-
-
 # ==================== CUSTOM ADMIN SITE SETTINGS ====================
-admin.site.site_header = "ACE Consulting Administration"
-admin.site.site_title = "ACE Consulting Admin Portal"
-admin.site.index_title = "Welcome to ACE Consulting Admin Dashboard"
+admin.site.site_header = "Vamshi EduCare Administration"
+admin.site.site_title = "Vamshi EduCare Admin Portal"
+admin.site.index_title = "Welcome to Vamshi EduCare Admin Dashboard"

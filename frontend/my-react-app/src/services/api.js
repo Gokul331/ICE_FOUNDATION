@@ -30,11 +30,11 @@ API.interceptors.response.use(
       // Clear invalid token
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      
+
       // Optional: Redirect to login page
       // window.location.href = '/login';
     }
-    
+
     console.error("API Error:", error.response?.data || error.message);
     return Promise.reject(error);
   }
@@ -291,7 +291,7 @@ export const checkAuth = async () => {
   try {
     const token = localStorage.getItem("token");
     if (!token) return { isAuthenticated: false };
-    
+
     const response = await API.get("check-auth/", {
       headers: { Authorization: `Token ${token}` }
     });
@@ -403,12 +403,12 @@ export const updateCurrentUserProfile = async (profileData) => {
     const response = await API.put("/profile/update/", profileData, {
       headers: { Authorization: `Token ${token}` }
     });
-    
+
     // Update localStorage with new user data
     if (response.data.user) {
       localStorage.setItem('user', JSON.stringify(response.data.user));
     }
-    
+
     return response.data;
   } catch (error) {
     console.error("Error updating profile:", error);
@@ -422,12 +422,12 @@ export const patchCurrentUserProfile = async (profileData) => {
     const response = await API.patch("/profile/update/", profileData, {
       headers: { Authorization: `Token ${token}` }
     });
-    
+
     // Update localStorage with new user data
     if (response.data.user) {
       localStorage.setItem('user', JSON.stringify(response.data.user));
     }
-    
+
     return response.data;
   } catch (error) {
     console.error("Error patching profile:", error);
@@ -441,12 +441,12 @@ export const createOrUpdateProfile = async (profileData) => {
     const response = await API.post("/profile/create-update/", profileData, {
       headers: { Authorization: `Token ${token}` }
     });
-    
+
     // Update localStorage with new user data
     if (response.data.user) {
       localStorage.setItem('user', JSON.stringify(response.data.user));
     }
-    
+
     return response.data;
   } catch (error) {
     console.error("Error creating/updating profile:", error);
@@ -460,7 +460,7 @@ export const updateProfileById = async (profileId, profileData) => {
     const response = await API.patch(`/profile/update/${profileId}/`, profileData, {
       headers: { Authorization: `Token ${token}` }
     });
-    
+
     // Only update localStorage if it's the current user's profile
     if (response.data.user) {
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -468,7 +468,7 @@ export const updateProfileById = async (profileId, profileData) => {
         localStorage.setItem('user', JSON.stringify(response.data.user));
       }
     }
-    
+
     return response.data;
   } catch (error) {
     console.error(`Error updating profile ${profileId}:`, error);
@@ -482,12 +482,12 @@ export const changePassword = async (passwordData) => {
     const response = await API.post("/change-password/", passwordData, {
       headers: { Authorization: `Token ${token}` }
     });
-    
+
     // Update token in localStorage if a new one is returned
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
     }
-    
+
     return response.data;
   } catch (error) {
     console.error("Error changing password:", error);
@@ -529,18 +529,18 @@ export const getApplicationFormData = async () => {
 export const submitApplication = async (formData) => {
   try {
     const token = localStorage.getItem('token');
-    
+
     if (!token) {
       throw new Error('No authentication token found. Please login again.');
     }
-    
+
     const response = await API.post('/submit-application/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
         'Authorization': `Token ${token}`,
       },
     });
-    
+
     return response.data;
   } catch (error) {
     console.error('Error submitting application:', error);
@@ -606,15 +606,21 @@ export const getApplicationDetail = async (applicationId) => {
   });
   return response.data;
 };
-// ==================== SCHOLARSHIP APPLICATION (Public - No Auth Required) ====================
-
 export const submitScholarshipApplication = async (formData) => {
   try {
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      throw new Error('No authentication token found. Please login again.');
+    }
+
     const response = await API.post('/submit-scholarship-application/', formData, {
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Token ${token}`,
       },
     });
+
     return response.data;
   } catch (error) {
     console.error('Error submitting scholarship application:', error);
@@ -622,5 +628,6 @@ export const submitScholarshipApplication = async (formData) => {
     throw error;
   }
 };
+
 
 export default API;
