@@ -142,6 +142,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "https://vamshi-educare.vercel.app",
     "https://vamshi-educare.onrender.com",
+    "https://aceconsultancy.org"
 ]
 
 # Add any CORS origins from environment variable
@@ -267,7 +268,7 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'ICE Foundation <norep
 SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
 
 # Frontend URL for email links
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://vamshi-educare.vercel.app')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://aceconsultancy.org')
 
 # ==================== LOGGING ====================
 LOG_LEVEL = os.environ.get('DJANGO_LOG_LEVEL', 'INFO')
