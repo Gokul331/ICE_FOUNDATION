@@ -11,7 +11,7 @@ class CollegeAdmin(admin.ModelAdmin):
                     'courses_offered_summary', 'image_preview', 'has_gallery_badge', 'address')
     search_fields = ('college_name', 'short_name', 'location_city', 'location_state')
     list_filter = ('location_state',)
-    readonly_fields = ('created_at', 'updated_at', 'courses_offered_summary', 'total_courses_count', 
+    readonly_fields = ('courses_offered_summary', 'total_courses_count', 
                       'sync_status', 'image_preview', 'gallery_preview', 'all_images_preview')
     
     actions = ['sync_categories_from_courses', 'bulk_add_engineering_category', 'clear_categories']
@@ -48,10 +48,6 @@ class CollegeAdmin(admin.ModelAdmin):
                     • Use the "Sync Categories from Courses" action below to auto-update
                 </div>
             ''')
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'), 
-            'classes': ('collapse',)
         })
     )
     
