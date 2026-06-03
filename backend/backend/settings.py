@@ -15,10 +15,10 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-&z+ca)$#0^a(l^nve5dhf
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'  # Changed to False by default
 
 # ALLOWED_HOSTS - critical for Render (NO SPACES)
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,ice-foundation-1.onrender.com,.onrender.com,.vercel.app,aceconsultancy.org,www.aceconsultancy.org').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,ice-foundation-1.onrender.com,.vercel.app,aceconsultancy.org,www.aceconsultancy.org').split(',')
 
 # CSRF settings for Render - Includes ice-foundation-1 and aceconsultancy.org
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://ice-foundation-1.onrender.com,https://*.onrender.com,https://*.vercel.app,https://aceconsultancy.org,https://www.aceconsultancy.org,http://localhost:5173,http://localhost:3000').split(',')
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://ice-foundation-1.onrender.com,https://*.vercel.app,https://aceconsultancy.org,https://www.aceconsultancy.org,http://localhost:5173,http://localhost:3000').split(',')
 
 # ==================== APPLICATION DEFINITION ====================
 INSTALLED_APPS = [
@@ -125,8 +125,9 @@ else:
     print("📦 Using SQLite database for development")
 
 # ==================== CORS SETTINGS ====================
-# Allow all origins only in development
-CORS_ALLOW_ALL_ORIGINS = DEBUG
+# Allow all origins only in development by default; allow overriding with env var
+# Set environment variable CORS_ALLOW_ALL_ORIGINS=True to enable in production (use carefully)
+CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL_ORIGINS', str(DEBUG)).lower() == 'true'
 
 # Explicitly allowed origins
 CORS_ALLOWED_ORIGINS = [
@@ -152,7 +153,6 @@ if env_cors_origins:
 # Allow ice-foundation-1 and other Render.com subdomains via regex
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://ice-foundation-1\.onrender\.com$",
-    r"^https://.*\.onrender\.com$",
     r"^https://.*\.vercel\.app$",
     r"^https://(www\.)?aceconsultancy\.org$",
 ]
