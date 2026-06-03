@@ -34,14 +34,22 @@
   text-decoration: none;
   display: flex;
   flex-direction: column;
-  margin-bottom: 32px;
+  margin-bottom: 5px;
 }
 
 .footer-logo-main {
-  font-size: 2.2rem;
-  font-weight: 800;
-  color: white;
-  letter-spacing: -0.02em;
+    margin: 0;
+    display: inline-grid;
+    gap: 0;
+    font-size: 1.5rem;
+    letter-spacing: 0.24em;
+    font-weight: 800;
+    text-transform: uppercase;
+    text-align: left;
+    background: linear-gradient(180deg, #103387 0%, #f7b800 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
 .footer-logo-tagline {

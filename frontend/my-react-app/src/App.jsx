@@ -3,7 +3,6 @@ import Home from './components/Home';
 import About from './components/About';
 import Colleges from './components/Colleges';
 import CollegeDetail from './components/CollegeDetail';
-import CollegeSuggestion from './components/CollegeSuggestion';
 import Profile from './components/Profile';
 import ApplicationForm from './components/ApplicationForm';
 import Login from './components/Login';
@@ -25,7 +24,6 @@ function App() {
         <Route path="/colleges" element={<Colleges />} />
         <Route path="/colleges/:id" element={<CollegeDetail />} />
         <Route path="/courses" element={<Courses />} />
-        <Route path="/college-suggestion" element={<CollegeSuggestion />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/application-form" element={<ApplicationForm />} />
         <Route path="/login" element={<Login />} />

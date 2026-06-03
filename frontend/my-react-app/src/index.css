@@ -13,14 +13,14 @@
   --surface-soft: #f1f5f9;
   --text: #020617;
   --text-muted: #64748b;
-  --accent: #ff7300;
-  --accent-transparent: #ff7300eb;
-  --primary: #255669;
-  --primary-dark: #1b3e4c;
+  --accent: #DAA520;
+  --accent-transparent: #DAA520eb;
+  --primary: #0E3A8A;
+  --primary-dark: #0B2B69;
   --border: rgba(0, 0, 0, 0.08);
   --glass-border: rgba(255, 255, 255, 0.6);
   --glass-bg: rgba(255, 255, 255, 0.85);
-  --glass-shadow: 0 8px 32px 0 rgba(37, 86, 105, 0.08);
+  --glass-shadow: 0 8px 32px 0 rgba(14, 58, 138, 0.08);
 }
 
 body {
@@ -28,8 +28,8 @@ body {
   min-height: 100vh;
   background-color: var(--bg);
   background-image: 
-    radial-gradient(circle at 15% 50%, rgba(255, 115, 0, 0.03), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(37, 86, 105, 0.04), transparent 25%);
+    radial-gradient(circle at 15% 50%, rgba(218, 165, 32, 0.05), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(14, 58, 138, 0.05), transparent 25%);
   color: var(--text);
   overflow-x: hidden;
 }

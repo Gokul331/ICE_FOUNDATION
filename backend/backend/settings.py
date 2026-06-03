@@ -18,7 +18,7 @@ DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,.onrender.com').split(',')
 
 # CSRF settings for Render
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://*.onrender.com,https://icefoundation.vercel.app').split(',')
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://*.onrender.com,https://*.vercel.app, http://localhost:5173').split(',')
 
 # ==================== APPLICATION DEFINITION ====================
 INSTALLED_APPS = [
@@ -70,9 +70,13 @@ TEMPLATES = [
 WSGI_APPLICATION = 'backend.wsgi.application'
 
 # ==================== DATABASE ====================
-if os.environ.get('DATABASE_URL'):
+RENDER_INTERNAL_DATABASE_URL = os.environ.get('RENDER_INTERNAL_DATABASE_URL')
+RENDER_EXTERNAL_DATABASE_URL = os.environ.get('RENDER_EXTERNAL_DATABASE_URL')
+DATABASE_URL = RENDER_INTERNAL_DATABASE_URL or RENDER_EXTERNAL_DATABASE_URL or os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
     DATABASES = {
-        'default': dj_database_url.config(conn_max_age=600, ssl_require=True)
+        'default': dj_database_url.config(conn_max_age=600, ssl_require=True, default=DATABASE_URL)
     }
 else:
     DATABASES = {
@@ -94,7 +98,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5178",
     "http://localhost:5179",
     "http://127.0.0.1:3000",
-    "https://icefoundation.vercel.app",
+    "https://*.vercel.app",
 ] + [origin.strip() for origin in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if origin.strip()]
 
 # For Render.com domains
@@ -187,7 +191,7 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'ICE Foundation <norep
 SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
 
 # Frontend URL for email links
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://icefoundation.vercel.app')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://*.vercel.app,http://localhost:5173')
 
 # ==================== LOGGING (Optional but recommended) ====================
 LOGGING = {

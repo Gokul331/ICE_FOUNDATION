@@ -67,14 +67,14 @@
 .hero-bg-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.7) 0%, rgba(37, 86, 105, 0.4) 100%);
+  background: linear-gradient(135deg, rgba(70, 75, 80, 0.7) 0%, rgba(58, 82, 91, 0.4) 100%);
   z-index: 1;
 }
 
 .hero-bg-gradient {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(15, 23, 42, 1) 0%, transparent 40%);
+  background: linear-gradient(to top, rgb(0, 0, 0) 0%, transparent 40%);
   z-index: 2;
 }
 

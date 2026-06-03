@@ -5,10 +5,10 @@ import { getColleges } from "../services/api";
 import "../styles/home.css";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
-import img1 from "/1.jpg";
+import img1 from "/5.jpeg";
 import img2 from "/2.jpg";
 import img3 from "/3.jpg";
-import img4 from "/4.jpg";
+import img4 from "/1.jpg";
 
 /* ── animation helpers ── */
 const fadeUp = {
@@ -59,40 +59,36 @@ function Home() {
       badge: "Trusted by 100+ colleges across Tamil Nadu",
       lines: ["Bridge the gap to", "your dream", "college journey"],
       desc: "Personalized guidance, scholarship support, and admissions strategy from experts who know what top colleges want.",
-      primaryLabel: "Start Your College Plan",
-      primaryTo: "/register",
-      authLabel: "Book Free Consultation",
-      authTo: "/college-suggestion",
+      primaryLabel: "Explore Our Branches",
+      primaryTo: "/colleges",
+      
     },
     {
       image: img2,
       badge: "5000+ Scholarships Available",
       lines: ["Discover the", "right library", "for your future"],
       desc: "Explore thousands of resources, scholarship opportunities and academic support to help you succeed in your higher education journey.",
-      primaryLabel: "Find Scholarships",
-      primaryTo: "/college-suggestion",
-      authLabel: "Explore Colleges",
-      authTo: "/colleges",
+      primaryLabel: "Explore Infrastructure",
+      primaryTo: "/infrastructure",
+      
     },
     {
       image: img3,
       badge: "World-Class Laboratory Facilities",
       lines: ["Hands-on learning", "in cutting-edge", "laboratories"],
       desc: "Find colleges equipped with state-of-the-art labs for Engineering, Medical, and Allied Sciences to ignite your passion for research.",
-      primaryLabel: "Explore Engineering",
+      primaryLabel: "Explore Courses",
       primaryTo: "/courses",
-      authLabel: "View Colleges",
-      authTo: "/colleges",
+    
     },
     {
       image: img4,
       badge: "95% Student Success Rate",
       lines: ["Your dream campus", "is just one step", "away"],
       desc: "From application to admission, our expert counselors walk you through every stage of your college journey with confidence.",
-      primaryLabel: "Get Expert Guidance",
+      primaryLabel: "Call Assistance",
       primaryTo: "/contact",
-      authLabel: "Browse Colleges",
-      authTo: "/colleges",
+     
     },
   ];
 
@@ -184,19 +180,18 @@ function Home() {
     `https://via.placeholder.com/400x300/f8fafc/255669?text=${encodeURIComponent(name || "College")}`;
 
   const serviceItems = [
-    { icon: "🎓", title: "Admission Guidance", desc: "Expert guidance to navigate the complex admission process of top-tier colleges and universities." },
+    { icon: "🎓", title: "Admission Guidance", desc: "Expert guidance to navigate the complex admission process of our branch colleges and universities." },
     { icon: "🎯", title: "Career Counseling", desc: "Personalized counseling sessions to align your interests and strengths with the right career path." },
     { icon: "📚", title: "Course Selection", desc: "Helping you choose from a wide range of courses that best suit your academic background and goals." },
-    { icon: "🏛️", title: "University Selection", desc: "Strategic selection of institutions based on rankings, infrastructure, placements, and your profile." },
     { icon: "💰", title: "Scholarship Support", desc: "Information and assistance for securing various merit-based and need-based scholarships." },
     { icon: "📝", title: "Documentation", desc: "Complete support for application forms, SOPs, and all required documentation for a smooth process." },
   ];
 
   const processSteps = [
     { number: "01", title: "Initial Consultation", desc: "Discuss your goals, interests, and academic background with our experts." },
-    { number: "02", title: "Profile Analysis", desc: "Comprehensive evaluation of your scores and profile to match with top institutions." },
+    { number: "02", title: "Profile Analysis", desc: "Comprehensive evaluation of your scores and profile to match with our branches." },
     { number: "03", title: "Documentation", desc: "Support in preparing and submitting application forms with precision." },
-    { number: "04", title: "Admission Success", desc: "Get your offer letter and secure your seat in your dream college." },
+    { number: "04", title: "Admission Success", desc: "Get your admit confirmation and secure your seat in your chosen branch." },
   ];
 
   return (
@@ -239,7 +234,7 @@ function Home() {
           >
             <div className="hero-badge floating-3d">
               <span className="badge-pulse" />
-              Direct Admission 2025-26 Open
+              Direct Admission {new Date().getFullYear()} - {new Date().getFullYear() + 1} Open
             </div>
 
             <h1 className="hero-title">
@@ -252,21 +247,16 @@ function Home() {
 
             <div className="hero-buttons">
               <Link
-                to={user ? heroSlides[currentSlide].authTo : heroSlides[currentSlide].primaryTo}
+                to={ heroSlides[currentSlide].primaryTo}
                 className="btn-dark"
               >
-                {user ? heroSlides[currentSlide].authLabel : heroSlides[currentSlide].primaryLabel}
+                { heroSlides[currentSlide].primaryLabel}
               </Link>
-              <Link to="/colleges" className="btn-outline">
-                <span>Explore Colleges</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              </Link>
+              
             </div>
 
             <div className="hero-trust">
-              {[["10+", "Colleges"], ["5k–40k", "Scholarships"], ["95%", "Success Rate"]].map(
+              {[["10+", "Branches"], ["5k–25k", "Scholarships"], ["95%", "Success Rate"]].map(
                 ([num, label], i) => (
                   <div key={i} className="trust-item">
                     <span className="trust-num">{num}</span>
@@ -322,7 +312,7 @@ function Home() {
         >
           <div className="hero-visual">
             {[
-              { icon: "🎓", text: "Top Universities", cls: "card-1" },
+              { icon: "🎓", text: "Universities", cls: "card-1" },
               { icon: "💰", text: "Scholarships", cls: "card-2" },
               { icon: "📚", text: "Courses", cls: "card-3" },
               { icon: "🏆", text: "Expert Guide", cls: "card-4" },
@@ -361,146 +351,7 @@ function Home() {
         </div>
       </section>
 
-      {/* ── COLLEGES HORIZONTAL SCROLL ── */}
-      <section className="colleges-horizontal-section">
-        <div className="colleges-horizontal-container">
-          <SectionReveal className="section-header-horizontal">
-            <motion.div className="section-label-premium" variants={fadeUp}>
-              <span className="label-dot" />
-              Featured Institutions
-              <span className="label-count">{colleges.length > 0 ? `${colleges.length} colleges` : ""}</span>
-            </motion.div>
-            <motion.h2 className="section-title-premium" variants={fadeUp}>
-              Discover Top Colleges
-              <span className="title-highlight"> Near You</span>
-            </motion.h2>
-            <motion.p className="section-subtitle-premium" variants={fadeUp}>
-              Handpicked premier institutions with world-class infrastructure,
-              exceptional faculty, and outstanding placement records.
-            </motion.p>
-          </SectionReveal>
 
-          {loading && (
-            <div className="horizontal-loading">
-              <div style={{ display: "flex", gap: "24px", overflow: "hidden" }}>
-                {[1,2,3,4].map(i => (
-                  <div key={i} style={{ flex: "0 0 320px", height: "350px", background: "var(--bg-alt)", borderRadius: "24px", animation: "pulse 1.5s infinite" }} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="error-premium" style={{ textAlign: "center", padding: "60px 20px" }}>
-              <h3>Unable to load colleges</h3>
-              <p>{error}</p>
-              <button onClick={() => window.location.reload()} className="btn-dark" style={{ marginTop: "20px" }}>
-                Try Again
-              </button>
-            </div>
-          )}
-
-          {!loading && !error && colleges.length > 0 && (
-            <>
-              <AnimatePresence>
-                {showLeftArrow && (
-                  <motion.button
-                    className="horizontal-scroll-arrow left"
-                    onClick={() => scrollColleges(-1)}
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
-                  </motion.button>
-                )}
-              </AnimatePresence>
-
-              <AnimatePresence>
-                {showRightArrow && (
-                  <motion.button
-                    className="horizontal-scroll-arrow right"
-                    onClick={() => scrollColleges(1)}
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
-                  </motion.button>
-                )}
-              </AnimatePresence>
-
-              <div className="horizontal-scroll-wrapper" ref={scrollContainerRef}>
-                <div className="horizontal-scroll-track">
-                  {colleges.map((college, index) => (
-                    <motion.div
-                      key={college.college_id}
-                      initial={{ opacity: 0, x: 40 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.07, duration: 0.5, ease: "easeOut" }}
-                      whileHover={cardHover}
-                      style={{ flex: "0 0 350px" }}
-                    >
-                      <Link to={`/colleges/${college.college_id}`} className="horizontal-college-card" style={{ flex: "unset", display: "block" }}>
-                        <div className="horizontal-card-inner">
-                          <div className="horizontal-card-image">
-                            <img
-                              src={college.displayImage || college.campus_images}
-                              alt={college.college_name}
-                              loading="lazy"
-                              onError={(e) => { e.target.src = placeholder(college.college_name); }}
-                            />
-                            <div className="image-overlay" />
-                            {college.type && (
-                              <div className={`horizontal-badge ${college.type}`}>
-                                {college.type === "government" && "🏛️ Government"}
-                                {college.type === "private" && "🏢 Private"}
-                                {college.type === "autonomous" && "🎓 Autonomous"}
-                                {college.type === "aided" && "🤝 Aided"}
-                              </div>
-                            )}
-                          </div>
-                          <div className="horizontal-card-content">
-                            <h3 className="horizontal-college-title">{college.college_name || "College Name"}</h3>
-                            <div className="horizontal-college-location">
-                              <svg className="location-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                                <circle cx="12" cy="10" r="3" fill="currentColor" />
-                              </svg>
-                              <span>{college.location_city || "City"}, {college.location_state || "State"}</span>
-                            </div>
-                           <div className = "horizontal-card-separator"></div>
-                            <div className="horizontal-card-action">
-                              <span>Explore College</span>
-                              <svg className="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M5 12h14M12 5l7 7-7 7" />
-                              </svg>
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="scroll-progress-indicator">
-                <div className="scroll-progress-bar">
-                  <motion.div
-                    className="scroll-progress-fill"
-                    style={{ width: `${scrollProgress}%` }}
-                    animate={{ width: `${scrollProgress}%` }}
-                    transition={{ duration: 0.2 }}
-                  />
-                </div>
-              </div>
-
-              <motion.div className="view-all-horizontal" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-                <Link to="/colleges" className="btn-premium-primary">
-                  <span>Explore All Colleges</span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                </Link>
-              </motion.div>
-            </>
-          )}
-        </div>
-      </section>
 
       {/* ── WHAT WE DO SECTION ── */}
       <section className="services-section premium-3d-wrap">
@@ -618,7 +469,7 @@ function Home() {
               Start Your <span className="success-highlight">Success Story</span> Today
             </h2>
             <p className="success-cta-sub">
-              Join <strong>1000+ students</strong> who have achieved their educational dreams with ACE COUNSULTING.
+              Join <strong>1000+ students</strong> who have achieved their educational dreams with VAMSHI EDUCARE.
               Expert guidance for every step of your admission journey.
             </p>
           </motion.div>
@@ -629,10 +480,10 @@ function Home() {
               {
                 icon: "📞",
                 label: "Call Us",
-                lines: ["+91 87786 35855 ", "+91 93600 38049"],
+                lines: ["+91 89252 62724 ", "+91 93607 05445"],
                 sub: "Available 24/7 for your queries",
-                color: "#255669",
-                action: "tel:+918778635855",
+                color: "#0E3A8A",
+                action: "tel:+918925262724",
                 actionLabel: "Call Now",
               },
               {
@@ -641,15 +492,15 @@ function Home() {
                 lines: ["Chat with us"],
                 sub: "Instant responses & file sharing",
                 color: "#25D366",
-                action: "https://wa.me/+918778635855",
+                action: "https://wa.me/+918925262724",
                 actionLabel: "Open WhatsApp",
               },
               {
                 icon: "📍",
                 label: "Visit Us",
-                lines: ["Namakkal, Tamil Nadu"],
+                lines: ["Thiruvarur, Tamil Nadu"],
                 sub: "Walk-in consultations welcome",
-                color: "#ff7300",
+                color: "#DAA520",
                 action: "/contact",
                 actionLabel: "Get Directions",
                 internal: true,
@@ -716,7 +567,7 @@ function Home() {
             viewport={{ once: true }}
             transition={{ delay: 0.7, duration: 0.5 }}
           >
-            {[["1000+", "Students Helped"], ["10+", "Colleges"], ["95%", "Success Rate"], ["24/7", "Support"]].map(([num, label], i) => (
+            {[["1000+", "Students Helped"], ["10+", "Branches"], ["95%", "Success Rate"], ["24/7", "Support"]].map(([num, label], i) => (
               <div key={i} className="success-stat">
                 <span className="success-stat-num">{num}</span>
                 <span className="success-stat-label">{label}</span>

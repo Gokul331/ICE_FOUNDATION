@@ -166,7 +166,6 @@ function Navbar() {
     { to: '/about',             label: 'About' },
     { to: '/colleges',          label: 'Colleges' },
     { to: '/courses',           label: 'Courses' },
-    { to: '/college-suggestion',label: 'Suggestion' },
     { to: '/contact',           label: 'Contact' },
   ];
 
@@ -174,7 +173,7 @@ function Navbar() {
     { to: '/profile',           label: 'My Profile',         Icon: IconProfile },
     { to: '/my-applications',   label: 'My Applications',    Icon: IconApps    },
     { to: '/colleges',          label: 'Browse Colleges',    Icon: IconCollege },
-    { to: '/college-suggestion',label: 'College Suggestions',Icon: IconSuggest },
+    
   ];
 
   return (
@@ -188,17 +187,12 @@ function Navbar() {
       >
         {/* Logo */}
         <Link to="/" className="nb-logo" onClick={closeMobile}>
-          <motion.div className="nb-logo-icon" whileHover={{ rotate: 8, scale: 1.08 }} transition={{ type: 'spring', stiffness: 300 }}>
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M2 17L12 22L22 17"           stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M2 12L12 17L22 12"           stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              <circle cx="12" cy="12" r="2" fill="currentColor"/>
-            </svg>
-          </motion.div>
+          <div className="nb-logo-icon" whileHover={{ rotate: 8, scale: 1.08 }} transition={{ type: 'spring', stiffness: 300 }}>
+            <img src="/public/favicon.png" alt="Logo" />
+          </div>
           <div className="nb-logo-text">
-            <span className="nb-logo-brand">ACE <span className="nb-logo-accent">COUNSULTING</span></span>
-            <span className="nb-logo-sub">ADMISSIONS | CAREER | EDUCATION</span>
+            <span className="nb-logo-brand">VAMSHI EDUCARE</span>
+            <span className="nb-logo-sub">CAREER GUIDANCE CENTER</span>
           </div>
         </Link>
 
@@ -330,7 +324,7 @@ function Navbar() {
                   </svg>
                 </div>
                 <div>
-                  <span className="nb-mob-brand">ACE COUNSULTING</span>
+                  <span className="nb-mob-brand">VAMSHI EDUCARE</span>
                   <small className="nb-mob-sub">ADMISSIONS | CAREER | EDUCATION</small>
                 </div>
               </div>

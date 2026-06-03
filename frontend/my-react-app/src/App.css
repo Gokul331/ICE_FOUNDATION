@@ -5,16 +5,16 @@
   --bg: #ffffff;
   --bg-alt: #f8fafc;
   --surface: #ffffff;
-  --surface-soft: #f1f5f9;
+  --surface-soft: #f9f1d4;
   --text: #1a1a2e;
-  --text-muted: #64748b;
+  --text-muted: #5f6a7b;
   
-  --primary: #255669; /* Professional Teal/Blue */
-  --primary-dark: #1a3d4c;
-  --primary-soft: #e6f0f3;
+  --primary: #0E3A8A; /* Deep Royal Blue */
+  --primary-dark: #6c7ea4;
+  --primary-soft: #E5EEFF;
   
-  --accent: #3a8bb9; /* Sophisticated Accent Blue */
-  --accent-soft: #eaf4f9;
+  --accent: #DAA520; /* Gold */
+  --accent-soft: #F9E8A6;
   
   --success: #10b981;
   --error: #ef4444;
@@ -27,7 +27,7 @@
   --shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.12);
-  --shadow-premium: 0 20px 40px -15px rgba(37, 86, 105, 0.2);
+  --shadow-premium: 0 20px 40px -15px rgba(14, 58, 138, 0.2);
   
   /* ── Radii ── */
   --radius-sm: 8px;
@@ -178,7 +178,7 @@ p {
   width: 52px;
   height: 52px;
   border-radius: 14px;
-  background: rgba(37, 86, 105, 0.85);
+  background: rgba(14, 58, 138, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   color: white;

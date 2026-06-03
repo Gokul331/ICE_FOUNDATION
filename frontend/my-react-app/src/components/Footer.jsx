@@ -10,12 +10,12 @@ const Footer = () => {
         <div className="footer-premium-grid">
           <div className="footer-brand-col">
             <Link to="/" className="footer-logo">
-              <span className="footer-logo-main">ACE</span>
-              <span className="footer-logo-tagline">COUNSULTING</span>
+              <span className="footer-logo-main">VAMSHI EDUCARE</span>
+              
             </Link>
             <p className="footer-description">
               Empowering students to achieve their academic dreams through personalized guidance, 
-              scholarship support, and expert admission strategies since 2026.
+              scholarship support, and expert admission strategies since 2024.
             </p>
             <div className="footer-social">
               <a href="#" aria-label="Instagram">📸</a>
@@ -36,7 +36,7 @@ const Footer = () => {
           <div className="footer-links-col">
             <h4>Resources</h4>
             <ul>
-              <li><Link to="/college-suggestion">College Suggestion</Link></li>
+              
               <li><Link to="/profile">My Profile</Link></li>
               <li><Link to="/application-form">Apply Now</Link></li>
               <li><a href="#">Scholarships</a></li>
@@ -46,16 +46,16 @@ const Footer = () => {
           <div className="footer-contact-col">
             <h4>Contact Info</h4>
             <div className="footer-contact-info">
-              <p>📍 Namakkal, Tamil Nadu</p>
-              <p>✉️ info@aceconsulting.in</p>
-              <p>📞 +91 87786 35855</p>
-              <p>📞 +91 93600 38849</p>
+              <p>📍 Thiruvarur, Tamil Nadu</p>
+              <p>✉️ info@vamshieducare.in</p>
+              <p>📞 +91 89252 62724</p>
+              <p>📞 +91 93607 05445</p>
             </div>
           </div>
         </div>
 
         <div className="footer-bottom-bar">
-          <p>&copy; {new Date().getFullYear()} ACE COUNSULTING. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} VAMSHI EDUCARE. All rights reserved.</p>
           <div className="footer-bottom-links">
             <a href="#">Privacy Policy</a>
             <a href="#">Terms of Service</a>

@@ -76,9 +76,9 @@ const Contact = () => {
         <div className="container">
           <div className="info-cards-grid">
             {[
-              { icon: "📞", label: "Call Us", val: "+91 87786 35855", sub: "Available 24/7 for queries" },
-              { icon: "✉️", label: "Email Us", val: "hello@aceconsulting.in", sub: "Quick response within 24h" },
-              { icon: "📍", label: "Visit Us", val: "Namakkal, Tamil Nadu", sub: "Walk-in consultations welcome" }
+              { icon: "📞", label: "Call Us", val: "+91 8925262724 ", sub: "Available 24/7 for queries" },
+              { icon: "✉️", label: "Email Us", val: "hello@vamshieducare.in", sub: "Quick response within 24h" },
+              { icon: "📍", label: "Visit Us", val: "Thiruvarur, Tamil Nadu", sub: "Walk-in consultations welcome" }
             ].map((item, i) => (
               <SectionReveal key={i} className="info-card-premium" delay={i * 0.1}>
                 <div className="info-card-icon">{item.icon}</div>
@@ -208,7 +208,7 @@ const Contact = () => {
                   </div>
                 </div>
                 <div className="map-card-footer">
-                  <p>ACE COUNSULTING Pvt Ltd. <br />Namakkal, Tamil Nadu</p>
+                  <p>VAMSHI EDUCARE. <br />Thiruvarur, Tamil Nadu</p>
                   <button className="btn-outline-premium">Get Directions</button>
                 </div>
               </SectionReveal>
