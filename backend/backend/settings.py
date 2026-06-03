@@ -75,9 +75,22 @@ RENDER_EXTERNAL_DATABASE_URL = os.environ.get('RENDER_EXTERNAL_DATABASE_URL')
 DATABASE_URL = RENDER_INTERNAL_DATABASE_URL or RENDER_EXTERNAL_DATABASE_URL or os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
+    # If the internal Render URL is being used, connect without forcing SSL
+    using_internal = bool(RENDER_INTERNAL_DATABASE_URL and DATABASE_URL == RENDER_INTERNAL_DATABASE_URL)
+    ssl_required = False if using_internal else True
+
     DATABASES = {
-        'default': dj_database_url.config(conn_max_age=600, ssl_require=True, default=DATABASE_URL)
+        'default': dj_database_url.config(conn_max_age=600, ssl_require=ssl_required, default=DATABASE_URL)
     }
+
+    # Helpful log for deploy debugging - prints host and ssl decision only
+    try:
+        parsed = dj_database_url.parse(DATABASE_URL)
+        _db_host = parsed.get('HOST')
+    except Exception:
+        _db_host = None
+    if _db_host:
+        print(f"🔌 Database host: {_db_host} (ssl_required={ssl_required})")
 else:
     DATABASES = {
         'default': {
