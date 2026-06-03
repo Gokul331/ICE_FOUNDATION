@@ -75,6 +75,9 @@ RENDER_EXTERNAL_DATABASE_URL = os.environ.get('RENDER_EXTERNAL_DATABASE_URL')
 DATABASE_URL = RENDER_INTERNAL_DATABASE_URL or RENDER_EXTERNAL_DATABASE_URL or os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
+    # Optional override for SSL mode (e.g. 'require', 'prefer', 'disable')
+    DB_SSLMODE = os.environ.get('DB_SSLMODE')
+
     # If the internal Render URL is being used, connect without forcing SSL
     using_internal = bool(RENDER_INTERNAL_DATABASE_URL and DATABASE_URL == RENDER_INTERNAL_DATABASE_URL)
     ssl_required = False if using_internal else True
@@ -85,6 +88,13 @@ if DATABASE_URL:
 
     # Helpful log for deploy debugging - prints host and ssl decision only
     try:
+        # If user provided DB_SSLMODE, ensure it's included in the connection string
+        if DB_SSLMODE and 'sslmode=' not in DATABASE_URL:
+            if '?' in DATABASE_URL:
+                DATABASE_URL = f"{DATABASE_URL}&sslmode={DB_SSLMODE}"
+            else:
+                DATABASE_URL = f"{DATABASE_URL}?sslmode={DB_SSLMODE}"
+
         parsed = dj_database_url.parse(DATABASE_URL)
         _db_host = parsed.get('HOST')
     except Exception:
