@@ -140,8 +140,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5179",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
-    "https://vamshi-educare.vercel.app",
-    "https://vamshi-educare.onrender.com",
     "https://aceconsultancy.org",
     "https://www.aceconsultancy.org",
 ]
