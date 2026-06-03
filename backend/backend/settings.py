@@ -12,13 +12,13 @@ os.makedirs(SAVED_APPLICATIONS_DIR, exist_ok=True)
 
 # ==================== SECURITY ====================
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-&z+ca)$#0^a(l^nve5dhf0y*8c32om^-$ey#oij06cst@1cpy8')
-DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'  # Changed to False by default
 
-# ALLOWED_HOSTS - critical for Render
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,.onrender.com,.vercel.app').split(',')
+# ALLOWED_HOSTS - critical for Render (NO SPACES)
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,.onrender.com,.vercel.app,.aceconsultancy.org').split(',')
 
-# CSRF settings for Render
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://*.onrender.com,https://*.vercel.app,http://localhost:5173,http://localhost:3000').split(',')
+# CSRF settings for Render - Includes aceconsultancy.org
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://*.onrender.com,https://*.vercel.app,https://aceconsultancy.org,https://www.aceconsultancy.org,http://localhost:5173,http://localhost:3000').split(',')
 
 # ==================== APPLICATION DEFINITION ====================
 INSTALLED_APPS = [
@@ -142,7 +142,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "https://vamshi-educare.vercel.app",
     "https://vamshi-educare.onrender.com",
-    "https://aceconsultancy.org"
+    "https://aceconsultancy.org",
+    "https://www.aceconsultancy.org",
 ]
 
 # Add any CORS origins from environment variable
@@ -154,6 +155,7 @@ if env_cors_origins:
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.onrender\.com$",
     r"^https://.*\.vercel\.app$",
+    r"^https://(www\.)?aceconsultancy\.org$",
 ]
 
 # Allow credentials (cookies, authorization headers)
@@ -321,19 +323,19 @@ LOGGING = {
 }
 
 # ==================== AUTO SUPERUSER CREATION ====================
-# Only run on Render in production
-if not DEBUG and os.environ.get('DATABASE_URL') and os.environ.get('DJANGO_SUPERUSER_USERNAME'):
+# Run on Render in production or when DATABASE_URL is set
+if os.environ.get('DATABASE_URL') and os.environ.get('DJANGO_SUPERUSER_USERNAME'):
     try:
         from django.contrib.auth import get_user_model
         User = get_user_model()
         
         username = os.environ.get('DJANGO_SUPERUSER_USERNAME', 'admin')
         email = os.environ.get('DJANGO_SUPERUSER_EMAIL', 'admin@example.com')
-        password = os.environ.get('DJANGO_SUPERUSER_PASSWORD', 'admin123')
+        password = os.environ.get('DJANGO_SUPERUSER_PASSWORD')
         
         if password and not User.objects.filter(username=username).exists():
             User.objects.create_superuser(username=username, email=email, password=password)
-            print(f"✅ Superuser '{username}' created successfully on Render!")
+            print(f"✅ Superuser '{username}' created successfully!")
         elif not password:
             print("⚠️ DJANGO_SUPERUSER_PASSWORD not set, skipping superuser creation")
         else:
