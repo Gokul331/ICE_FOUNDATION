@@ -18,7 +18,7 @@ const collegeOptions = [
   'Dhanalakshmi Srinivasan University',
 ];
 
-function App() {
+function ApplicationForm() {
   const [formData, setFormData] = useState({
     studentName: '',
     phoneNumber: '',
