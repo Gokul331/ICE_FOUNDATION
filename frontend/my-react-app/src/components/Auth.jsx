@@ -87,7 +87,7 @@ function Auth({ initialTab = "login", onLoginSuccess } = {}) {
           <div className="visual-content floating-3d">
             <Link to="/" className="auth-logo-top">
               <span className="logo-dot-premium" />
-              ACE <span>COUNSULTING</span>
+              Vamshi <span>EduCare</span>
             </Link>
             
             <div className="visual-text-box">
@@ -268,4 +268,4 @@ function Auth({ initialTab = "login", onLoginSuccess } = {}) {
   );
 }
 
-export default Auth; 
+export default Auth;

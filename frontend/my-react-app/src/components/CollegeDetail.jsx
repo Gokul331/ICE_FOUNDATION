@@ -4,8 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   getCollegeDetail,
   getCollegeCourses,
-  getCollegeFees,
-  getCollegeHostels,
 } from "../services/api";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
@@ -34,8 +32,6 @@ function CollegeDetail() {
   const { id } = useParams();
   const [college, setCollege] = useState(null);
   const [courses, setCourses] = useState([]);
-  const [fees, setFees] = useState(null);
-  const [hostels, setHostels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
@@ -51,20 +47,13 @@ function CollegeDetail() {
         const collegeData = await getCollegeDetail(id);
         setCollege(collegeData);
 
-        const [coursesData, feesData, hostelsData] = await Promise.allSettled([
-          getCollegeCourses(id),
-          getCollegeFees(collegeData.college_id || collegeData.id),
-          getCollegeHostels(collegeData.college_id || collegeData.id)
-        ]);
-
-        if (coursesData.status === 'fulfilled') {
-          setCourses(Array.isArray(coursesData.value) ? coursesData.value : coursesData.value.results || []);
-        }
-        if (feesData.status === 'fulfilled') {
-          setFees(Array.isArray(feesData.value) && feesData.value.length > 0 ? feesData.value[0] : null);
-        }
-        if (hostelsData.status === 'fulfilled') {
-          setHostels(Array.isArray(hostelsData.value) ? hostelsData.value : []);
+        const coursesData = await getCollegeCourses(id);
+        if (coursesData && Array.isArray(coursesData)) {
+          setCourses(coursesData);
+        } else if (coursesData && coursesData.results) {
+          setCourses(coursesData.results);
+        } else {
+          setCourses([]);
         }
 
         setLoading(false);
@@ -95,16 +84,15 @@ function CollegeDetail() {
     }
   };
 
-  const formatCurrency = (amount) => {
-    if (!amount) return "N/A";
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumSignificantDigits: 3 }).format(amount);
-  };
-
   const getAllImages = () => {
     const images = [];
-    if (college?.cover_image) images.push({ url: college.cover_image, title: "Campus Main" });
-    if (college?.banner_image) images.push({ url: college.banner_image, title: "College View" });
-    if (college?.college_images) college.college_images.forEach((img, i) => images.push({ url: img, title: `Gallery ${i+1}` }));
+    if (college?.banner_image) images.push({ url: college.banner_image, title: "College Banner" });
+    if (college?.college_images && Array.isArray(college.college_images)) {
+      college.college_images.forEach((img, i) => images.push({ url: img, title: `Campus View ${i+1}` }));
+    }
+    if (college?.campus_images && Array.isArray(college.campus_images)) {
+      college.campus_images.forEach((img, i) => images.push({ url: img, title: `Campus ${i+1}` }));
+    }
     return images;
   };
 
@@ -132,7 +120,7 @@ function CollegeDetail() {
             <div className="cd-hero-info">
               <div className="section-label-premium">
                 <span className="label-dot" />
-                {college.type || "Institution"}
+                Institution
               </div>
               <h1>{college.college_name}</h1>
               <div className="cd-location">
@@ -141,19 +129,19 @@ function CollegeDetail() {
               </div>
               <div className="cd-quick-stats">
                 <div className="stat-item">
-                  <strong>{college.counselling_code || "-"}</strong>
-                  <span>Counseling Code</span>
+                  <strong>{college.short_name || "-"}</strong>
+                  <span>College Code</span>
                 </div>
                 <div className="stat-item">
-                  <strong>{college.placement_percentage || "90"}%</strong>
-                  <span>Placement</span>
+                  <strong>{courses.length || "0"}+</strong>
+                  <span>Courses</span>
                 </div>
               </div>
             </div>
 
             <div className="cd-hero-action-card">
               <div className="action-inner">
-                <div className="admission-status">Admission Open 2024-25</div>
+                <div className="admission-status">Admission Open 2025-26</div>
                 <button className="btn-apply-full" onClick={() => handleApplyNow(courses[0])}>Apply Now</button>
                 <div className="action-features">
                   <span>✓ Expert Counseling</span>
@@ -169,7 +157,7 @@ function CollegeDetail() {
       <div className="cd-tabs-wrapper">
         <div className="container">
           <div className="cd-tabs-nav">
-            {['overview', 'courses', 'placements', 'gallery'].map(t => (
+            {['overview', 'courses', 'gallery'].map(t => (
               <button 
                 key={t} 
                 className={`tab-btn ${activeTab === t ? 'active' : ''}`}
@@ -189,19 +177,19 @@ function CollegeDetail() {
             <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               <SectionReveal className="cd-content-section">
                 <h3>About the Institution</h3>
-                <p className="cd-desc-text">{college.description || "Leading educational institution dedicated to excellence."}</p>
+                <p className="cd-desc-text">{college.address || "Leading educational institution dedicated to academic excellence and holistic student development."}</p>
                 <div className="cd-details-grid">
                   <div className="detail-box">
-                    <label>Established</label>
-                    <span>{college.established_year || "N/A"}</span>
+                    <label>Location</label>
+                    <span>{college.location_city}, {college.location_state}</span>
                   </div>
                   <div className="detail-box">
-                    <label>Affiliation</label>
-                    <span>{college.affiliation || "-"}</span>
+                    <label>Pincode</label>
+                    <span>{college.location_pincode || "-"}</span>
                   </div>
                   <div className="detail-box">
-                    <label>NAAC Grade</label>
-                    <span>{college.naac_grade || "N/A"}</span>
+                    <label>Courses Offered</label>
+                    <span>{college.courses_offered?.length || 0} Categories</span>
                   </div>
                 </div>
               </SectionReveal>
@@ -213,108 +201,35 @@ function CollegeDetail() {
               <SectionReveal className="cd-content-section">
                 <div className="section-header-flex">
                   <h3>Academic Offerings</h3>
-                  <div className="quota-toggle">
-                    <button className={selectedQuota === 'management' ? 'active' : ''} onClick={() => setSelectedQuota('management')}>Management</button>
-                    <button className={selectedQuota === 'government' ? 'active' : ''} onClick={() => setSelectedQuota('government')}>Government</button>
-                  </div>
                 </div>
                 
                 <div className="table-responsive-premium">
                   <table className="cd-courses-table">
                     <thead>
                       <tr>
-                        <th>Specialization</th>
-                        <th>Annual Fee</th>
+                        <th>Course Code</th>
+                        <th>Course Name</th>
+                        <th>Degree Type</th>
                         <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {courses.map((crs, i) => (
-                        <tr key={i}>
-                          <td><strong>{crs.course_name}</strong></td>
-                          <td>{formatCurrency(selectedQuota === 'management' ? crs.tuition_fee_management : crs.tuition_fee_government)}</td>
-                          <td><button className="btn-table-apply" onClick={() => handleApplyNow(crs)}>Apply</button></td>
+                      {courses.length > 0 ? (
+                        courses.map((crs, i) => (
+                          <tr key={i}>
+                            <td><strong>{crs.course_code || '-'}</strong></td>
+                            <td>{crs.course_name}</td>
+                            <td>{crs.degree_type?.toUpperCase() || '-'}</td>
+                            <td><button className="btn-table-apply" onClick={() => handleApplyNow(crs)}>Apply</button></td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="4" style={{ textAlign: 'center' }}>No courses available</td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
-                </div>
-
-                {/* Additional Fees Section */}
-                {(fees || (hostels && hostels.length > 0)) && (
-                  <div className="additional-fees-container" style={{ marginTop: '40px', paddingTop: '30px', borderTop: '1px solid var(--border)' }}>
-                    <h3 style={{ fontSize: '1.4rem', marginBottom: '20px' }}>Extra Fees & Accommodations</h3>
-                    
-                    <div className="cd-details-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-                      
-                      {/* Transport Fees */}
-                      {fees && (fees.transport_fee_min > 0 || fees.transport_fee_max > 0) && (
-                        <div className="detail-box">
-                          <label>Transport Fees</label>
-                          <span>
-                            {fees.transport_fee_min === fees.transport_fee_max 
-                              ? formatCurrency(fees.transport_fee_min) 
-                              : `${formatCurrency(fees.transport_fee_min)} - ${formatCurrency(fees.transport_fee_max)}`}
-                          </span>
-                        </div>
-                      )}
-                      
-                      {/* Admission & Application Fees */}
-                      {fees && fees.admission_fee > 0 && (
-                        <div className="detail-box">
-                          <label>Admission Fee (One-time)</label>
-                          <span>{formatCurrency(fees.admission_fee)}</span>
-                        </div>
-                      )}
-                      
-                      {fees && fees.application_fee > 0 && (
-                        <div className="detail-box">
-                          <label>Application Fee</label>
-                          <span>{formatCurrency(fees.application_fee)}</span>
-                        </div>
-                      )}
-
-                      {/* Miscellaneous */}
-                      {fees && fees.miscellaneous_fee > 0 && (
-                        <div className="detail-box">
-                          <label>Miscellaneous Fee</label>
-                          <span>{formatCurrency(fees.miscellaneous_fee)}</span>
-                        </div>
-                      )}
-
-                      {/* Hostel Fees */}
-                      {hostels && hostels.map((hostel, idx) => (
-                        <div className="detail-box" key={`hostel-${idx}`}>
-                          <label>{hostel.name} {hostel.room_type_display ? `(${hostel.room_type_display})` : ''} Hostel</label>
-                          <span>{formatCurrency(hostel.fee_per_year)} / Year</span>
-                        </div>
-                      ))}
-
-                    </div>
-                  </div>
-                )}
-
-              </SectionReveal>
-            </motion.div>
-          )}
-
-          {activeTab === 'placements' && (
-            <motion.div key="placements" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              <SectionReveal className="cd-content-section">
-                <h3>Placement Statistics</h3>
-                <div className="cd-stats-grid-large">
-                  <div className="stat-card">
-                    <span className="stat-label">Placement %</span>
-                    <span className="stat-val">{college.placement_percentage || "92"}%</span>
-                  </div>
-                  <div className="stat-card">
-                    <span className="stat-label">Highest Package</span>
-                    <span className="stat-val">₹{college.highest_salary || "24"} LPA</span>
-                  </div>
-                  <div className="stat-card">
-                    <span className="stat-label">Median Salary</span>
-                    <span className="stat-val">₹{college.median_salary || "6.5"} LPA</span>
-                  </div>
                 </div>
               </SectionReveal>
             </motion.div>
@@ -324,13 +239,20 @@ function CollegeDetail() {
             <motion.div key="gallery" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               <SectionReveal className="cd-content-section">
                 <h3>Campus Gallery</h3>
-                <div className="cd-gallery-grid-full">
-                  {allImages.map((img, i) => (
-                    <div key={i} className="gallery-item-full" onClick={() => { setSelectedGalleryImage(img); setGalleryOpen(true); }}>
-                      <img src={img.url} alt={img.title} />
-                    </div>
-                  ))}
-                </div>
+                {allImages.length > 0 ? (
+                  <div className="cd-gallery-grid-full">
+                    {allImages.map((img, i) => (
+                      <div key={i} className="gallery-item-full" onClick={() => { setSelectedGalleryImage(img); setGalleryOpen(true); }}>
+                        <img src={img.url} alt={img.title} />
+                        <div className="gallery-overlay">
+                          <span>View Image</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ textAlign: 'center', padding: '40px' }}>No gallery images available</p>
+                )}
               </SectionReveal>
             </motion.div>
           )}
@@ -339,9 +261,21 @@ function CollegeDetail() {
 
       {/* Lightbox */}
       <AnimatePresence>
-        {galleryOpen && (
-          <motion.div className="cd-lightbox-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setGalleryOpen(false)}>
-            <motion.div className="cd-lightbox-content" initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} onClick={e => e.stopPropagation()}>
+        {galleryOpen && selectedGalleryImage && (
+          <motion.div 
+            className="cd-lightbox-overlay" 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            onClick={() => setGalleryOpen(false)}
+          >
+            <motion.div 
+              className="cd-lightbox-content" 
+              initial={{ scale: 0.9 }} 
+              animate={{ scale: 1 }} 
+              exit={{ scale: 0.9 }} 
+              onClick={e => e.stopPropagation()}
+            >
               <button className="close-lightbox" onClick={() => setGalleryOpen(false)}>&times;</button>
               <img src={selectedGalleryImage.url} alt="Gallery" />
               <div className="lightbox-caption">{selectedGalleryImage.title}</div>

@@ -29,11 +29,16 @@ function MyApplications() {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+    
     const stored = localStorage.getItem('user');
     if (stored) setUser(JSON.parse(stored));
     fetchApplications();
@@ -42,9 +47,13 @@ function MyApplications() {
   const fetchApplications = async () => {
     try {
       const data = await getMyApplications();
-      setApplications(data);
+      // Ensure data is an array
+      setApplications(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching applications:", error);
+      if (error.response?.status === 401) {
+        navigate('/login');
+      }
     } finally {
       setLoading(false);
     }
@@ -64,22 +73,36 @@ function MyApplications() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading PDF:', error);
+      alert('Failed to download PDF. Please try again.');
     } finally {
       setDownloading(null);
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    setUser(null);
+    navigate('/login');
+  };
+
   const getStatusClass = (status) => {
-    if (!status) return 'status-pending';
-    return `status-${status.toLowerCase().replace(' ', '-')}`;
+    // Applications from EnquiryForm are always "submitted"
+    return 'status-submitted';
+  };
+
+  const getStatusDisplay = () => {
+    return 'Submitted';
   };
 
   const filteredApplications = applications.filter((app) => {
     const matchesSearch =
       app.application_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.college_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || app.status === statusFilter;
-    return matchesSearch && matchesStatus;
+      app.college_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.course_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.last_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
   });
 
   if (loading) {
@@ -93,7 +116,7 @@ function MyApplications() {
 
   return (
     <div className="myapps-page-premium">
-      <Navbar user={user} onLogout={() => { localStorage.removeItem('user'); setUser(null); navigate('/login'); }} />
+      <Navbar user={user} onLogout={handleLogout} />
 
       <section className="myapps-hero">
         <div className="container">
@@ -103,7 +126,7 @@ function MyApplications() {
               Student Dashboard
             </div>
             <h1>Your <span className="title-highlight">Applications</span></h1>
-            <p>Monitor and manage all your ongoing college admission processes in one place.</p>
+            <p>Monitor and manage all your college admission enquiries in one place.</p>
           </SectionReveal>
         </div>
       </section>
@@ -114,9 +137,13 @@ function MyApplications() {
           {/* Dashboard Stats */}
           <div className="myapps-stats-grid">
             {[
-              { label: "Total", val: applications.length, icon: "📋" },
-              { label: "Approved", val: applications.filter(a => a.status === 'approved').length, icon: "✅" },
-              { label: "Pending", val: applications.filter(a => a.status === 'pending' || a.status === 'under_review').length, icon: "⏳" }
+              { label: "Total Enquiries", val: applications.length, icon: "📋" },
+              { label: "This Month", val: applications.filter(a => {
+                  const submittedDate = new Date(a.submitted_at);
+                  const now = new Date();
+                  return submittedDate.getMonth() === now.getMonth() && 
+                         submittedDate.getFullYear() === now.getFullYear();
+                }).length, icon: "📅" },
             ].map((s, i) => (
               <SectionReveal key={i} className="stat-card-premium" delay={i * 0.1}>
                 <div className="stat-icon-wrap">{s.icon}</div>
@@ -131,24 +158,17 @@ function MyApplications() {
           {/* Controls */}
           <SectionReveal className="myapps-controls">
             <div className="search-box-premium">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
               <input 
                 type="text" 
-                placeholder="Search by ID or College name..." 
+                placeholder="Search by ID, College, Course, or Name..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <select 
-              className="filter-select-premium"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">All Status</option>
-              <option value="submitted">Submitted</option>
-              <option value="approved">Approved</option>
-              <option value="pending">Pending</option>
-            </select>
           </SectionReveal>
 
           {/* Applications Grid */}
@@ -159,21 +179,33 @@ function MyApplications() {
                   <SectionReveal key={app.application_id} className="app-card-premium" delay={idx * 0.05}>
                     <div className="app-card-header">
                       <span className="app-id-pill">ID: #{app.application_id}</span>
-                      <span className={`status-badge-premium ${getStatusClass(app.status)}`}>
-                        {app.status || 'Pending'}
+                      <span className={`status-badge-premium ${getStatusClass()}`}>
+                        {getStatusDisplay()}
                       </span>
                     </div>
                     
                     <div className="app-card-body">
-                      <h3>{app.college_name || "Unknown College"}</h3>
+                      <h3>{app.college_name || "College Not Specified"}</h3>
+                      <p className="course-name">{app.course_name || "Course Not Specified"}</p>
+                      {app.department_name && (
+                        <p className="dept-name">Department: {app.department_name}</p>
+                      )}
+                      <div className="student-info">
+                        <span>{app.first_name} {app.last_name}</span>
+                        <span>{app.mobile_number}</span>
+                      </div>
                       <div className="app-meta-grid">
                         <div className="meta-item">
-                          <label>Applied On</label>
-                          <span>{new Date(app.submitted_at).toLocaleDateString()}</span>
+                          <label>Submitted On</label>
+                          <span>{new Date(app.submitted_at).toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          })}</span>
                         </div>
                         <div className="meta-item">
-                          <label>Quota</label>
-                          <span className="capitalize">{app.quota_type || "N/A"}</span>
+                          <label>Submitted At</label>
+                          <span>{new Date(app.submitted_at).toLocaleTimeString()}</span>
                         </div>
                       </div>
                     </div>
@@ -184,13 +216,13 @@ function MyApplications() {
                         onClick={() => handleDownloadPDF(app.application_id)}
                         disabled={downloading === app.application_id}
                       >
-                        {downloading === app.application_id ? "..." : "PDF"}
+                        {downloading === app.application_id ? "⏳" : "📄 PDF"}
                       </button>
                       <button 
                         className="btn-view-details"
-                        onClick={() => navigate(`/applications/${app.application_id}`)}
+                        onClick={() => navigate(`/my-applications/${app.application_id}`)}
                       >
-                        View Full Details
+                        View Details
                       </button>
                     </div>
                   </SectionReveal>
@@ -203,8 +235,10 @@ function MyApplications() {
                 >
                   <div className="empty-icon-large">📂</div>
                   <h3>No Applications Found</h3>
-                  <p>We couldn't find any applications matching your criteria.</p>
-                  <button onClick={() => navigate("/colleges")} className="btn-premium-action">Browse Colleges</button>
+                  <p>You haven't submitted any college applications yet.</p>
+                  <button onClick={() => navigate("/colleges")} className="btn-premium-action">
+                    Browse Colleges
+                  </button>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -218,5 +252,4 @@ function MyApplications() {
   );
 }
 
-
-export default MyApplications;
+export default MyApplications;

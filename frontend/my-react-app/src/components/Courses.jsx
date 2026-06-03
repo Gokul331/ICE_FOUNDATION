@@ -29,12 +29,22 @@ function Courses() {
   const [courses, setCourses] = useState([]);
   const [collegesMap, setCollegesMap] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
-  const [filters, setFilters] = useState({ stream: "All", duration: "All" });
+  const [filters, setFilters] = useState({ degreeType: "All", category: "All" });
   const [sortBy, setSortBy] = useState("name");
   const [viewMode, setViewMode] = useState("grid");
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Get unique categories from courses
+  const uniqueCategories = useMemo(() => {
+    const categories = new Set();
+    courses.forEach(course => {
+      if (course.category_display) categories.add(course.category_display);
+      else if (course.category) categories.add(course.category);
+    });
+    return ["All", ...Array.from(categories).sort()];
+  }, [courses]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,7 +61,7 @@ function Courses() {
             name: c.college_name,
             city: c.location_city,
             state: c.location_state,
-            logo: c.logo_url
+            banner: c.banner_image
           };
         });
         
@@ -92,17 +102,36 @@ function Courses() {
     }
   };
 
+  const getDegreeTypeDisplay = (degreeType) => {
+    const display = {
+      'ug': 'UG',
+      'pg': 'PG',
+      'diploma': 'Diploma',
+      'phd': 'PhD',
+      'integrated': 'Integrated'
+    };
+    return display[degreeType?.toLowerCase()] || degreeType || 'UG';
+  };
+
   const filteredAndSortedCourses = useMemo(() => {
     let filtered = courses.filter(c => {
       const name = c.course_name || "";
+      const code = c.course_code || "";
       const college = collegesMap[c.college]?.name || "";
+      const category = c.category_display || c.category || "";
+      
       const matchesSearch = searchQuery === "" ||
         name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        code.toLowerCase().includes(searchQuery.toLowerCase()) ||
         college.toLowerCase().includes(searchQuery.toLowerCase());
       
-      const matchesStream = filters.stream === "All" || (c.degree_type && c.degree_type.toLowerCase() === filters.stream.toLowerCase());
+      const matchesDegreeType = filters.degreeType === "All" || 
+        (c.degree_type && c.degree_type.toLowerCase() === filters.degreeType.toLowerCase());
       
-      return matchesSearch && matchesStream;
+      const matchesCategory = filters.category === "All" || 
+        category === filters.category;
+      
+      return matchesSearch && matchesDegreeType && matchesCategory;
     });
 
     filtered.sort((a, b) => {
@@ -151,28 +180,40 @@ function Courses() {
               <input
                 type="text"
                 className="sticky-search-input"
-                placeholder="Search courses or specializations..."
+                placeholder="Search courses, course code, or college..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
             <div className="filter-chips">
-              {["All", "UG", "PG", "Diploma"].map(t => (
-                <button
-                  key={t}
-                  className={`filter-chip ${filters.stream === t ? "active" : ""}`}
-                  onClick={() => setFilters({ ...filters, stream: t })}
-                >
-                  {t}
-                </button>
-              ))}
+              <select 
+                className="filter-select"
+                value={filters.degreeType}
+                onChange={(e) => setFilters({ ...filters, degreeType: e.target.value })}
+              >
+                <option value="All">All Degree Types</option>
+                <option value="ug">UG</option>
+                <option value="pg">PG</option>
+                <option value="diploma">Diploma</option>
+                <option value="phd">PhD</option>
+                <option value="integrated">Integrated</option>
+              </select>
+              
+              <select 
+                className="filter-select"
+                value={filters.category}
+                onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+              >
+                {uniqueCategories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
             </div>
 
             <div className="sort-view-controls">
               <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                 <option value="name">Sort: A-Z</option>
-                <option value="duration">Sort: Duration</option>
               </select>
               <div className="view-toggle">
                 <button className={`vt-btn ${viewMode === "grid" ? "active" : ""}`} onClick={() => setViewMode("grid")}>
@@ -211,30 +252,33 @@ function Courses() {
                   <SectionReveal key={course.course_id || i} className="course-card-wrapper" delay={i % 6 * 0.05}>
                     <div className="course-card-premium">
                       <div className="course-card-top">
-                        <div className="course-badge">{course.degree_type || "UG"}</div>
+                        <div className="course-badge">{getDegreeTypeDisplay(course.degree_type)}</div>
                         <h3 className="course-name">{course.course_name}</h3>
                         <p className="course-clg">{collegesMap[course.college]?.name || "Institution"}</p>
                       </div>
                       
                       <div className="course-card-meta">
                         <div className="c-meta-item">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                          {course.duration_years || "4"} Years
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
+                          {course.category_display || course.category || "Engineering"}
                         </div>
                         <div className="c-meta-item">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-                          Intake: {course.intake_seats || "60"}
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                          {course.degree_type?.toUpperCase() || "UG"}
                         </div>
                       </div>
 
                       <div className="course-card-fees">
                         <div className="fee-box">
-                          <span className="fee-label">Management Fee</span>
-                          <span className="fee-val">₹{course.tuition_fee_management || "1.2"}L /yr</span>
+                          <span className="fee-label">Course Code</span>
+                          <span className="fee-val">{course.course_code || "-"}</span>
                         </div>
-                        {course.scholarship_amount && (
-                          <div className="scholar-label">Scholarship: ₹{course.scholarship_amount}</div>
-                        )}
+                        <div className="fee-box">
+                          <span className="fee-label">Status</span>
+                          <span className={`status-badge ${course.is_active ? 'active' : 'inactive'}`}>
+                            {course.is_active ? "Active" : "Inactive"}
+                          </span>
+                        </div>
                       </div>
                       
                       <div className="course-card-actions">

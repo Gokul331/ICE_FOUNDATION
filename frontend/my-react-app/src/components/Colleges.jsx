@@ -14,18 +14,20 @@ const fadeUp = {
 };
 
 function CollegeImageDisplay({ college, getLogoLetters }) {
-  const allImages = Array.isArray(college.all_images) ? college.all_images.filter(Boolean) : [];
-  const fallbackLogo = college.logo_url || "";
+  // Use all_images from serializer or combine college_images and campus_images
+  const allImages = Array.isArray(college.all_images) 
+    ? college.all_images.filter(Boolean) 
+    : (college.college_images || []).concat(college.campus_images || []).filter(Boolean);
+  
+  const fallbackImage = college.banner_image || "";
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [hasLogoError, setHasLogoError] = useState(false);
+  const [hasImageError, setHasImageError] = useState(false);
 
   const rotationInterval = 5000;
   const zoomAmount = 1.03;
 
   useEffect(() => {
-    if (allImages.length <= 1) {
-      return;
-    }
+    if (allImages.length <= 1) return;
 
     const interval = window.setInterval(() => {
       setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
@@ -35,27 +37,12 @@ function CollegeImageDisplay({ college, getLogoLetters }) {
   }, [allImages.length, rotationInterval]);
 
   const hasImages = allImages.length > 0;
-  const activeImage = hasImages ? allImages[currentImageIndex] : fallbackLogo;
-  const shouldShowLogo = !hasImages && Boolean(fallbackLogo) && !hasLogoError;
+  const activeImage = hasImages ? allImages[currentImageIndex] : fallbackImage;
+  const shouldShowImage = hasImages || (fallbackImage && !hasImageError);
 
   return (
     <div className="card-image-box">
-      {shouldShowLogo ? (
-        <motion.div
-          className="card-image-logo-shell"
-          initial={{ opacity: 0, scale: 0.985 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.45, ease: "easeOut" }}
-        >
-          <img
-            src={activeImage}
-            alt={college.college_name || college.name}
-            className="card-image logo-image"
-            onError={() => setHasLogoError(true)}
-          />
-          <div className="logo-label-overlay">logo</div>
-        </motion.div>
-      ) : hasImages ? (
+      {shouldShowImage ? (
         <AnimatePresence mode="wait">
           <motion.img
             key={activeImage}
@@ -66,6 +53,7 @@ function CollegeImageDisplay({ college, getLogoLetters }) {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: zoomAmount }}
             transition={{ duration: 0.45, ease: "easeOut" }}
+            onError={() => setHasImageError(true)}
           />
         </AnimatePresence>
       ) : (
@@ -73,7 +61,6 @@ function CollegeImageDisplay({ college, getLogoLetters }) {
           <div className="card-image-placeholder-badge">
             {getLogoLetters(college.college_name || college.name)}
           </div>
-          <div className="logo-label-overlay">logo</div>
         </div>
       )}
     </div>
@@ -81,8 +68,6 @@ function CollegeImageDisplay({ college, getLogoLetters }) {
 }
 
 function SectionReveal({ children, className, delay = 0 }) {
-  const ref = useRef(null);
-  const inView = window.innerWidth < 768 ? true : false; // simplified for long lists
   return (
     <motion.div
       className={className}
@@ -103,12 +88,29 @@ function Colleges() {
   const navigate = useNavigate();
   const [colleges, setColleges] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filters, setFilters] = useState({ type: "All" });
+  const [filters, setFilters] = useState({ city: "All", state: "All" });
   const [sortBy, setSortBy] = useState("name");
   const [viewMode, setViewMode] = useState("grid");
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Get unique cities and states for filters
+  const uniqueCities = useMemo(() => {
+    const cities = new Set();
+    colleges.forEach(college => {
+      if (college.location_city) cities.add(college.location_city);
+    });
+    return ["All", ...Array.from(cities).sort()];
+  }, [colleges]);
+
+  const uniqueStates = useMemo(() => {
+    const states = new Set();
+    colleges.forEach(college => {
+      if (college.location_state) states.add(college.location_state);
+    });
+    return ["All", ...Array.from(states).sort()];
+  }, [colleges]);
 
   useEffect(() => {
     const fetchColleges = async () => {
@@ -167,15 +169,17 @@ function Colleges() {
   const filteredAndSortedColleges = useMemo(() => {
     let filtered = colleges.filter(college => {
       const name = college.college_name || college.name || "";
-      const city = college.location_city || college.district || "";
+      const city = college.location_city || "";
+      const state = college.location_state || "";
+      
       const matchesSearch = searchQuery === "" ||
         name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         city.toLowerCase().includes(searchQuery.toLowerCase());
       
-      const type = college.type || "Private";
-      const matchesType = filters.type === "All" || type.toLowerCase() === filters.type.toLowerCase();
+      const matchesCity = filters.city === "All" || city === filters.city;
+      const matchesState = filters.state === "All" || state === filters.state;
       
-      return matchesSearch && matchesType;
+      return matchesSearch && matchesCity && matchesState;
     });
 
     filtered.sort((a, b) => {
@@ -183,7 +187,6 @@ function Colleges() {
       const nameB = b.college_name || b.name || "";
       switch (sortBy) {
         case "name": return nameA.localeCompare(nameB);
-        case "nirf": return (a.nirf_rank || 999) - (b.nirf_rank || 999);
         default: return 0;
       }
     });
@@ -245,21 +248,29 @@ function Colleges() {
             </div>
 
             <div className="filter-chips">
-              {["All", "Government", "Private", "Autonomous"].map(t => (
-                <button
-                  key={t}
-                  className={`filter-chip ${filters.type === t ? "active" : ""}`}
-                  onClick={() => setFilters({ type: t })}
-                >
-                  {t}
-                </button>
-              ))}
+              <select 
+                className="filter-select"
+                value={filters.city}
+                onChange={(e) => setFilters({ ...filters, city: e.target.value })}
+              >
+                {uniqueCities.map(city => (
+                  <option key={city} value={city}>{city}</option>
+                ))}
+              </select>
+              <select 
+                className="filter-select"
+                value={filters.state}
+                onChange={(e) => setFilters({ ...filters, state: e.target.value })}
+              >
+                {uniqueStates.map(state => (
+                  <option key={state} value={state}>{state}</option>
+                ))}
+              </select>
             </div>
 
             <div className="sort-view-controls">
               <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                 <option value="name">Sort: Name A-Z</option>
-                <option value="nirf">Sort: NIRF Rank</option>
               </select>
               <div className="view-toggle">
                 <button className={`vt-btn ${viewMode === "grid" ? "active" : ""}`} onClick={() => setViewMode("grid")}>
@@ -299,15 +310,6 @@ function Colleges() {
                     <div className="college-card-premium card-3d">
                       <CollegeImageDisplay college={college} getLogoLetters={getLogoLetters} />
                       
-                        <div className="card-badge">{college.type || "Private"}</div>
-                        <motion.button 
-                          className="card-wishlist"
-                          whileTap={{ scale: 0.8 }}
-                        >
-                          <FaHeart />
-                        </motion.button>
-                     
-                      
                       <div className="card-details">
                         <div className="card-top">
                           <div className="card-logo">
@@ -315,7 +317,7 @@ function Colleges() {
                           </div>
                           <div className="card-loc">
                             <FaMapMarkerAlt />
-                            {college.location_city || college.district}, {college.state || "TN"}
+                            {college.location_city || "City"}, {college.location_state || "State"}
                           </div>
                         </div>
                         
@@ -323,25 +325,12 @@ function Colleges() {
                         
                         <div className="card-stats">
                           <div className="c-stat">
-                             <span className="c-stat-label">TNEA Code</span>
-                            <span className="c-stat-val">{college.counselling_code}</span>
-                           
+                            <span className="c-stat-label">Short Name</span>
+                            <span className="c-stat-val">{college.short_name || "-"}</span>
                           </div>
                           <div className="c-stat">
-                            <span className="c-stat-label">Placement</span>
-                            <span className="c-stat-val">{college.placement_percentage || "90"}%</span>
-                            
-                          </div>
-                          <div className="c-stat">
-                            <span className="c-stat-label">Website</span>
-                            <a
-                              href={college.website_url || "#"}
-                              className="website-link"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <FaExternalLinkAlt className="website-icon"/>
-                            </a>
+                            <span className="c-stat-label">Courses</span>
+                            <span className="c-stat-val">{college.courses_offered?.length || 0}</span>
                           </div>
                         </div>
                         
@@ -367,6 +356,5 @@ function Colleges() {
     </div>
   );
 }
-
 
 export default Colleges;
