@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import '../styles/applicationForm.css';
 import { SiTicktick } from "react-icons/si";
 import { submitScholarshipApplication } from '../services/api';
@@ -18,7 +18,7 @@ const collegeOptions = [
   'Dhanalakshmi Srinivasan University',
 ];
 
-function App() {
+function ApplicationForm() {
   const [formData, setFormData] = useState({
     studentName: '',
     phoneNumber: '',

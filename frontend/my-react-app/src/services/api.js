@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "https://ice-foundation-1.onrender.com/";
+const API_URL = "https://ice-foundation-1.onrender.com";
 
 const API = axios.create({
   baseURL: `${API_URL}/api`,
@@ -606,4 +606,21 @@ export const getApplicationDetail = async (applicationId) => {
   });
   return response.data;
 };
+// ==================== SCHOLARSHIP APPLICATION (Public - No Auth Required) ====================
+
+export const submitScholarshipApplication = async (formData) => {
+  try {
+    const response = await API.post('/submit-scholarship-application/', formData, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error submitting scholarship application:', error);
+    console.error('Error response:', error.response?.data);
+    throw error;
+  }
+};
+
 export default API;
