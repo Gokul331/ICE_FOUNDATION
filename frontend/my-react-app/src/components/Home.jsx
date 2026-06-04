@@ -383,8 +383,9 @@ function Home() {
                 <div className="service-icon-wrapper">
                   <div className="service-icon-bg" />
                   <span className="service-icon">{service.icon}</span>
+                  <h3 className="service-card-title">{service.title}</h3>
                 </div>
-                <h3 className="service-card-title">{service.title}</h3>
+                
                 <p className="service-card-desc">{service.desc}</p>
                 <div className="service-card-line" />
               </motion.div>

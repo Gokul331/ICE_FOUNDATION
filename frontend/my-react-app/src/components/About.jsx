@@ -4,6 +4,9 @@ import { motion } from "framer-motion";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import "../styles/about.css";
+import { FaBullseye } from "react-icons/fa";
+import { FaHandshakeSimple } from "react-icons/fa6";
+import { TbTargetArrow } from "react-icons/tb";
 
 /* ── animation helpers ── */
 function SectionReveal({ children, className, delay = 0 }) {
@@ -83,13 +86,19 @@ function About() {
         <div className="container">
           <div className="values-grid">
             <SectionReveal className="value-card-modern card-3d" delay={0.1}>
-              <div className="value-icon-wrap">👁️</div>
-              <h3>Our Vision</h3>
+              <div className="value-header">
+                 <div className="value-icon-wrap"> <FaBullseye /></div> 
+                  <h3>Our Vision</h3>
+              </div>
+              
+              
               <p>To empower students and institutions by bridging the gap between education and industry, creating a future-ready generation of professionals and innovators.</p>
             </SectionReveal>
             <SectionReveal className="value-card-modern card-3d" delay={0.2}>
-              <div className="value-icon-wrap">🎯</div>
-              <h3>Our Mission</h3>
+              <div className="value-header">
+                <div className="value-icon-wrap"><TbTargetArrow /></div>
+                <h3>Our Mission</h3>
+              </div>
               <ul className="mission-list">
                 <li>Guide students in choosing the right academic paths and career opportunities</li>
                 <li>Support institutions in curriculum development and research</li>
@@ -98,8 +107,10 @@ function About() {
               </ul>
             </SectionReveal>
             <SectionReveal className="value-card-modern card-3d" delay={0.3}>
-              <div className="value-icon-wrap">🤝</div>
-              <h3>Our Impact</h3>
+              <div className="value-header">
+                <div className="value-icon-wrap"><FaHandshakeSimple /></div>
+                <h3>Our Impact</h3>
+              </div>
               <p>As a registered admission consultancy, we play a vital role in bridging students with suitable engineering and medical colleges, fostering educational growth and professional development.</p>
             </SectionReveal>
           </div>

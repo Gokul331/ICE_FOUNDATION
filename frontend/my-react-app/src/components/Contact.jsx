@@ -48,9 +48,9 @@ const Contact = () => {
 
   const faqs = [
     { q: "How soon will I hear back?", a: "We aim to respond to all enquiries within 24 hours on business days." },
-    { q: "Is the initial consultation free?", a: "Yes! Your first 30-minute session with an ACE COUNSULTING advisor is completely free." },
-    { q: "Can I visit the office directly?", a: "Absolutely. Walk-ins are welcome during office hours at our Chennai & Andhra Pradesh locations." },
-    { q: "Do you offer online counselling?", a: "Yes, we offer full online counselling via video call for students across India." }
+    { q: "Is the initial consultation free?", a: "Yes! Your first 30-minute session with an VAMSHI Educare advisor is completely free." },
+    { q: "Can I visit the office directly?", a: "Absolutely. Walk-ins are welcome during office hours at our Thiruvarur locations." },
+    { q: "Do you offer online counselling?", a: "Yes, we offer full online counselling via video call for students across Tamil Nadu." }
   ];
 
   return (
@@ -204,7 +204,7 @@ const Contact = () => {
                       <div className="pulse" />
                       <div className="dot" />
                     </div>
-                    <span>Namakkal Office</span>
+                    <span>Thiruvarur Office</span>
                   </div>
                 </div>
                 <div className="map-card-footer">

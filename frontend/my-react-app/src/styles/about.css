@@ -109,7 +109,12 @@
   padding: 60px 0;
   background: var(--bg-alt);
 }
-
+.value-header{
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: flex-start;
+}
 .values-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

@@ -799,7 +799,7 @@
 
 .services-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(3, minmax(320px, 1fr)); 
   gap: 24px;
 }
 
@@ -835,30 +835,25 @@
 }
 
 .service-icon-wrapper {
-  width: 80px;
-  height: 80px;
   background: var(--bg-alt);
   border-radius: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 12px;
   font-size: 2.5rem;
   margin-bottom: 24px;
+  padding: 20px;
   transition: all 0.6s ease;
   position: relative;
   z-index: 2;
 }
 
-.service-card:hover .service-icon-wrapper {
-  background: var(--primary);
-  transform: rotate(-10deg) scale(1.1);
-  color: white;
-}
+
 
 .service-card-title {
   font-size: 1.6rem;
   font-weight: 900;
-  margin-bottom: 16px;
   color: var(--text);
   position: relative;
   z-index: 2;
@@ -982,7 +977,7 @@
 /* ── SUCCESS CTA SECTION ── */
 .success-cta-section {
   padding: 80px 0;
-  background: var(--primary-dark);
+  background: #243150d1;
   color: white;
   text-align: center;
   position: relative;
@@ -1391,8 +1386,10 @@
   }
 
   .service-icon-wrapper {
-    width: 60px;
-    height: 60px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
     font-size: 1.8rem;
   }
 

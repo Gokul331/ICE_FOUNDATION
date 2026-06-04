@@ -269,7 +269,7 @@ function Navbar() {
             </div>
           ) : (
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
-              <Link to="/login" className="nb-cta">Login / Register</Link>
+              <Link to="/application-form" className="nb-cta">Apply Now</Link>
             </motion.div>
           )}
         </div>
@@ -413,7 +413,7 @@ function Navbar() {
               </div>
             ) : (
               <div className="nb-mob-footer">
-                <Link to="/login" className="nb-mob-cta" onClick={closeMobile}>Login / Register</Link>
+                <Link to="/application-form" className="nb-mob-cta" onClick={closeMobile}>Apply Now</Link>
               </div>
             )}
           </motion.aside>
