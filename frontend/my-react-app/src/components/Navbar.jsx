@@ -321,7 +321,7 @@ function Navbar() {
                 </div>
                 <div>
                   <span className="nb-mob-brand">VAMSHI EDUCARE</span>
-                  <small className="nb-mob-sub">ADMISSIONS | CAREER | EDUCATION</small>
+                  <small className="nb-mob-sub">CAREER GUIDANCE CENTER</small>
                 </div>
               </div>
               <motion.button className="nb-mob-close" onClick={closeMobile} whileTap={{ scale: 0.9 }} aria-label="Close menu">

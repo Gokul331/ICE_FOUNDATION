@@ -9,7 +9,7 @@ import img1 from "/5.jpeg";
 import img2 from "/2.jpg";
 import img3 from "/3.jpg";
 import img4 from "/1.jpg";
-
+import { FaExternalLinkSquareAlt } from "react-icons/fa";
 /* ── animation helpers ── */
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -250,7 +250,7 @@ function Home() {
                 to={ heroSlides[currentSlide].primaryTo}
                 className="btn-dark"
               >
-                { heroSlides[currentSlide].primaryLabel}
+                { heroSlides[currentSlide].primaryLabel} <FaExternalLinkSquareAlt style={{ marginLeft: "6px", fontSize: "0.9em" }} />
               </Link>
               
             </div>
