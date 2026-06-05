@@ -1,8 +1,8 @@
 from django.contrib import admin
 from django.db.models import Count, Q
+from django.db import models  # Changed this line - import models from django.db, not django
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
-from django import models
 from django.contrib.admin.widgets import AdminTextareaWidget
 from .models import College, Course, UserProfile, EnquiryForm
 
