@@ -9,23 +9,22 @@ from django.core.exceptions import ValidationError
 class College(models.Model):
     
     COURSE_CATEGORY_CHOICES = [
-    ('engineering', 'Engineering and Technology'),
-    ('arts_science', 'Arts and Science'),
-    ('polytechnic', 'Polytechnic'),
-    ('allied_health_science', 'Allied Health Science'),
-    ('medical', 'Medical'),
-    ('law', 'Law'),
-    ('nursing', 'Nursing'),
-    ('management', 'Management'),
-    ('computer_applications', 'Computer Applications'),
-    ('pharmacy', 'Pharmacy'),
-    ('agriculture', 'Agricultural Science'),
-    ('physiotherapy', 'Physiotherapy'),
-    ('occupational_therapy', 'Occupational Therapy'),
-    ('architecture', 'Architecture'),
-    ('education', 'Education'),
-    ('physical_education', 'Physical Education'),
-
+        ('engineering', 'Engineering and Technology'),
+        ('arts_science', 'Arts and Science'),
+        ('polytechnic', 'Polytechnic'),
+        ('allied_health_science', 'Allied Health Science'),
+        ('medical', 'Medical'),
+        ('law', 'Law'),
+        ('nursing', 'Nursing'),
+        ('management', 'Management'),
+        ('computer_applications', 'Computer Applications'),
+        ('pharmacy', 'Pharmacy'),
+        ('agriculture', 'Agricultural Science'),
+        ('physiotherapy', 'Physiotherapy'),
+        ('occupational_therapy', 'Occupational Therapy'),
+        ('architecture', 'Architecture'),
+        ('education', 'Education'),
+        ('physical_education', 'Physical Education'),
     ]
     
     college_id = models.AutoField(primary_key=True)
@@ -35,23 +34,21 @@ class College(models.Model):
     courses_offered = models.JSONField(
         default=list, 
         blank=True, 
-        help_text="List of course categories offered by the college"
+        help_text='List of course categories offered by the college. Format: ["engineering", "pharmacy", "law"]'
     )
     
     # ========== IMAGE FIELDS =========
-    # Array of images for the college gallery
     college_images = models.JSONField(
         default=list,
         blank=True,
-        help_text="Array of image URLs for college campus, facilities, etc."
+        help_text='Array of image URLs for college campus, facilities, etc. Format: ["https://example.com/image1.jpg"]'
     )
     
-    # Optional: separate fields for specific image types
     banner_image = models.URLField(max_length=500, null=True, blank=True, help_text="Banner image for college page")
     campus_images = models.JSONField(
         default=list,
         blank=True,
-        help_text="Array of campus photos"
+        help_text='Array of campus photos. Format: ["https://example.com/campus1.jpg"]'
     )
     
     location_city = models.CharField(max_length=100)
@@ -75,25 +72,28 @@ class College(models.Model):
                     )
     
     def save(self, *args, **kwargs):
+        # Only validate, don't auto-sync
         self.full_clean()
         super().save(*args, **kwargs)
-        # Auto-sync categories from detailed courses
-        self.sync_courses_offered()
+        # Remove the auto-sync call to prevent overwriting manual entries
     
     def sync_courses_offered(self):
-        """Synchronize courses_offered JSONField with actual Course objects"""
+        """Manually synchronize courses_offered JSONField with actual Course objects"""
         if hasattr(self, 'courses'):
             # Get unique categories from actual courses
-            actual_categories = set(
+            actual_categories = list(set(
                 self.courses.filter(is_active=True)
                 .values_list('category', flat=True)
                 .distinct()
-            )
+            ))
             # Update if changed
-            if set(self.courses_offered) != actual_categories:
-                self.courses_offered = list(actual_categories)
+            if set(self.courses_offered or []) != set(actual_categories):
                 # Use update to avoid recursion
-                College.objects.filter(pk=self.pk).update(courses_offered=self.courses_offered)
+                College.objects.filter(pk=self.pk).update(courses_offered=actual_categories)
+                # Update the instance's attribute
+                self.courses_offered = actual_categories
+                return True
+        return False
     
     def get_courses_by_category(self, category=None):
         """Get all courses, optionally filtered by category"""
