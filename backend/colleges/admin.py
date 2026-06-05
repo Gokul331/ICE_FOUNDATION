@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.db.models import Count, Q
-from django.db import models  # Changed this line - import models from django.db, not django
+from django.db import models
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.contrib.admin.widgets import AdminTextareaWidget
@@ -90,7 +90,7 @@ class CollegeAdmin(admin.ModelAdmin):
         
         if all_images:
             preview_html = '<div style="display: flex; gap: 5px; flex-wrap: wrap;">'
-            for img_url in all_images[:5]:  # Show first 5 images
+            for img_url in all_images[:5]:
                 preview_html += f'<img src="{img_url}" width="80" height="60" style="object-fit: cover; border-radius: 4px;" />'
             preview_html += '</div>'
             preview_html += f'<small>Total images: {len(all_images)}</small>'
@@ -107,15 +107,34 @@ class CollegeAdmin(admin.ModelAdmin):
     has_gallery_badge.short_description = "Gallery Status"
     
     def courses_offered_summary(self, obj):
-        """Display courses offered as badges"""
+        """Display courses offered as badges with category colors"""
         if obj.courses_offered and isinstance(obj.courses_offered, list) and len(obj.courses_offered) > 0:
             category_map = dict(College.COURSE_CATEGORY_CHOICES)
+            color_map = {
+                'engineering': '#2196F3',
+                'arts_science': '#9C27B0',
+                'polytechnic': '#FF9800',
+                'allied_health_science': '#4CAF50',
+                'medical': '#F44336',
+                'law': '#3F51B5',
+                'nursing': '#00BCD4',
+                'management': '#FFC107',
+                'computer_applications': '#607D8B',
+                'pharmacy': '#795548',
+                'agriculture': '#8BC34A',
+                'physiotherapy': '#009688',
+                'occupational_therapy': '#CDDC39',
+                'architecture': '#FF5722',
+                'education': '#9E9E9E',
+                'physical_education': '#E91E63',
+            }
             badges = []
-            for category in obj.courses_offered[:5]:  # Show first 5 categories
-                category_name = category_map.get(category, category)
-                badges.append(f'<span style="background: #2196F3; color: white; padding: 2px 8px; margin: 2px; border-radius: 12px; display: inline-block; font-size: 11px;">{category_name}</span>')
+            for category in obj.courses_offered[:5]:
+                category_name = category_map.get(category, category.replace('_', ' ').title())
+                color = color_map.get(category, '#666')
+                badges.append(f'<span style="background:{color}; color:white; padding:2px 8px; margin:2px; border-radius:12px; display:inline-block; font-size:11px;">{category_name}</span>')
             if len(obj.courses_offered) > 5:
-                badges.append(f'<span style="background: #666; color: white; padding: 2px 8px; margin: 2px; border-radius: 12px; display: inline-block;">+{len(obj.courses_offered)-5}</span>')
+                badges.append(f'<span style="background:#666; color:white; padding:2px 8px; margin:2px; border-radius:12px; display:inline-block;">+{len(obj.courses_offered)-5}</span>')
             return mark_safe(' '.join(badges))
         return "No courses specified"
     courses_offered_summary.short_description = "Courses Offered"
@@ -197,18 +216,24 @@ class CourseAdmin(admin.ModelAdmin):
     def category_badge(self, obj):
         """Display category as colored badge"""
         category_map = dict(College.COURSE_CATEGORY_CHOICES)
-        category_name = category_map.get(obj.category, obj.category)
+        category_name = category_map.get(obj.category, obj.category.replace('_', ' ').title())
         color_map = {
             'engineering': '#2196F3',
-            'medical': '#4CAF50',
-            'arts_science': '#FF9800',
-            'management': '#9C27B0',
-            'law': '#F44336',
+            'arts_science': '#9C27B0',
+            'polytechnic': '#FF9800',
+            'allied_health_science': '#4CAF50',
+            'medical': '#F44336',
+            'law': '#3F51B5',
             'nursing': '#00BCD4',
+            'management': '#FFC107',
+            'computer_applications': '#607D8B',
             'pharmacy': '#795548',
-            'education': '#607D8B',
-            'polytechnic': '#3F51B5',
-            'allied_science': '#009688'
+            'agriculture': '#8BC34A',
+            'physiotherapy': '#009688',
+            'occupational_therapy': '#CDDC39',
+            'architecture': '#FF5722',
+            'education': '#9E9E9E',
+            'physical_education': '#E91E63',
         }
         color = color_map.get(obj.category, '#666')
         return mark_safe(f'<span style="background:{color}; color:white; padding:2px 8px; border-radius:12px; font-size:11px;">{category_name}</span>')
