@@ -75,7 +75,6 @@ class College(models.Model):
         # Only validate, don't auto-sync
         self.full_clean()
         super().save(*args, **kwargs)
-        # Remove the auto-sync call to prevent overwriting manual entries
     
     def sync_courses_offered(self):
         """Manually synchronize courses_offered JSONField with actual Course objects"""
@@ -94,6 +93,13 @@ class College(models.Model):
                 self.courses_offered = actual_categories
                 return True
         return False
+    
+    def get_available_categories(self):
+        """Get categories that are offered by this college"""
+        if self.courses_offered:
+            return [(cat, dict(self.COURSE_CATEGORY_CHOICES).get(cat, cat)) 
+                    for cat in self.courses_offered]
+        return []
     
     def get_courses_by_category(self, category=None):
         """Get all courses, optionally filtered by category"""

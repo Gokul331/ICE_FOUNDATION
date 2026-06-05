@@ -4,7 +4,56 @@ from django.db import models
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.contrib.admin.widgets import AdminTextareaWidget
+from django import forms
 from .models import College, Course, UserProfile, EnquiryForm
+
+
+# ==================== COURSE ADMIN FORM WITH DYNAMIC CATEGORY FILTERING ====================
+class CourseForm(forms.ModelForm):
+    class Meta:
+        model = Course
+        fields = '__all__'
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Get the college from either the POST data or the instance
+        college_id = None
+        
+        if self.data.get('college'):
+            # When form is submitted with data
+            try:
+                college_id = int(self.data.get('college'))
+            except (ValueError, TypeError):
+                pass
+        elif self.instance and self.instance.pk and self.instance.college:
+            # When editing an existing course
+            college_id = self.instance.college.pk
+        elif self.initial.get('college'):
+            # When initial data is provided
+            college_id = self.initial.get('college')
+        
+        # Filter category choices based on selected college
+        if college_id:
+            try:
+                college = College.objects.get(pk=college_id)
+                offered_categories = college.courses_offered or []
+                
+                if offered_categories:
+                    # Filter category choices to only those offered by the college
+                    self.fields['category'].choices = [
+                        choice for choice in self.fields['category'].choices 
+                        if choice[0] in offered_categories
+                    ]
+                    
+                    # Add a help text to show available categories
+                    category_names = [dict(College.COURSE_CATEGORY_CHOICES).get(cat, cat) for cat in offered_categories]
+                    self.fields['category'].help_text = f"This college offers: {', '.join(category_names)}"
+                else:
+                    self.fields['category'].help_text = "No categories specified for this college. Please update the college's 'Courses Offered' field first."
+                    
+            except College.DoesNotExist:
+                pass
 
 
 @admin.register(College)
@@ -193,6 +242,7 @@ class CollegeAdmin(admin.ModelAdmin):
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
+    form = CourseForm  # Use the custom form with dynamic filtering
     list_display = ('course_code', 'course_name', 'college', 'category_badge', 'degree_type', 'is_active', 'created_at')
     search_fields = ('course_code', 'course_name', 'college__college_name')
     list_filter = ('college', 'category', 'degree_type', 'is_active')
@@ -202,7 +252,7 @@ class CourseAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('college', 'course_code', 'course_name', 'category', 'category_badge', 'degree_type')
+            'fields': ('college', 'course_code', 'category', 'category_badge', 'degree_type', 'course_name')
         }),
         ('Status', {
             'fields': ('is_active',)
