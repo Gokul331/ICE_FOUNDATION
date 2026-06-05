@@ -1,8 +1,10 @@
 from django.contrib import admin
 from django.db.models import Count, Q
 from django.utils.html import format_html
-from .models import College, Course, UserProfile, EnquiryForm
 from django.utils.safestring import mark_safe
+from django import models
+from django.contrib.admin.widgets import AdminTextareaWidget
+from .models import College, Course, UserProfile, EnquiryForm
 
 
 @admin.register(College)
@@ -15,6 +17,11 @@ class CollegeAdmin(admin.ModelAdmin):
                       'sync_status', 'image_preview', 'gallery_preview', 'all_images_preview')
     
     actions = ['sync_categories_from_courses', 'bulk_add_engineering_category', 'clear_categories']
+    
+    # Custom widget for JSONField
+    formfield_overrides = {
+        models.JSONField: {'widget': AdminTextareaWidget(attrs={'rows': 5, 'cols': 80, 'style': 'font-family: monospace;'})},
+    }
     
     fieldsets = (
         ('Basic Information', {
@@ -102,7 +109,7 @@ class CollegeAdmin(admin.ModelAdmin):
     def courses_offered_summary(self, obj):
         """Display courses offered as badges"""
         if obj.courses_offered and isinstance(obj.courses_offered, list) and len(obj.courses_offered) > 0:
-            category_map = dict(obj.COURSE_CATEGORY_CHOICES)
+            category_map = dict(College.COURSE_CATEGORY_CHOICES)
             badges = []
             for category in obj.courses_offered[:5]:  # Show first 5 categories
                 category_name = category_map.get(category, category)
@@ -163,6 +170,7 @@ class CollegeAdmin(admin.ModelAdmin):
         else:
             return mark_safe('<span style="color: #F44336;">⚠ Out of sync</span>')
     sync_status.short_description = "Sync Status"
+
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):

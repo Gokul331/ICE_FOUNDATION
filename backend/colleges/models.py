@@ -9,16 +9,23 @@ from django.core.exceptions import ValidationError
 class College(models.Model):
     
     COURSE_CATEGORY_CHOICES = [
-        ('engineering', 'Engineering'),
-        ('arts_science', 'Arts and Science'),
-        ('polytechnic', 'Polytechnic'),
-        ('allied_science', 'Allied Science'),
-        ('medical', 'Medical'),
-        ('law', 'Law'),
-        ('nursing', 'Nursing'),
-        ('management', 'Management'),
-        ('pharmacy', 'Pharmacy'),
-        ('education', 'Education'),
+    ('engineering', 'Engineering and Technology'),
+    ('arts_science', 'Arts and Science'),
+    ('polytechnic', 'Polytechnic'),
+    ('allied_health_science', 'Allied Health Science'),
+    ('medical', 'Medical'),
+    ('law', 'Law'),
+    ('nursing', 'Nursing'),
+    ('management', 'Management'),
+    ('computer_applications', 'Computer Applications'),
+    ('pharmacy', 'Pharmacy'),
+    ('agriculture', 'Agricultural Science'),
+    ('physiotherapy', 'Physiotherapy'),
+    ('occupational_therapy', 'Occupational Therapy'),
+    ('architecture', 'Architecture'),
+    ('education', 'Education'),
+    ('physical_education', 'Physical Education'),
+
     ]
     
     college_id = models.AutoField(primary_key=True)
