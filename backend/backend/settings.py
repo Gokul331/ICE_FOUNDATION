@@ -196,7 +196,7 @@ STATIC_URL = '/static/'
 STATIC_ROOT = str(BASE_DIR / 'staticfiles')
 
 STATICFILES_DIRS = [
-str(BASE_DIR / 'static'),  # This points to your static folder at the project root
+        str(BASE_DIR / 'static'),  # This points to your static folder at the project root
 ]
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_URL = '/media/'
