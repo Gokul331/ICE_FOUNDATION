@@ -217,118 +217,189 @@ class Course(models.Model):
         ('integrated', 'Integrated'),
     ]
 
-    COURSE_CODE_CHOICES = [
+    # ==================== ENGINEERING COURSES ====================
+    ENGINEERING_COURSE_CHOICES = [
         ('AD', 'Artificial Intelligence and Data Science'),
-        ('AE', 'Aeronautical Engineering'),
-        ('AG', 'Agriculture Engineering'),
-        ('AI', 'Agricultural and Irrigation Engineering (SS)'),
-        ('AIML', 'Computer Science and Engineering (AI and Machine Learning)'),
-        ('AS', 'Aerospace Engineering'),
         ('CS', 'Computer Science and Engineering'),
-        ('EC', 'Electronics and Communication Engineering'),
-        ('EE', 'Electrical and Electronics Engineering'),
-        ('ME', 'Mechanical Engineering'),
-        ('CE', 'Civil Engineering'),
+        ('CS_CYBER', 'Computer Science and Engineering (Cyber Security)'),
         ('IT', 'Information Technology'),
+        ('AIML', 'Artificial Intelligence and Machine Learning'),
+        ('EC', 'Electronics and Communication Engineering'),
+        ('CS_IOT', 'Computer Science Engineering with IOT'),
+        ('BT', 'Bio Technology'),
+        ('BME', 'Biomedical Engineering'),
+        ('EEE', 'Electrical and Electronics Engineering'),
+        ('ME', 'Mechanical Engineering'),
+        ('AE', 'Aeronautical Engineering'),
+        ('CE', 'Civil Engineering'),
+        ('FT', 'Food Technology'),
+        ('AG', 'Agriculture Engineering'),
+        ('ROBO_AI', 'Robotics and Artificial Intelligence'),
+        ('MECHATRONICS', 'Mechatronics Engineering'),
+        ('ENV', 'Environmental Science and Technology'),
+        ('ECE', 'Electrical and Computer Engineering'),
     ]
 
-    COURSE_NAME_CHOICES = [
-        ('Artificial Intelligence and Data Science', 'Artificial Intelligence and Data Science'),
-        ('Aeronautical Engineering', 'Aeronautical Engineering'),
-        ('Agriculture Engineering', 'Agriculture Engineering'),
-        ('Agricultural and Irrigation Engineering (SS)', 'Agricultural and Irrigation Engineering (SS)'),
-        ('Computer Science and Engineering (AI and Machine Learning)', 'Computer Science and Engineering (AI and Machine Learning)'),
-        ('Aerospace Engineering', 'Aerospace Engineering'),
-        ('Apparel Technology (SS)', 'Apparel Technology (SS)'),
-        ('Architecture', 'Architecture'),
-        ('Automobile Engineering (SS)', 'Automobile Engineering (SS)'),
-        ('Automobile Engineering', 'Automobile Engineering'),
-        ('Computer Science and Engineering (Big Data Analytics)', 'Computer Science and Engineering (Big Data Analytics)'),
-        ('Bio-Medical Engineering', 'Bio-Medical Engineering'),
-        ('Architecture (SS)', 'Architecture (SS)'),
-        ('Bio Technology (SS)', 'Bio Technology (SS)'),
-        ('Bio Technology', 'Bio Technology'),
-        ('Bio-Medical Engineering (SS)', 'Bio-Medical Engineering (SS)'),
-        ('Civil and Structural Engineering', 'Civil and Structural Engineering'),
-        ('Computer Science and Business System', 'Computer Science and Business System'),
-        ('Chemical and Electro Chemical Engineering (SS)', 'Chemical and Electro Chemical Engineering (SS)'),
-        ('Civil Engineering', 'Civil Engineering'),
-        ('Chemical Engineering', 'Chemical Engineering'),
-        ('Chemical Engineering (SS)', 'Chemical Engineering (SS)'),
-        ('Computer Science and Engineering (SS)', 'Computer Science and Engineering (SS)'),
-        ('Civil Engineering (SS)', 'Civil Engineering (SS)'),
-        ('Computer and Communication Engineering', 'Computer and Communication Engineering'),
-        ('Civil Engg. and Planning', 'Civil Engg. and Planning'),
-        ('Ceramic Technology (SS)', 'Ceramic Technology (SS)'),
-        ('Computer Science and Engineering', 'Computer Science and Engineering'),
-        ('Computer Technology', 'Computer Technology'),
-        ('Computer Science and Business System (SS)', 'Computer Science and Business System (SS)'),
-        ('Cyber Security', 'Cyber Security'),
-        ('Electronics and Communication Engineering', 'Electronics and Communication Engineering'),
-        ('Electrical and Electronics Engineering', 'Electrical and Electronics Engineering'),
-        ('Electronics and Instrumentation Engineering', 'Electronics and Instrumentation Engineering'),
-        ('Electronics and Communication Engg. (SS)', 'Electronics and Communication Engg. (SS)'),
-        ('Environmental Engg.', 'Environmental Engg.'),
-        ('Electrical and Electronics (Sandwich) (SS)', 'Electrical and Electronics (Sandwich) (SS)'),
-        ('Electronics and Telecommunication Engg.', 'Electronics and Telecommunication Engg.'),
-        ('Electronics and Instrumentation Engg. (SS)', 'Electronics and Instrumentation Engg. (SS)'),
-        ('Elec. And Electronics Engg (SS)', 'Elec. And Electronics Engg (SS)'),
-        ('Food Technology', 'Food Technology'),
-        ('Food Technology (SS)', 'Food Technology (SS)'),
-        ('Fashion Technology', 'Fashion Technology'),
-        ('Fashion Technology (SS)', 'Fashion Technology (SS)'),
-        ('Geo-Informatics', 'Geo-Informatics'),
-        ('Handloom and Textile Technology', 'Handloom and Textile Technology'),
-        ('Industrial Bio-Technology', 'Industrial Bio-Technology'),
-        ('Instrumentation and Control Engineering', 'Instrumentation and Control Engineering'),
-        ('Industrial Engineering', 'Industrial Engineering'),
-        ('Information Science and Engineering', 'Information Science and Engineering'),
-        ('Information Tech. (SS)', 'Information Tech. (SS)'),
-        ('Industrial Engineering and Management', 'Industrial Engineering and Management'),
-        ('Industrial Bio-Tech. (SS)', 'Industrial Bio-Tech. (SS)'),
-        ('Information Technology', 'Information Technology'),
-        ('Instrumentation and Control Engineering (SS)', 'Instrumentation and Control Engineering (SS)'),
-        ('Leather Technology', 'Leather Technology'),
-        ('Material Science and Engineering (SS)', 'Material Science and Engineering (SS)'),
-        ('Mechatronics', 'Mechatronics'),
-        ('Medical Electronics Engg.', 'Medical Electronics Engg.'),
-        ('Mechanical Engineering', 'Mechanical Engineering'),
-        ('Mechanical (Manufacturing)', 'Mechanical (Manufacturing)'),
-        ('Mechatronics (SS)', 'Mechatronics (SS)'),
-        ('Mechanical Engineering (Sandwich)', 'Mechanical Engineering (Sandwich)'),
-        ('Mining Engineering', 'Mining Engineering'),
-        ('Manufacturing Engineering', 'Manufacturing Engineering'),
-        ('Mechanical and Mechatronics Engineering (Additive Manufacturing)', 'Mechanical and Mechatronics Engineering (Additive Manufacturing)'),
-        ('Marine Engineering', 'Marine Engineering'),
-        ('Mechanical Engineering (Sandwich) (SS)', 'Mechanical Engineering (Sandwich) (SS)'),
-        ('Metallurgical Engineering', 'Metallurgical Engineering'),
-        ('Mechanical and Automation Engineering', 'Mechanical and Automation Engineering'),
-        ('Metallurgical Engg. (SS)', 'Metallurgical Engg. (SS)'),
-        ('Nano Science and Technology', 'Nano Science and Technology'),
-        ('Plastic Technology', 'Plastic Technology'),
-        ('Petro Chemical Technology', 'Petro Chemical Technology'),
-        ('Petrochemical Engineering', 'Petrochemical Engineering'),
-        ('Petroleum Engineering', 'Petroleum Engineering'),
-        ('Pharmaceutical Technology', 'Pharmaceutical Technology'),
-        ('Polymer Technology', 'Polymer Technology'),
-        ('Pharmaceutical Tech (SS)', 'Pharmaceutical Tech (SS)'),
-        ('Production Engineering (SS)', 'Production Engineering (SS)'),
-        ('Petroleum Engineering and Technology (SS)', 'Petroleum Engineering and Technology (SS)'),
-        ('Production Engineering', 'Production Engineering'),
-        ('Production Engineering (Sandwich) (SS)', 'Production Engineering (Sandwich) (SS)'),
-        ('Printing and Packaging Technology', 'Printing and Packaging Technology'),
-        ('Robotics and Automation (SS)', 'Robotics and Automation (SS)'),
-        ('Robotics and Automation', 'Robotics and Automation'),
-        ('Rubber and Plastic Tech.', 'Rubber and Plastic Tech.'),
-        ('Computer Science and Engineering (Internet of Things and Cyber Security including Block Chain Technology)', 'Computer Science and Engineering (Internet of Things and Cyber Security including Block Chain Technology)'),
-        ('Textile Chemistry', 'Textile Chemistry'),
-        ('Computer science and Technology', 'Computer science and Technology'),
-        ('Textile Technology (SS)', 'Textile Technology (SS)'),
-        ('Textile Technology', 'Textile Technology'),
-        ('Civil Engineering (Tamil Medium)', 'Civil Engineering (Tamil Medium)'),
-        ('Mechanical Engineering (Tamil Medium)', 'Mechanical Engineering (Tamil Medium)'),
-        ('Computer Science and Engineering (Cyber Security)', 'Computer Science and Engineering (Cyber Security)'),
+    # ==================== ARTS & SCIENCE COURSES ====================
+    ARTS_SCIENCE_COURSE_CHOICES = [
+        ('BCOM', 'B.Com'),
+        ('BCOM_CA', 'B.Com - Computer Applications'),
+        ('BCOM_PA', 'B.Com - Professional Accounting'),
+        ('BCA', 'B.C.A'),
+        ('BSC_CS', 'B.Sc - Computer Science'),
+        ('BSC_AI_DS', 'B.Sc - Artificial Intelligence & Data Science'),
+        ('BSC_IT', 'B.Sc - Information Technology'),
+        ('BSC_CYBER', 'B.Sc - Cyber Security & Ethical Hacking'),
+        ('BBA', 'B.B.A'),
+        ('BBA_LOGISTICS', 'B.B.A - Logistic & Supply Chain Management'),
+        ('BSC_DATA_SCIENCE', 'B.Sc - Data Science & Analytics'),
+        ('BSC_IOT', 'B.Sc Internet of Things (IoT)'),
+        ('BSC_DEFENCE', 'B.Sc - Defence and Strategic Studies'),
+        ('BSC_VISUAL_COMM', 'B.Sc - Visual Communication'),
+        ('BSC_FORENSIC', 'B.Sc - Forensic Science'),
+        ('BBA_AVIATION', 'B.B.A - Aviation Management'),
+        ('BA_ENGLISH', 'B.A English'),
+        ('BA_PUBLIC_ADMIN', 'B.A Public Administration'),
+        ('BA_SOCIAL_WORK', 'B.A Social Work'),
+        ('BSC_HOTEL_MGT', 'B.Sc - Hotel Management & Catering Science'),
+        ('MA_ENGLISH', 'M.A English'),
+        ('MSC_CS', 'M.Sc Computer Science'),
+        ('MSC_IT', 'M.Sc Information Technology'),
+        ('MCOM', 'M.Com'),
+        ('MCOM_CA', 'M.Com (CA)'),
+        ('MSC_BIOCHEM', 'MSc Biochemistry'),
+        ('MSC_BIO_TECH', 'M.Sc Biotechnology'),
+        ('MSC_MATHS', 'M.Sc Mathematics'),
+        ('MSC_MICRO', 'M.Sc Microbiology'),
+        ('MSC_PHYSICS', 'M.Sc Physics'),
+        ('MSC_CHEMISTRY', 'M.Sc Chemistry'),
     ]
+
+    # ==================== ALLIED HEALTH SCIENCE COURSES ====================
+    ALLIED_HEALTH_COURSE_CHOICES = [
+        ('BSC_ACCIDENT_EMERGENCY', 'B.Sc - Accident and Emergency Care Technology'),
+        ('BSC_CARDIO_PULMONARY', 'B.Sc - Cardio Pulmonary and Perfusion Technology'),
+        ('BSC_CARDIO_VASCULAR', 'B.Sc - Cardio Vascular Technology'),
+        ('BSC_CRITICAL_CARE', 'B.Sc - Critical Care Technology'),
+        ('BSC_DIALYSIS', 'B.Sc - Dialysis Technology'),
+        ('BSC_MLT', 'B.Sc - Medical Laboratory Technology'),
+        ('BSC_OT_ANAESTHESIA', 'B.Sc - Operation Theatre and Anaesthesia Technology'),
+        ('BOPTOM', 'B.Optometry'),
+        ('BSC_PHYSICIAN_ASSISTANT', 'B.Sc - Physician Assistant'),
+        ('BSC_RADIOLOGY', 'B.Sc - Radiography and Imaging Technology'),
+        ('MSC_ANAESTHESIA', 'M.Sc - Anaesthesia Tech'),
+        ('MSC_DIALYSIS', 'M.Sc - Dialysis Technology'),
+        ('MSC_MEDICAL_MICRO', 'M.Sc - Medical Microbiology'),
+        ('MSC_MEDICAL_BIOCHEM', 'M.Sc - Medical Biochemistry'),
+        ('MSC_RADIOLOGY', 'M.Sc - Radiography and Imaging Tech'),
+        ('MSC_ACCIDENT_EMERGENCY', 'M.Sc - Accident and Emergency Care'),
+    ]
+
+    # ==================== PHARMACY COURSES ====================
+    PHARMACY_COURSE_CHOICES = [
+        ('BPHARM', 'B.Pharm - Bachelor of Pharmacy'),
+        ('DPHARM', 'D.Pharm - Diploma in Pharmacy'),
+        ('MPHARM_PHARMACEUTICALS', 'M.Pharm - Pharmaceuticals'),
+        ('MPHARM_ANALYSIS', 'M.Pharm - Pharmaceutical Analysis'),
+        ('MPHARM_PHARMACOGNOSY', 'M.Pharm - Pharmacognosy'),
+        ('PHARMD', 'Pharm.D'),
+    ]
+
+    # ==================== NURSING COURSES ====================
+    NURSING_COURSE_CHOICES = [
+        ('BSC_NURSING', 'B.Sc - Nursing'),
+        ('GNM', 'GNM - General Nursing and Midwifery'),
+        ('PB_BSC_NURSING', 'Post Basic B.Sc - Nursing'),
+        ('MSC_NURSING', 'M.Sc - Nursing'),
+    ]
+
+    # ==================== PHYSIOTHERAPY COURSES ====================
+    PHYSIOTHERAPY_COURSE_CHOICES = [
+        ('BPT', 'B.P.T - Bachelor of Physiotherapy'),
+        ('MPT_ORTHO', 'M.P.T - Orthopaedics'),
+        ('MPT_NEURO', 'M.P.T - Neurology'),
+        ('MPT_SPORTS', 'M.P.T - Sports & Fitness'),
+    ]
+
+    # ==================== OCCUPATIONAL THERAPY COURSES ====================
+    OCCUPATIONAL_THERAPY_COURSE_CHOICES = [
+        ('BOT', 'B.O.T - Bachelor of Occupational Therapy'),
+    ]
+
+    # ==================== AGRICULTURE COURSES ====================
+    AGRICULTURE_COURSE_CHOICES = [
+        ('BSC_AGRI_HONS', 'B.Sc (Hons) Agriculture'),
+        ('BSC_HORT_HONS', 'B.Sc (Hons) Horticulture'),
+    ]
+
+    # ==================== ARCHITECTURE COURSES ====================
+    ARCHITECTURE_COURSE_CHOICES = [
+        ('BARCH', 'B.Arch - Bachelor of Architecture'),
+        ('BDES_INTERIOR', 'B.Des - Interior Design'),
+    ]
+
+    # ==================== LAW COURSES ====================
+    LAW_COURSE_CHOICES = [
+        ('BA_LLB', 'B.A. LLB (Hons.)'),
+        ('BBA_LLB', 'B.B.A. LLB (Hons.)'),
+    ]
+
+    # ==================== MANAGEMENT COURSES ====================
+    MANAGEMENT_COURSE_CHOICES = [
+        ('MBA', 'M.B.A - Master of Business Administration'),
+    ]
+
+    # ==================== COMPUTER APPLICATIONS COURSES ====================
+    COMPUTER_APPLICATIONS_COURSE_CHOICES = [
+        ('MCA', 'M.C.A - Master of Computer Applications'),
+    ]
+
+    # ==================== POLYTECHNIC COURSES ====================
+    POLYTECHNIC_COURSE_CHOICES = [
+        ('DIP_CE', 'Diploma in Computer Engineering'),
+        ('DIP_EEE', 'Diploma in Electrical & Electronics Engineering'),
+        ('DIP_ME', 'Diploma in Mechanical Engineering'),
+    ]
+
+    # ==================== EDUCATION COURSES ====================
+    EDUCATION_COURSE_CHOICES = [
+        ('BED', 'B.Ed - Bachelor of Education'),
+        ('MED', 'M.Ed - Master of Education'),
+        ('BPED', 'B.P.Ed - Bachelor of Physical Education'),
+        ('BPES', 'B.P.E.S - Bachelor of Physical Education and Sports'),
+    ]
+
+    # Combined course name choices based on category
+    COURSE_NAME_CHOICES = (
+        # Engineering
+        *[(code, name) for code, name in ENGINEERING_COURSE_CHOICES],
+        # Arts & Science
+        *[(code, name) for code, name in ARTS_SCIENCE_COURSE_CHOICES],
+        # Allied Health
+        *[(code, name) for code, name in ALLIED_HEALTH_COURSE_CHOICES],
+        # Pharmacy
+        *[(code, name) for code, name in PHARMACY_COURSE_CHOICES],
+        # Nursing
+        *[(code, name) for code, name in NURSING_COURSE_CHOICES],
+        # Physiotherapy
+        *[(code, name) for code, name in PHYSIOTHERAPY_COURSE_CHOICES],
+        # Occupational Therapy
+        *[(code, name) for code, name in OCCUPATIONAL_THERAPY_COURSE_CHOICES],
+        # Agriculture
+        *[(code, name) for code, name in AGRICULTURE_COURSE_CHOICES],
+        # Architecture
+        *[(code, name) for code, name in ARCHITECTURE_COURSE_CHOICES],
+        # Law
+        *[(code, name) for code, name in LAW_COURSE_CHOICES],
+        # Management
+        *[(code, name) for code, name in MANAGEMENT_COURSE_CHOICES],
+        # Computer Applications
+        *[(code, name) for code, name in COMPUTER_APPLICATIONS_COURSE_CHOICES],
+        # Polytechnic
+        *[(code, name) for code, name in POLYTECHNIC_COURSE_CHOICES],
+        # Education
+        *[(code, name) for code, name in EDUCATION_COURSE_CHOICES],
+    )
 
     course_id = models.AutoField(primary_key=True)
     college = models.ForeignKey('College', on_delete=models.CASCADE, related_name='courses')
@@ -340,19 +411,28 @@ class Course(models.Model):
         help_text="Course category (e.g., Engineering, Medical, etc.)"
     )
     
-    course_code = models.CharField(max_length=20, choices=COURSE_CODE_CHOICES, help_text="Select course code")
-    course_name = models.CharField(max_length=200, choices=COURSE_NAME_CHOICES, help_text="Select course name")
+    course_code = models.CharField(max_length=50, choices=COURSE_NAME_CHOICES, help_text="Select course")
+    course_name = models.CharField(max_length=200, help_text="Course name")
     
     degree_type = models.CharField(max_length=20, choices=DEGREE_TYPE_CHOICES)
    
+    # Fee structure fields
+    tuition_fee_gq = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Government Quota Fee per year/semester")
+    tuition_fee_mq = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Management Quota Fee per year/semester")
+    fee_period = models.CharField(max_length=20, choices=[('year', 'Per Year'), ('semester', 'Per Semester')], default='year')
+    
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.get_course_code_display()} - {self.get_course_name_display()}"
-    
+        return f"{self.get_course_name_display()} - {self.college.college_name}"
+
     def save(self, *args, **kwargs):
+        # Auto-set course_name based on course_code
+        if self.course_code:
+            course_dict = dict(self.COURSE_NAME_CHOICES)
+            self.course_name = course_dict.get(self.course_code, self.course_code)
         super().save(*args, **kwargs)
         if self.college:
             self.college.sync_courses_offered()
@@ -364,7 +444,7 @@ class Course(models.Model):
             college.sync_courses_offered()
     
     def get_course_code_display(self):
-        return dict(self.COURSE_CODE_CHOICES).get(self.course_code, self.course_code)
+        return dict(self.COURSE_NAME_CHOICES).get(self.course_code, self.course_code)
     
     def get_course_name_display(self):
         return self.course_name
@@ -380,10 +460,43 @@ class Course(models.Model):
     def full_course_display(self):
         """Returns formatted course display for dropdowns"""
         return f"{self.get_course_code_display()} - {self.course_name}"
+    
+    @property
+    def fee_range_display(self):
+        """Display fee range"""
+        if self.tuition_fee_gq and self.tuition_fee_mq:
+            return f"GQ: ₹{self.tuition_fee_gq:,.0f} | MQ: ₹{self.tuition_fee_mq:,.0f}"
+        elif self.tuition_fee_mq:
+            return f"₹{self.tuition_fee_mq:,.0f}/{self.fee_period}"
+        elif self.tuition_fee_gq:
+            return f"₹{self.tuition_fee_gq:,.0f}/{self.fee_period}"
+        return "Fee not available"
 
     class Meta:
-        ordering = ['college__college_name', 'course_code']
+        ordering = ['college__college_name', 'category', 'course_name']
         unique_together = ['college', 'course_code']
+
+
+# Helper function to get courses by category
+def get_courses_by_category(category):
+    """Returns list of course choices based on category"""
+    category_mapping = {
+        'engineering': Course.ENGINEERING_COURSE_CHOICES,
+        'arts_science': Course.ARTS_SCIENCE_COURSE_CHOICES,
+        'allied_health_science': Course.ALLIED_HEALTH_COURSE_CHOICES,
+        'pharmacy': Course.PHARMACY_COURSE_CHOICES,
+        'nursing': Course.NURSING_COURSE_CHOICES,
+        'physiotherapy': Course.PHYSIOTHERAPY_COURSE_CHOICES,
+        'occupational_therapy': Course.OCCUPATIONAL_THERAPY_COURSE_CHOICES,
+        'agriculture': Course.AGRICULTURE_COURSE_CHOICES,
+        'architecture': Course.ARCHITECTURE_COURSE_CHOICES,
+        'law': Course.LAW_COURSE_CHOICES,
+        'management': Course.MANAGEMENT_COURSE_CHOICES,
+        'computer_applications': Course.COMPUTER_APPLICATIONS_COURSE_CHOICES,
+        'polytechnic': Course.POLYTECHNIC_COURSE_CHOICES,
+        'education': Course.EDUCATION_COURSE_CHOICES,
+    }
+    return category_mapping.get(category, [])
 
 
 # ==================== USER PROFILE MODEL ====================

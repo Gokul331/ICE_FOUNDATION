@@ -5,172 +5,12 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.contrib.admin.widgets import AdminTextareaWidget
 from django import forms
+from django.http import JsonResponse
+from django.urls import path
 from .models import College, Course, UserProfile, EnquiryForm
 
 
-# ==================== COURSE ADMIN FORM WITH COMPLETE HIERARCHICAL SELECTION ====================
-class CourseForm(forms.ModelForm):
-    """Enhanced Course Form with dynamic filtering for all fields"""
-    
-    # Add a custom field for degree type with dynamic choices
-    degree_type = forms.ChoiceField(
-        choices=[],
-        required=True,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    # Add a custom field for course name with dynamic choices
-    course_name = forms.ChoiceField(
-        choices=[],
-        required=True,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    class Meta:
-        model = Course
-        fields = '__all__'
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        
-        # Get the college from either the POST data or the instance
-        college_id = None
-        
-        if self.data.get('college'):
-            # When form is submitted with data
-            try:
-                college_id = int(self.data.get('college'))
-            except (ValueError, TypeError):
-                pass
-        elif self.instance and self.instance.pk and self.instance.college:
-            # When editing an existing course
-            college_id = self.instance.college.pk
-            # Pre-select existing values
-            if self.instance.degree_type:
-                self.initial['degree_type'] = self.instance.degree_type
-            if self.instance.course_code:
-                self.initial['course_code'] = self.instance.course_code
-        elif self.initial.get('college'):
-            # When initial data is provided
-            college_id = self.initial.get('college')
-        
-        # Filter category choices based on selected college
-        if college_id:
-            try:
-                college = College.objects.get(pk=college_id)
-                offered_categories = college.courses_offered or []
-                
-                if offered_categories:
-                    # Filter category choices to only those offered by the college
-                    self.fields['category'].choices = [
-                        choice for choice in self.fields['category'].choices 
-                        if choice[0] in offered_categories
-                    ]
-                    
-                    # Add a help text to show available categories
-                    category_names = [dict(College.COURSE_CATEGORY_CHOICES).get(cat, cat) for cat in offered_categories]
-                    self.fields['category'].help_text = f"This college offers: {', '.join(category_names)}"
-                else:
-                    self.fields['category'].help_text = "No categories specified for this college. Please update the college's 'Courses Offered' field first."
-                
-                # Get the selected category
-                selected_category = None
-                if self.data.get('category'):
-                    selected_category = self.data.get('category')
-                elif self.instance and self.instance.category:
-                    selected_category = self.instance.category
-                elif self.initial.get('category'):
-                    selected_category = self.initial.get('category')
-                
-                # Populate degree type choices based on college and category
-                if selected_category:
-                    # Get existing degree types for this college and category
-                    existing_degree_types = Course.objects.filter(
-                        college_id=college_id,
-                        category=selected_category
-                    ).values_list('degree_type', flat=True).distinct()
-                    
-                    # Add all degree type choices
-                    degree_choices = [('', '--------')]
-                    for dt_code, dt_name in Course.DEGREE_TYPE_CHOICES:
-                        # Mark if this degree type has existing courses
-                        if dt_code in existing_degree_types:
-                            degree_choices.append((dt_code, f"{dt_name} (has existing courses)"))
-                        else:
-                            degree_choices.append((dt_code, dt_name))
-                    
-                    self.fields['degree_type'].choices = degree_choices
-                    self.fields['degree_type'].help_text = "Select the degree type (UG, PG, Diploma, etc.)"
-                else:
-                    self.fields['degree_type'].choices = [('', '-- Select Category First --')]
-                    self.fields['degree_type'].help_text = "Please select a category first"
-                
-                # Populate course name choices based on college, category, and degree type
-                selected_degree_type = None
-                if self.data.get('degree_type'):
-                    selected_degree_type = self.data.get('degree_type')
-                elif self.instance and self.instance.degree_type:
-                    selected_degree_type = self.instance.degree_type
-                elif self.initial.get('degree_type'):
-                    selected_degree_type = self.initial.get('degree_type')
-                
-                if selected_category and selected_degree_type:
-                    # Get existing course names for this combination
-                    existing_course_names = Course.objects.filter(
-                        college_id=college_id,
-                        category=selected_category,
-                        degree_type=selected_degree_type
-                    ).values_list('course_name', flat=True)
-                    
-                    # Build course choices from COURSE_NAME_CHOICES
-                    course_choices = [('', '--------')]
-                    for cn_code, cn_name in Course.COURSE_NAME_CHOICES:
-                        # Mark if this course already exists
-                        if cn_name in existing_course_names:
-                            course_choices.append((cn_name, f"{cn_name} (⚠ Already exists for this combination)"))
-                        else:
-                            course_choices.append((cn_name, cn_name))
-                    
-                    # Also add option to create custom course name
-                    self.fields['course_name'].choices = course_choices
-                    self.fields['course_name'].help_text = "Select a course name"
-                    
-                    # Make course_name a CharField with choices (not a foreign key)
-                    self.fields['course_name'].widget = forms.Select(attrs={'class': 'form-control'})
-                else:
-                    self.fields['course_name'].choices = [('', '-- Select Degree Type First --')]
-                    self.fields['course_name'].help_text = "Please select degree type first"
-                    
-            except College.DoesNotExist:
-                pass
-        else:
-            # No college selected yet
-            self.fields['category'].choices = [('', '-- Select College First --')]
-            self.fields['degree_type'].choices = [('', '-- Select College First --')]
-            self.fields['course_name'].choices = [('', '-- Select College First --')]
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        college = cleaned_data.get('college')
-        category = cleaned_data.get('category')
-        degree_type = cleaned_data.get('degree_type')
-        course_code = cleaned_data.get('course_code')
-        course_name = cleaned_data.get('course_name')
-        
-        # Check for duplicate course (same college and course_code)
-        if college and course_code:
-            existing = Course.objects.filter(
-                college=college,
-                course_code=course_code
-            ).exclude(pk=self.instance.pk if self.instance.pk else None)
-            
-            if existing.exists():
-                raise forms.ValidationError(
-                    f"A course with code '{course_code}' already exists for this college."
-                )
-        
-        return cleaned_data
-
+# ==================== AJAX VIEWS FOR DYNAMIC FILTERING ====================
 
 @admin.register(College)
 class CollegeAdmin(admin.ModelAdmin):
@@ -183,7 +23,6 @@ class CollegeAdmin(admin.ModelAdmin):
     
     actions = ['sync_categories_from_courses', 'bulk_add_engineering_category', 'clear_categories']
     
-    # Custom widget for JSONField
     formfield_overrides = {
         models.JSONField: {'widget': AdminTextareaWidget(attrs={'rows': 5, 'cols': 80, 'style': 'font-family: monospace;'})},
     }
@@ -226,14 +65,12 @@ class CollegeAdmin(admin.ModelAdmin):
     # ==================== IMAGE PREVIEW METHODS ====================
     
     def image_preview(self, obj):
-        """Preview for single banner image"""
         if obj.banner_image:
             return format_html('<img src="{}" width="200" style="max-height: 150px; object-fit: cover; border-radius: 4px;" />', obj.banner_image)
         return "No banner image"
     image_preview.short_description = "Banner Preview"
     
     def gallery_preview(self, obj):
-        """Preview for first 3 images from college_images"""
         if obj.college_images and isinstance(obj.college_images, list) and len(obj.college_images) > 0:
             preview_html = '<div style="display: flex; gap: 5px; flex-wrap: wrap;">'
             for img_url in obj.college_images[:3]:
@@ -246,7 +83,6 @@ class CollegeAdmin(admin.ModelAdmin):
     gallery_preview.short_description = "Gallery Preview"
     
     def all_images_preview(self, obj):
-        """Preview for all images (college_images + campus_images combined)"""
         all_images = []
         if obj.college_images and isinstance(obj.college_images, list):
             all_images.extend(obj.college_images)
@@ -264,7 +100,6 @@ class CollegeAdmin(admin.ModelAdmin):
     all_images_preview.short_description = "All Images Preview"
     
     def has_gallery_badge(self, obj):
-        """Badge indicating if college has gallery images"""
         has_images = (obj.college_images and len(obj.college_images) > 0) or (obj.campus_images and len(obj.campus_images) > 0)
         if has_images:
             return mark_safe('<span style="background: #4CAF50; color: white; padding: 2px 8px; border-radius: 12px;">📷 Has Gallery</span>')
@@ -272,7 +107,6 @@ class CollegeAdmin(admin.ModelAdmin):
     has_gallery_badge.short_description = "Gallery Status"
     
     def courses_offered_summary(self, obj):
-        """Display courses offered as badges with category colors"""
         if obj.courses_offered and isinstance(obj.courses_offered, list) and len(obj.courses_offered) > 0:
             category_map = dict(College.COURSE_CATEGORY_CHOICES)
             color_map = {
@@ -305,7 +139,6 @@ class CollegeAdmin(admin.ModelAdmin):
     courses_offered_summary.short_description = "Courses Offered"
     
     def total_courses_count(self, obj):
-        """Display total number of detailed courses"""
         count = obj.courses.count()
         return format_html('<span style="background: #4CAF50; color: white; padding: 3px 10px; border-radius: 12px;">{} Courses</span>', count)
     total_courses_count.short_description = "Total Courses"
@@ -313,7 +146,6 @@ class CollegeAdmin(admin.ModelAdmin):
     # ==================== ADMIN ACTIONS ====================
     
     def sync_categories_from_courses(self, request, queryset):
-        """Sync courses_offered field from related Course objects"""
         updated_count = 0
         for college in queryset:
             categories = college.courses.values_list('category', flat=True).distinct()
@@ -324,7 +156,6 @@ class CollegeAdmin(admin.ModelAdmin):
     sync_categories_from_courses.short_description = "Sync categories from detailed courses"
     
     def bulk_add_engineering_category(self, request, queryset):
-        """Bulk add Engineering category to selected colleges"""
         for college in queryset:
             if not college.courses_offered:
                 college.courses_offered = []
@@ -335,7 +166,6 @@ class CollegeAdmin(admin.ModelAdmin):
     bulk_add_engineering_category.short_description = "Add Engineering category to selected"
     
     def clear_categories(self, request, queryset):
-        """Clear all categories from selected colleges"""
         for college in queryset:
             college.courses_offered = []
             college.save()
@@ -343,7 +173,6 @@ class CollegeAdmin(admin.ModelAdmin):
     clear_categories.short_description = "Clear all categories from selected"
     
     def sync_status(self, obj):
-        """Display sync status between courses_offered and related courses"""
         from_courses = set(obj.courses.values_list('category', flat=True).distinct())
         from_field = set(obj.courses_offered or [])
         
@@ -356,10 +185,49 @@ class CollegeAdmin(admin.ModelAdmin):
     sync_status.short_description = "Sync Status"
 
 
+# ==================== COURSE ADMIN FORM WITH AJAX DYNAMIC FILTERING ====================
+class CourseForm(forms.ModelForm):
+    """Enhanced Course Form with AJAX-based dynamic filtering"""
+    
+    class Meta:
+        model = Course
+        fields = '__all__'
+        widgets = {
+            'college': forms.Select(attrs={
+                'class': 'form-control',
+                'id': 'id_college',
+                'data-ajax-url': '/admin/colleges/course/load-categories/'
+            }),
+            'category': forms.Select(attrs={
+                'class': 'form-control',
+                'id': 'id_category',
+                'disabled': 'disabled'
+            }),
+            'degree_type': forms.Select(attrs={
+                'class': 'form-control',
+                'id': 'id_degree_type',
+                'disabled': 'disabled'
+            }),
+            'course_code': forms.Select(attrs={
+                'class': 'form-control',
+                'id': 'id_course_code',
+                'disabled': 'disabled'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Make category, degree_type, and course_code not required initially
+        self.fields['category'].required = False
+        self.fields['degree_type'].required = False
+        self.fields['course_code'].required = False
+
+
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
     form = CourseForm
-    list_display = ('course_code_display', 'course_name_short', 'college_link', 'category_badge', 'degree_type_badge', 'is_active', 'created_at')
+    list_display = ('course_code', 'course_name', 'college_link', 'category_badge', 'degree_type_badge', 'is_active', 'created_at')
     search_fields = ('course_code', 'course_name', 'college__college_name')
     list_filter = ('college', 'category', 'degree_type', 'is_active')
     readonly_fields = ('created_at', 'updated_at', 'category_badge', 'degree_type_badge')
@@ -367,21 +235,21 @@ class CourseAdmin(admin.ModelAdmin):
     list_per_page = 25
     
     fieldsets = (
-        ('College Selection', {
+        ('Step 1: Select College', {
             'fields': ('college',),
-            'description': 'Step 1: Select the college first. This will determine available categories.'
+            'description': mark_safe('<div style="background: #e3f2fd; padding: 10px; border-radius: 5px;"><strong>📌 Tip:</strong> Select a college first. Categories will load automatically.</div>')
         }),
-        ('Course Category', {
+        ('Step 2: Select Category', {
             'fields': ('category', 'category_badge'),
-            'description': 'Step 2: Select the course category (based on college offering).'
+            'description': 'Categories offered by the selected college will appear here.'
         }),
-        ('Degree Type', {
+        ('Step 3: Select Degree Type', {
             'fields': ('degree_type', 'degree_type_badge'),
-            'description': 'Step 3: Select the degree type (UG, PG, Diploma, etc.)'
+            'description': 'Available degree types for the selected category.'
         }),
-        ('Course Information', {
+        ('Step 4: Select Course', {
             'fields': ('course_code', 'course_name'),
-            'description': 'Step 4: Select course code and name.'
+            'description': 'Available courses for the selected degree type.'
         }),
         ('Status', {
             'fields': ('is_active',),
@@ -393,22 +261,7 @@ class CourseAdmin(admin.ModelAdmin):
         })
     )
     
-    def course_code_display(self, obj):
-        """Display course code with full name"""
-        return format_html('<strong>{}</strong><br><small style="color: #666;">{}</small>', 
-                          obj.course_code, 
-                          obj.get_course_code_display())
-    course_code_display.short_description = 'Course Code'
-    
-    def course_name_short(self, obj):
-        """Truncate long course names"""
-        if len(obj.course_name) > 50:
-            return obj.course_name[:47] + '...'
-        return obj.course_name
-    course_name_short.short_description = 'Course Name'
-    
     def college_link(self, obj):
-        """Link to college in admin"""
         from django.urls import reverse
         url = reverse('admin:colleges_college_change', args=[obj.college.college_id])
         return format_html('<a href="{}">{}</a>', url, obj.college.college_name)
@@ -416,7 +269,6 @@ class CourseAdmin(admin.ModelAdmin):
     college_link.admin_order_field = 'college__college_name'
     
     def category_badge(self, obj):
-        """Display category as colored badge"""
         category_map = dict(College.COURSE_CATEGORY_CHOICES)
         category_name = category_map.get(obj.category, obj.category.replace('_', ' ').title())
         color_map = {
@@ -442,7 +294,6 @@ class CourseAdmin(admin.ModelAdmin):
     category_badge.short_description = 'Category'
     
     def degree_type_badge(self, obj):
-        """Display degree type as colored badge"""
         degree_map = dict(Course.DEGREE_TYPE_CHOICES)
         degree_name = degree_map.get(obj.degree_type, obj.degree_type.upper())
         color_map = {
@@ -464,8 +315,384 @@ class CourseAdmin(admin.ModelAdmin):
         if obj.college:
             obj.college.sync_courses_offered()
     
+    # ==================== AJAX ENDPOINTS ====================
+    
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('load-categories/', self.load_categories, name='load_categories'),
+            path('load-degree-types/', self.load_degree_types, name='load_degree_types'),
+            path('load-courses/', self.load_courses, name='load_courses'),
+        ]
+        return custom_urls + urls
+    
+    def load_categories(self, request):
+        """AJAX endpoint to load categories based on selected college"""
+        college_id = request.GET.get('college_id')
+        if college_id:
+            try:
+                college = College.objects.get(pk=college_id)
+                offered_categories = college.courses_offered or []
+                
+                categories = []
+                for cat_code in offered_categories:
+                    cat_name = dict(College.COURSE_CATEGORY_CHOICES).get(cat_code, cat_code)
+                    categories.append({
+                        'value': cat_code,
+                        'display': cat_name
+                    })
+                
+                return JsonResponse({
+                    'success': True,
+                    'categories': categories,
+                    'has_categories': len(categories) > 0
+                })
+            except College.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'College not found'})
+        return JsonResponse({'success': False, 'error': 'No college selected'})
+    
+    def load_degree_types(self, request):
+        """AJAX endpoint to load degree types based on college and category"""
+        college_id = request.GET.get('college_id')
+        category = request.GET.get('category')
+        
+        if college_id and category:
+            degree_types = Course.objects.filter(
+                college_id=college_id,
+                category=category,
+                is_active=True
+            ).values_list('degree_type', flat=True).distinct()
+            
+            degree_list = []
+            for dt_code in Course.DEGREE_TYPE_CHOICES:
+                if dt_code[0] in degree_types or True:  # Show all degree types
+                    degree_list.append({
+                        'value': dt_code[0],
+                        'display': dt_code[1],
+                        'has_existing': dt_code[0] in degree_types
+                    })
+            
+            return JsonResponse({
+                'success': True,
+                'degree_types': degree_list
+            })
+        return JsonResponse({'success': False, 'error': 'Missing parameters'})
+    
+    def load_courses(self, request):
+        """AJAX endpoint to load courses based on college, category, and degree type"""
+        college_id = request.GET.get('college_id')
+        category = request.GET.get('category')
+        degree_type = request.GET.get('degree_type')
+        
+        if college_id and category and degree_type:
+            # Get existing courses
+            existing_courses = Course.objects.filter(
+                college_id=college_id,
+                category=category,
+                degree_type=degree_type
+            ).values_list('course_code', flat=True)
+            
+            # Get all available courses for this category
+            category_courses = self.get_courses_for_category(category)
+            
+            courses = []
+            for course_code, course_name in category_courses:
+                courses.append({
+                    'value': course_code,
+                    'display': course_name,
+                    'exists': course_code in existing_courses
+                })
+            
+            return JsonResponse({
+                'success': True,
+                'courses': courses
+            })
+        return JsonResponse({'success': False, 'error': 'Missing parameters'})
+    
+    def get_courses_for_category(self, category):
+        """Helper method to get courses based on category"""
+        category_course_mapping = {
+            'engineering': Course.ENGINEERING_COURSE_CHOICES,
+            'arts_science': Course.ARTS_SCIENCE_COURSE_CHOICES,
+            'allied_health_science': Course.ALLIED_HEALTH_COURSE_CHOICES,
+            'pharmacy': Course.PHARMACY_COURSE_CHOICES,
+            'nursing': Course.NURSING_COURSE_CHOICES,
+            'physiotherapy': Course.PHYSIOTHERAPY_COURSE_CHOICES,
+            'occupational_therapy': Course.OCCUPATIONAL_THERAPY_COURSE_CHOICES,
+            'agriculture': Course.AGRICULTURE_COURSE_CHOICES,
+            'architecture': Course.ARCHITECTURE_COURSE_CHOICES,
+            'law': Course.LAW_COURSE_CHOICES,
+            'management': Course.MANAGEMENT_COURSE_CHOICES,
+            'computer_applications': Course.COMPUTER_APPLICATIONS_COURSE_CHOICES,
+            'polytechnic': Course.POLYTECHNIC_COURSE_CHOICES,
+            'education': Course.EDUCATION_COURSE_CHOICES,
+        }
+        return category_course_mapping.get(category, [])
+    
     class Media:
-        js = ['admin/js/jquery.init.js']
+        js = ['admin/js/jquery.init.js', 'admin/js/course_admin.js']
+        css = {
+            'all': ['admin/css/course_admin.css']
+        }
+
+
+# ==================== CUSTOM CSS FOR COURSE ADMIN ====================
+# Create a file at: static/admin/css/course_admin.css
+"""
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.field-category .help, 
+.field-degree_type .help,
+.field-course_code .help {
+    color: #666;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.field-category select:disabled,
+.field-degree_type select:disabled,
+.field-course_code select:disabled {
+    background-color: #f5f5f5;
+    color: #999;
+    cursor: not-allowed;
+}
+
+.form-row {
+    margin-bottom: 15px;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.form-row:last-child {
+    border-bottom: none;
+}
+"""
+
+# ==================== JAVASCRIPT FOR COURSE ADMIN ====================
+# Create a file at: static/admin/js/course_admin.js
+"""
+(function($) {
+    'use strict';
+    
+    // Wait for the DOM to be ready
+    $(document).ready(function() {
+        var collegeSelect = $('#id_college');
+        var categorySelect = $('#id_category');
+        var degreeTypeSelect = $('#id_degree_type');
+        var courseCodeSelect = $('#id_course_code');
+        var loadingSpinner = null;
+        
+        // Create loading spinner
+        function showLoading(selectElement) {
+            var spinner = $('<span class="loading-spinner"></span>');
+            selectElement.after(spinner);
+            selectElement.prop('disabled', true);
+            return spinner;
+        }
+        
+        function hideLoading(spinner, selectElement) {
+            if (spinner) spinner.remove();
+            selectElement.prop('disabled', false);
+        }
+        
+        // Load categories when college changes
+        function loadCategories() {
+            var collegeId = collegeSelect.val();
+            
+            if (!collegeId) {
+                categorySelect.empty().append('<option value="">-- Select College First --</option>');
+                categorySelect.prop('disabled', true);
+                degreeTypeSelect.empty().append('<option value="">-- Select Category First --</option>');
+                degreeTypeSelect.prop('disabled', true);
+                courseCodeSelect.empty().append('<option value="">-- Select Degree Type First --</option>');
+                courseCodeSelect.prop('disabled', true);
+                return;
+            }
+            
+            var spinner = showLoading(categorySelect);
+            
+            $.ajax({
+                url: '/admin/colleges/course/load-categories/',
+                data: { college_id: collegeId },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        categorySelect.empty();
+                        categorySelect.append('<option value="">-- Select Category --</option>');
+                        
+                        $.each(response.categories, function(i, category) {
+                            categorySelect.append(
+                                $('<option></option>').val(category.value).html(category.display)
+                            );
+                        });
+                        
+                        categorySelect.prop('disabled', false);
+                        categorySelect.trigger('change');
+                        
+                        // Show help text
+                        if (response.has_categories) {
+                            categorySelect.closest('.form-row').find('.help').remove();
+                            categorySelect.after('<div class="help">✓ Categories loaded successfully. Select a category to continue.</div>');
+                        } else {
+                            categorySelect.after('<div class="help">⚠ No categories found for this college. Please add categories in the College admin.</div>');
+                        }
+                    } else {
+                        categorySelect.empty().append('<option value="">-- Error loading categories --</option>');
+                        categorySelect.prop('disabled', true);
+                    }
+                    hideLoading(spinner, categorySelect);
+                },
+                error: function() {
+                    categorySelect.empty().append('<option value="">-- Error loading categories --</option>');
+                    categorySelect.prop('disabled', true);
+                    hideLoading(spinner, categorySelect);
+                }
+            });
+        }
+        
+        // Load degree types when category changes
+        function loadDegreeTypes() {
+            var collegeId = collegeSelect.val();
+            var category = categorySelect.val();
+            
+            if (!collegeId || !category) {
+                degreeTypeSelect.empty().append('<option value="">-- Select Category First --</option>');
+                degreeTypeSelect.prop('disabled', true);
+                courseCodeSelect.empty().append('<option value="">-- Select Degree Type First --</option>');
+                courseCodeSelect.prop('disabled', true);
+                return;
+            }
+            
+            var spinner = showLoading(degreeTypeSelect);
+            
+            $.ajax({
+                url: '/admin/colleges/course/load-degree-types/',
+                data: { 
+                    college_id: collegeId,
+                    category: category
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        degreeTypeSelect.empty();
+                        degreeTypeSelect.append('<option value="">-- Select Degree Type --</option>');
+                        
+                        $.each(response.degree_types, function(i, degreeType) {
+                            var optionText = degreeType.display;
+                            if (degreeType.has_existing) {
+                                optionText += ' ✓ (exists)';
+                            }
+                            degreeTypeSelect.append(
+                                $('<option></option>').val(degreeType.value).html(optionText)
+                            );
+                        });
+                        
+                        degreeTypeSelect.prop('disabled', false);
+                        degreeTypeSelect.trigger('change');
+                        
+                        degreeTypeSelect.closest('.form-row').find('.help').remove();
+                        degreeTypeSelect.after('<div class="help">✓ Select the degree type for this course.</div>');
+                    } else {
+                        degreeTypeSelect.empty().append('<option value="">-- Error loading degree types --</option>');
+                        degreeTypeSelect.prop('disabled', true);
+                    }
+                    hideLoading(spinner, degreeTypeSelect);
+                },
+                error: function() {
+                    degreeTypeSelect.empty().append('<option value="">-- Error loading degree types --</option>');
+                    degreeTypeSelect.prop('disabled', true);
+                    hideLoading(spinner, degreeTypeSelect);
+                }
+            });
+        }
+        
+        // Load courses when degree type changes
+        function loadCourses() {
+            var collegeId = collegeSelect.val();
+            var category = categorySelect.val();
+            var degreeType = degreeTypeSelect.val();
+            
+            if (!collegeId || !category || !degreeType) {
+                courseCodeSelect.empty().append('<option value="">-- Select Degree Type First --</option>');
+                courseCodeSelect.prop('disabled', true);
+                return;
+            }
+            
+            var spinner = showLoading(courseCodeSelect);
+            
+            $.ajax({
+                url: '/admin/colleges/course/load-courses/',
+                data: {
+                    college_id: collegeId,
+                    category: category,
+                    degree_type: degreeType
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        courseCodeSelect.empty();
+                        courseCodeSelect.append('<option value="">-- Select Course --</option>');
+                        
+                        var hasAvailableCourses = false;
+                        $.each(response.courses, function(i, course) {
+                            if (!course.exists) {
+                                hasAvailableCourses = true;
+                                courseCodeSelect.append(
+                                    $('<option></option>').val(course.value).html(course.display)
+                                );
+                            }
+                        });
+                        
+                        if (!hasAvailableCourses) {
+                            courseCodeSelect.append('<option value="">-- No new courses available for this combination --</option>');
+                            courseCodeSelect.prop('disabled', true);
+                            courseCodeSelect.closest('.form-row').find('.help').remove();
+                            courseCodeSelect.after('<div class="help">⚠ All courses for this combination already exist.</div>');
+                        } else {
+                            courseCodeSelect.prop('disabled', false);
+                            courseCodeSelect.closest('.form-row').find('.help').remove();
+                            courseCodeSelect.after('<div class="help">✓ Select a course from the list above.</div>');
+                        }
+                    } else {
+                        courseCodeSelect.empty().append('<option value="">-- Error loading courses --</option>');
+                        courseCodeSelect.prop('disabled', true);
+                    }
+                    hideLoading(spinner, courseCodeSelect);
+                },
+                error: function() {
+                    courseCodeSelect.empty().append('<option value="">-- Error loading courses --</option>');
+                    courseCodeSelect.prop('disabled', true);
+                    hideLoading(spinner, courseCodeSelect);
+                }
+            });
+        }
+        
+        // Attach event handlers
+        collegeSelect.on('change', loadCategories);
+        categorySelect.on('change', loadDegreeTypes);
+        degreeTypeSelect.on('change', loadCourses);
+        
+        // If editing an existing course, trigger initial load
+        if (collegeSelect.val()) {
+            loadCategories();
+        }
+    });
+})(django.jQuery);
+"""
 
 
 @admin.register(UserProfile)
@@ -493,8 +720,6 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 
 class EnquiryFormAdminForm(forms.ModelForm):
-    """Custom form for EnquiryForm admin with dynamic college filtering"""
-    
     college = forms.ModelChoiceField(
         queryset=College.objects.all().order_by('college_name'),
         empty_label="-- Select College --",
