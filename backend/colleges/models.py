@@ -415,18 +415,13 @@ class Course(models.Model):
     course_name = models.CharField(max_length=200, help_text="Course name")
     
     degree_type = models.CharField(max_length=20, choices=DEGREE_TYPE_CHOICES)
-   
-    # Fee structure fields
-    tuition_fee_gq = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Government Quota Fee per year/semester")
-    tuition_fee_mq = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Management Quota Fee per year/semester")
-    fee_period = models.CharField(max_length=20, choices=[('year', 'Per Year'), ('semester', 'Per Semester')], default='year')
     
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.get_course_name_display()} - {self.college.college_name}"
+        return f"{self.get_course_code_display()} - {self.college.college_name}"
 
     def save(self, *args, **kwargs):
         # Auto-set course_name based on course_code
@@ -460,17 +455,6 @@ class Course(models.Model):
     def full_course_display(self):
         """Returns formatted course display for dropdowns"""
         return f"{self.get_course_code_display()} - {self.course_name}"
-    
-    @property
-    def fee_range_display(self):
-        """Display fee range"""
-        if self.tuition_fee_gq and self.tuition_fee_mq:
-            return f"GQ: ₹{self.tuition_fee_gq:,.0f} | MQ: ₹{self.tuition_fee_mq:,.0f}"
-        elif self.tuition_fee_mq:
-            return f"₹{self.tuition_fee_mq:,.0f}/{self.fee_period}"
-        elif self.tuition_fee_gq:
-            return f"₹{self.tuition_fee_gq:,.0f}/{self.fee_period}"
-        return "Fee not available"
 
     class Meta:
         ordering = ['college__college_name', 'category', 'course_name']
