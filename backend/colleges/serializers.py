@@ -276,6 +276,104 @@ class CourseSerializer(serializers.ModelSerializer):
         return None
 
 
+class CourseListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for listing courses in dropdowns"""
+    full_name = serializers.SerializerMethodField()
+    category_display = serializers.SerializerMethodField()
+    degree_type_display = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Course
+        fields = [
+            'course_id', 'course_code', 'course_name', 'full_name',
+            'category', 'category_display', 'degree_type', 'degree_type_display',
+            'college', 'is_active'
+        ]
+    
+    def get_full_name(self, obj):
+        return f"{obj.get_course_code_display()} - {obj.course_name}"
+    
+    def get_category_display(self, obj):
+        return dict(College.COURSE_CATEGORY_CHOICES).get(obj.category, obj.category)
+    
+    def get_degree_type_display(self, obj):
+        return dict(obj.DEGREE_TYPE_CHOICES).get(obj.degree_type, obj.degree_type)
+
+
+class CourseDetailSerializer(serializers.ModelSerializer):
+    """Detailed course serializer with complete information"""
+    category_display = serializers.SerializerMethodField()
+    course_code_display = serializers.SerializerMethodField()
+    degree_type_display = serializers.SerializerMethodField()
+    college_info = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Course
+        fields = '__all__'
+    
+    def get_category_display(self, obj):
+        return dict(College.COURSE_CATEGORY_CHOICES).get(obj.category, obj.category)
+    
+    def get_course_code_display(self, obj):
+        return dict(obj.COURSE_CODE_CHOICES).get(obj.course_code, obj.course_code)
+    
+    def get_degree_type_display(self, obj):
+        return dict(obj.DEGREE_TYPE_CHOICES).get(obj.degree_type, obj.degree_type)
+    
+    def get_college_info(self, obj):
+        if obj.college:
+            return {
+                'college_id': obj.college.college_id,
+                'college_name': obj.college.college_name,
+                'location_city': obj.college.location_city,
+                'location_state': obj.college.location_state,
+                'banner_image': obj.college.banner_image,
+                'primary_image': obj.college.primary_image
+            }
+        return None
+
+
+# ==================== HIERARCHICAL SELECTION SERIALIZERS (NEW) ====================
+
+class CategoryInfoSerializer(serializers.Serializer):
+    """Serializer for category information in hierarchical selection"""
+    code = serializers.CharField()
+    name = serializers.CharField()
+    course_count = serializers.IntegerField()
+    has_courses = serializers.BooleanField()
+
+
+class DegreeTypeInfoSerializer(serializers.Serializer):
+    """Serializer for degree type information in hierarchical selection"""
+    code = serializers.CharField()
+    name = serializers.CharField()
+    course_count = serializers.IntegerField()
+    has_courses = serializers.BooleanField()
+
+
+class CourseInfoSerializer(serializers.Serializer):
+    """Serializer for course information in hierarchical selection"""
+    id = serializers.IntegerField()
+    course_code = serializers.CharField()
+    course_code_display = serializers.CharField()
+    course_name = serializers.CharField()
+    full_name = serializers.CharField()
+    degree_type = serializers.CharField()
+    degree_type_display = serializers.CharField()
+    category = serializers.CharField()
+    category_display = serializers.CharField()
+    college_id = serializers.IntegerField()
+    college_name = serializers.CharField()
+    is_active = serializers.BooleanField()
+
+
+class CollegeHierarchySerializer(serializers.Serializer):
+    """Serializer for complete college hierarchy"""
+    college_id = serializers.IntegerField()
+    college_name = serializers.CharField()
+    categories = serializers.ListField(child=serializers.DictField())
+
+
 # ==================== FILTER SERIALIZERS ====================
 
 class CollegeCourseFilterSerializer(serializers.Serializer):
@@ -580,16 +678,40 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         return attrs
 
 
-# ==================== ENQUIRY FORM SERIALIZER ====================
+# ==================== ENQUIRY FORM SERIALIZERS ====================
 
 class EnquiryFormSerializer(serializers.ModelSerializer):
     """Serializer for EnquiryForm model"""
     college_name = serializers.CharField(source='college.college_name', read_only=True)
+    selected_course_details = serializers.SerializerMethodField()
+    selection_path = serializers.SerializerMethodField()
     
     class Meta:
         model = EnquiryForm
         fields = '__all__'
         read_only_fields = ['application_id', 'submitted_at', 'updated_at']
+    
+    def get_selected_course_details(self, obj):
+        """Get details of the selected course"""
+        if obj.selected_course:
+            return {
+                'id': obj.selected_course.course_id,
+                'course_code': obj.selected_course.course_code,
+                'course_code_display': obj.selected_course.get_course_code_display(),
+                'course_name': obj.selected_course.course_name,
+                'full_name': f"{obj.selected_course.get_course_code_display()} - {obj.selected_course.course_name}",
+                'degree_type': obj.selected_course.degree_type,
+                'degree_type_display': obj.selected_course.get_degree_type_display(),
+                'category': obj.selected_course.category,
+                'category_display': obj.selected_course.category_display
+            }
+        return None
+    
+    def get_selection_path(self, obj):
+        """Get the full selection path"""
+        if obj.selection_completed:
+            return obj.selection_path_display
+        return None
     
     def validate_photo(self, value):
         if value and value.size > 5 * 1024 * 1024:
@@ -600,16 +722,71 @@ class EnquiryFormSerializer(serializers.ModelSerializer):
         if value and value.size > 5 * 1024 * 1024:
             raise serializers.ValidationError("Aadhar card size must be less than 5MB")
         return value
+    
+    def validate(self, data):
+        """Validate that if selected_course is provided, it's active and belongs to the college"""
+        selected_course = data.get('selected_course')
+        college = data.get('college')
+        
+        if selected_course:
+            if not selected_course.is_active:
+                raise serializers.ValidationError({
+                    'selected_course': 'The selected course is not active'
+                })
+            
+            if college and selected_course.college != college:
+                raise serializers.ValidationError({
+                    'selected_course': 'The selected course does not belong to the specified college'
+                })
+            
+            # Auto-populate fields from selected course
+            data['course_name'] = selected_course.course_name
+            data['department_name'] = selected_course.get_course_code_display()
+            data['selected_category'] = selected_course.category
+            data['selected_degree_type'] = selected_course.degree_type
+            
+            if not college:
+                data['college'] = selected_course.college
+        
+        return data
 
 
 class EnquiryFormListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for listing enquiry forms"""
     college_name = serializers.CharField(source='college.college_name', read_only=True)
+    course_display = serializers.SerializerMethodField()
+    selection_status = serializers.SerializerMethodField()
     
     class Meta:
         model = EnquiryForm
         fields = [
             'application_id', 'college_name', 'course_name', 'department_name',
             'first_name', 'last_name', 'email_id', 'mobile_number',
-            'submitted_at', 'updated_at'
+            'submitted_at', 'updated_at', 'course_display', 'selection_status'
         ]
+    
+    def get_course_display(self, obj):
+        if obj.selected_course:
+            return f"{obj.selected_course.get_course_code_display()} - {obj.course_name}"
+        return obj.course_name or 'N/A'
+    
+    def get_selection_status(self, obj):
+        return 'Completed' if obj.selection_completed else 'Partial'
+
+
+class EnquiryFormCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating new enquiry forms with hierarchical selection"""
+    
+    class Meta:
+        model = EnquiryForm
+        fields = '__all__'
+        read_only_fields = ['application_id', 'submitted_at', 'updated_at', 'course_name', 'department_name']
+    
+    def create(self, validated_data):
+        # Generate application ID
+        from datetime import datetime
+        user = validated_data.get('user')
+        if user:
+            validated_data['application_id'] = f"APP-{user.id}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        
+        return super().create(validated_data)

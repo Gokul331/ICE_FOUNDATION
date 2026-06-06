@@ -29,6 +29,15 @@ from .views import (
     update_college_banner_image,
     delete_college_image,
     bulk_upload_college_images,
+    
+    # ==================== NEW HIERARCHICAL SELECTION VIEWS ====================
+    get_college_categories,
+    get_category_degree_types,
+    get_degree_courses,
+    get_course_details_for_selection,
+    get_all_colleges_with_categories,
+    get_college_hierarchy,
+    submit_application_v2,
 )
 
 from . import views
@@ -41,6 +50,33 @@ urlpatterns = [
     path('colleges/<int:college_id>/', get_college_detail, name='get_college_detail'),
     path('colleges/<int:college_id>/courses/', get_college_courses, name='get_college_courses'),
     path('colleges/suggest/', suggest_colleges, name='suggest_colleges'),
+    
+    # ==================== HIERARCHICAL SELECTION ENDPOINTS (NEW) ====================
+    # Step 1 & 2: Get categories for a college
+    path('colleges/<int:college_id>/categories/', get_college_categories, name='get_college_categories'),
+    
+    # Step 3: Get degree types for a specific college and category
+    path('colleges/<int:college_id>/categories/<str:category>/degree-types/', 
+         get_category_degree_types, name='get_category_degree_types'),
+    
+    # Step 4: Get courses for specific college, category, and degree type
+    path('colleges/<int:college_id>/categories/<str:category>/degrees/<str:degree_type>/courses/', 
+         get_degree_courses, name='get_degree_courses'),
+    
+    # Get course details for final selection
+    path('courses/<int:course_id>/details/', 
+         get_course_details_for_selection, name='get_course_details_for_selection'),
+    
+    # Get all colleges with their categories (for dropdown initialization)
+    path('colleges/with-categories/', 
+         get_all_colleges_with_categories, name='get_all_colleges_with_categories'),
+    
+    # Get complete college hierarchy (all categories, degrees, courses at once)
+    path('colleges/<int:college_id>/hierarchy/', 
+         get_college_hierarchy, name='get_college_hierarchy'),
+    
+    # Enhanced application submission with selected_course foreign key
+    path('submit-application-v2/', submit_application_v2, name='submit_application_v2'),
     
     # ==================== COLLEGE IMAGES ====================
     # Gallery and Images

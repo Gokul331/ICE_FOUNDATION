@@ -322,8 +322,74 @@ class UserProfileAdmin(admin.ModelAdmin):
     )
 
 
+# ==================== ENQUIRY FORM ADMIN WITH CUSTOM FORM ====================
+class EnquiryFormAdminForm(forms.ModelForm):
+    """Custom form for EnquiryForm admin with dynamic college filtering"""
+    
+    # Override college field to show all colleges
+    college = forms.ModelChoiceField(
+        queryset=College.objects.all().order_by('college_name'),
+        empty_label="-- Select College --",
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    class Meta:
+        model = EnquiryForm
+        fields = '__all__'
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # If college is selected, filter course choices
+        college_id = None
+        if self.instance and self.instance.college_id:
+            college_id = self.instance.college_id
+        elif self.data.get('college'):
+            try:
+                college_id = int(self.data.get('college'))
+            except (ValueError, TypeError):
+                pass
+        
+        if college_id:
+            # Get courses for the selected college
+            courses = Course.objects.filter(
+                college_id=college_id,
+                is_active=True
+            ).select_related('college')
+            
+            # Create a custom choice field for courses with formatted display
+            course_choices = [('', '-- Select Course --')]
+            course_choices.extend([
+                (course.id, f"{course.course_code} - {course.course_name}")
+                for course in courses
+            ])
+            
+            # Add a custom field for course selection if not exists
+            if 'course_selection' not in self.fields:
+                self.fields['course_selection'] = forms.ChoiceField(
+                    choices=course_choices,
+                    required=False,
+                    label="Select Course",
+                    widget=forms.Select(attrs={'class': 'form-control'})
+                )
+            else:
+                self.fields['course_selection'].choices = course_choices
+            
+            # Populate course_name and department_name when course is selected
+            if self.data.get('course_selection'):
+                try:
+                    course_id = int(self.data.get('course_selection'))
+                    course = Course.objects.get(id=course_id)
+                    self.initial['course_name'] = course.course_name
+                    self.initial['department_name'] = course.get_course_code_display()
+                except (ValueError, TypeError, Course.DoesNotExist):
+                    pass
+
+
 @admin.register(EnquiryForm)
 class EnquiryFormAdmin(admin.ModelAdmin):
+    form = EnquiryFormAdminForm
     list_display = ('application_id', 'first_name', 'last_name', 'email_id', 'mobile_number', 
                     'college', 'course_name', 'submitted_at')
     search_fields = ('application_id', 'first_name', 'last_name', 'email_id', 'mobile_number', 
@@ -335,7 +401,7 @@ class EnquiryFormAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Application Info', {
-            'fields': ('application_id', 'user', 'college', 'course_name', 'department_name')
+            'fields': ('application_id', 'user', 'college', 'course_selection', 'course_name', 'department_name')
         }),
         ('Bio-data', {
             'fields': ('first_name', 'last_name', 'gender', 'date_of_birth', 'mobile_number',
@@ -364,6 +430,19 @@ class EnquiryFormAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'college')
+    
+    def save_model(self, request, obj, form, change):
+        # Handle course selection
+        if 'course_selection' in form.cleaned_data and form.cleaned_data['course_selection']:
+            try:
+                course_id = int(form.cleaned_data['course_selection'])
+                course = Course.objects.get(id=course_id)
+                obj.course_name = course.course_name
+                obj.department_name = course.get_course_code_display()
+            except (ValueError, Course.DoesNotExist):
+                pass
+        
+        super().save_model(request, obj, form, change)
 
 
 # ==================== CUSTOM ADMIN SITE SETTINGS ====================

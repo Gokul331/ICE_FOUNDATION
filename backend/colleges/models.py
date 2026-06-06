@@ -108,6 +108,25 @@ class College(models.Model):
             queryset = queryset.filter(category=category)
         return queryset
     
+    def get_degree_types_for_category(self, category):
+        """Get unique degree types for a specific category"""
+        if category:
+            return self.courses.filter(
+                is_active=True,
+                category=category
+            ).values_list('degree_type', flat=True).distinct()
+        return []
+    
+    def get_courses_by_category_and_degree(self, category, degree_type):
+        """Get courses filtered by category and degree type"""
+        if category and degree_type:
+            return self.courses.filter(
+                is_active=True,
+                category=category,
+                degree_type=degree_type
+            )
+        return self.courses.none()
+    
     @property
     def courses_count(self):
         """Total number of active courses"""
@@ -356,6 +375,11 @@ class Course(models.Model):
     @property
     def category_display(self):
         return dict(College.COURSE_CATEGORY_CHOICES).get(self.category, self.category)
+    
+    @property
+    def full_course_display(self):
+        """Returns formatted course display for dropdowns"""
+        return f"{self.get_course_code_display()} - {self.course_name}"
 
     class Meta:
         ordering = ['college__college_name', 'course_code']
@@ -428,8 +452,37 @@ class EnquiryForm(models.Model):
     application_id = models.CharField(max_length=50, unique=True, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications')
     college = models.ForeignKey(College, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # NEW: Add direct relationship to Course for better data integrity
+    selected_course = models.ForeignKey(
+        Course, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='enquiries',
+        help_text="The selected course from the Course model"
+    )
+    
+    # Keep these for backward compatibility and display purposes
     course_name = models.CharField(max_length=255, null=True, blank=True)
     department_name = models.CharField(max_length=255, null=True, blank=True)
+    
+    # NEW: Store the selection path for reference
+    selected_category = models.CharField(
+        max_length=50, 
+        choices=College.COURSE_CATEGORY_CHOICES,
+        null=True, 
+        blank=True,
+        help_text="Selected course category"
+    )
+    selected_degree_type = models.CharField(
+        max_length=20, 
+        choices=Course.DEGREE_TYPE_CHOICES,
+        null=True, 
+        blank=True,
+        help_text="Selected degree type"
+    )
+    
     submitted_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -473,7 +526,8 @@ class EnquiryForm(models.Model):
     aadhar_card = models.FileField(upload_to=student_applications_directory_path, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.application_id} - {self.first_name} {self.last_name}"
+        course_info = f" - {self.course_name}" if self.course_name else ""
+        return f"{self.application_id} - {self.first_name} {self.last_name}{course_info}"
 
     class Meta:
         verbose_name = 'Student Application'
@@ -483,4 +537,39 @@ class EnquiryForm(models.Model):
     def save(self, *args, **kwargs):
         if not self.application_id:
             self.application_id = f'APP-{self.user.id}-{datetime.now().strftime("%Y%m%d%H%M%S")}'
+        
+        # Auto-populate course_name and department_name from selected_course
+        if self.selected_course:
+            self.course_name = self.selected_course.course_name
+            self.department_name = self.selected_course.get_course_code_display()
+            self.selected_category = self.selected_course.category
+            self.selected_degree_type = self.selected_course.degree_type
+            if not self.college:
+                self.college = self.selected_course.college
+        
         super().save(*args, **kwargs)
+    
+    @property
+    def selection_completed(self):
+        """Check if all selection steps are completed"""
+        return all([
+            self.college,
+            self.selected_category,
+            self.selected_degree_type,
+            self.selected_course
+        ])
+    
+    @property
+    def selection_path_display(self):
+        """Display the full selection path"""
+        if self.selection_completed:
+            return f"{self.college.college_name} → {self.get_selected_category_display()} → {self.get_selected_degree_type_display()} → {self.course_name}"
+        return "Selection incomplete"
+    
+    def get_selected_category_display(self):
+        """Get display name for selected category"""
+        return dict(College.COURSE_CATEGORY_CHOICES).get(self.selected_category, self.selected_category)
+    
+    def get_selected_degree_type_display(self):
+        """Get display name for selected degree type"""
+        return dict(Course.DEGREE_TYPE_CHOICES).get(self.selected_degree_type, self.selected_degree_type)
