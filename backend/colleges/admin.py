@@ -8,8 +8,24 @@ from django import forms
 from .models import College, Course, UserProfile, EnquiryForm
 
 
-# ==================== COURSE ADMIN FORM WITH DYNAMIC CATEGORY FILTERING ====================
+# ==================== COURSE ADMIN FORM WITH COMPLETE HIERARCHICAL SELECTION ====================
 class CourseForm(forms.ModelForm):
+    """Enhanced Course Form with dynamic filtering for all fields"""
+    
+    # Add a custom field for degree type with dynamic choices
+    degree_type = forms.ChoiceField(
+        choices=[],
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    # Add a custom field for course name with dynamic choices
+    course_name = forms.ChoiceField(
+        choices=[],
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
     class Meta:
         model = Course
         fields = '__all__'
@@ -29,6 +45,11 @@ class CourseForm(forms.ModelForm):
         elif self.instance and self.instance.pk and self.instance.college:
             # When editing an existing course
             college_id = self.instance.college.pk
+            # Pre-select existing values
+            if self.instance.degree_type:
+                self.initial['degree_type'] = self.instance.degree_type
+            if self.instance.course_code:
+                self.initial['course_code'] = self.instance.course_code
         elif self.initial.get('college'):
             # When initial data is provided
             college_id = self.initial.get('college')
@@ -51,9 +72,104 @@ class CourseForm(forms.ModelForm):
                     self.fields['category'].help_text = f"This college offers: {', '.join(category_names)}"
                 else:
                     self.fields['category'].help_text = "No categories specified for this college. Please update the college's 'Courses Offered' field first."
+                
+                # Get the selected category
+                selected_category = None
+                if self.data.get('category'):
+                    selected_category = self.data.get('category')
+                elif self.instance and self.instance.category:
+                    selected_category = self.instance.category
+                elif self.initial.get('category'):
+                    selected_category = self.initial.get('category')
+                
+                # Populate degree type choices based on college and category
+                if selected_category:
+                    # Get existing degree types for this college and category
+                    existing_degree_types = Course.objects.filter(
+                        college_id=college_id,
+                        category=selected_category
+                    ).values_list('degree_type', flat=True).distinct()
+                    
+                    # Add all degree type choices
+                    degree_choices = [('', '--------')]
+                    for dt_code, dt_name in Course.DEGREE_TYPE_CHOICES:
+                        # Mark if this degree type has existing courses
+                        if dt_code in existing_degree_types:
+                            degree_choices.append((dt_code, f"{dt_name} (has existing courses)"))
+                        else:
+                            degree_choices.append((dt_code, dt_name))
+                    
+                    self.fields['degree_type'].choices = degree_choices
+                    self.fields['degree_type'].help_text = "Select the degree type (UG, PG, Diploma, etc.)"
+                else:
+                    self.fields['degree_type'].choices = [('', '-- Select Category First --')]
+                    self.fields['degree_type'].help_text = "Please select a category first"
+                
+                # Populate course name choices based on college, category, and degree type
+                selected_degree_type = None
+                if self.data.get('degree_type'):
+                    selected_degree_type = self.data.get('degree_type')
+                elif self.instance and self.instance.degree_type:
+                    selected_degree_type = self.instance.degree_type
+                elif self.initial.get('degree_type'):
+                    selected_degree_type = self.initial.get('degree_type')
+                
+                if selected_category and selected_degree_type:
+                    # Get existing course names for this combination
+                    existing_course_names = Course.objects.filter(
+                        college_id=college_id,
+                        category=selected_category,
+                        degree_type=selected_degree_type
+                    ).values_list('course_name', flat=True)
+                    
+                    # Build course choices from COURSE_NAME_CHOICES
+                    course_choices = [('', '--------')]
+                    for cn_code, cn_name in Course.COURSE_NAME_CHOICES:
+                        # Mark if this course already exists
+                        if cn_name in existing_course_names:
+                            course_choices.append((cn_name, f"{cn_name} (⚠ Already exists for this combination)"))
+                        else:
+                            course_choices.append((cn_name, cn_name))
+                    
+                    # Also add option to create custom course name
+                    self.fields['course_name'].choices = course_choices
+                    self.fields['course_name'].help_text = "Select a course name"
+                    
+                    # Make course_name a CharField with choices (not a foreign key)
+                    self.fields['course_name'].widget = forms.Select(attrs={'class': 'form-control'})
+                else:
+                    self.fields['course_name'].choices = [('', '-- Select Degree Type First --')]
+                    self.fields['course_name'].help_text = "Please select degree type first"
                     
             except College.DoesNotExist:
                 pass
+        else:
+            # No college selected yet
+            self.fields['category'].choices = [('', '-- Select College First --')]
+            self.fields['degree_type'].choices = [('', '-- Select College First --')]
+            self.fields['course_name'].choices = [('', '-- Select College First --')]
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        college = cleaned_data.get('college')
+        category = cleaned_data.get('category')
+        degree_type = cleaned_data.get('degree_type')
+        course_code = cleaned_data.get('course_code')
+        course_name = cleaned_data.get('course_name')
+        
+        # Check for duplicate course (same college and course_code)
+        if college and course_code:
+            existing = Course.objects.filter(
+                college=college,
+                course_code=course_code
+            ).exclude(pk=self.instance.pk if self.instance.pk else None)
+            
+            if existing.exists():
+                raise forms.ValidationError(
+                    f"A course with code '{course_code}' already exists for this college."
+                )
+        
+        return cleaned_data
 
 
 @admin.register(College)
@@ -242,26 +358,62 @@ class CollegeAdmin(admin.ModelAdmin):
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    form = CourseForm  # Use the custom form with dynamic filtering
-    list_display = ('course_code', 'course_name', 'college', 'category_badge', 'degree_type', 'is_active', 'created_at')
+    form = CourseForm
+    list_display = ('course_code_display', 'course_name_short', 'college_link', 'category_badge', 'degree_type_badge', 'is_active', 'created_at')
     search_fields = ('course_code', 'course_name', 'college__college_name')
     list_filter = ('college', 'category', 'degree_type', 'is_active')
-    readonly_fields = ('created_at', 'updated_at', 'category_badge')
+    readonly_fields = ('created_at', 'updated_at', 'category_badge', 'degree_type_badge')
     list_editable = ('is_active',)
     list_per_page = 25
     
     fieldsets = (
-        ('Basic Information', {
-            'fields': ('college', 'course_code', 'category', 'category_badge', 'degree_type', 'course_name')
+        ('College Selection', {
+            'fields': ('college',),
+            'description': 'Step 1: Select the college first. This will determine available categories.'
+        }),
+        ('Course Category', {
+            'fields': ('category', 'category_badge'),
+            'description': 'Step 2: Select the course category (based on college offering).'
+        }),
+        ('Degree Type', {
+            'fields': ('degree_type', 'degree_type_badge'),
+            'description': 'Step 3: Select the degree type (UG, PG, Diploma, etc.)'
+        }),
+        ('Course Information', {
+            'fields': ('course_code', 'course_name'),
+            'description': 'Step 4: Select course code and name.'
         }),
         ('Status', {
-            'fields': ('is_active',)
+            'fields': ('is_active',),
+            'classes': ('collapse',)
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         })
     )
+    
+    def course_code_display(self, obj):
+        """Display course code with full name"""
+        return format_html('<strong>{}</strong><br><small style="color: #666;">{}</small>', 
+                          obj.course_code, 
+                          obj.get_course_code_display())
+    course_code_display.short_description = 'Course Code'
+    
+    def course_name_short(self, obj):
+        """Truncate long course names"""
+        if len(obj.course_name) > 50:
+            return obj.course_name[:47] + '...'
+        return obj.course_name
+    course_name_short.short_description = 'Course Name'
+    
+    def college_link(self, obj):
+        """Link to college in admin"""
+        from django.urls import reverse
+        url = reverse('admin:colleges_college_change', args=[obj.college.college_id])
+        return format_html('<a href="{}">{}</a>', url, obj.college.college_name)
+    college_link.short_description = 'College'
+    college_link.admin_order_field = 'college__college_name'
     
     def category_badge(self, obj):
         """Display category as colored badge"""
@@ -286,8 +438,23 @@ class CourseAdmin(admin.ModelAdmin):
             'physical_education': '#E91E63',
         }
         color = color_map.get(obj.category, '#666')
-        return mark_safe(f'<span style="background:{color}; color:white; padding:2px 8px; border-radius:12px; font-size:11px;">{category_name}</span>')
+        return mark_safe(f'<span style="background:{color}; color:white; padding:4px 12px; border-radius:20px; font-size:11px; display:inline-block;">{category_name}</span>')
     category_badge.short_description = 'Category'
+    
+    def degree_type_badge(self, obj):
+        """Display degree type as colored badge"""
+        degree_map = dict(Course.DEGREE_TYPE_CHOICES)
+        degree_name = degree_map.get(obj.degree_type, obj.degree_type.upper())
+        color_map = {
+            'ug': '#4CAF50',
+            'pg': '#FF9800',
+            'diploma': '#2196F3',
+            'phd': '#9C27B0',
+            'integrated': '#F44336',
+        }
+        color = color_map.get(obj.degree_type, '#666')
+        return mark_safe(f'<span style="background:{color}; color:white; padding:4px 12px; border-radius:20px; font-size:11px; display:inline-block;">{degree_name}</span>')
+    degree_type_badge.short_description = 'Degree Type'
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('college')
@@ -296,6 +463,9 @@ class CourseAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
         if obj.college:
             obj.college.sync_courses_offered()
+    
+    class Media:
+        js = ['admin/js/jquery.init.js']
 
 
 @admin.register(UserProfile)
@@ -322,11 +492,9 @@ class UserProfileAdmin(admin.ModelAdmin):
     )
 
 
-# ==================== ENQUIRY FORM ADMIN WITH CUSTOM FORM ====================
 class EnquiryFormAdminForm(forms.ModelForm):
     """Custom form for EnquiryForm admin with dynamic college filtering"""
     
-    # Override college field to show all colleges
     college = forms.ModelChoiceField(
         queryset=College.objects.all().order_by('college_name'),
         empty_label="-- Select College --",
@@ -340,51 +508,6 @@ class EnquiryFormAdminForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
-        # If college is selected, filter course choices
-        college_id = None
-        if self.instance and self.instance.college_id:
-            college_id = self.instance.college_id
-        elif self.data.get('college'):
-            try:
-                college_id = int(self.data.get('college'))
-            except (ValueError, TypeError):
-                pass
-        
-        if college_id:
-            # Get courses for the selected college
-            courses = Course.objects.filter(
-                college_id=college_id,
-                is_active=True
-            ).select_related('college')
-            
-            # Create a custom choice field for courses with formatted display
-            course_choices = [('', '-- Select Course --')]
-            course_choices.extend([
-                (course.id, f"{course.course_code} - {course.course_name}")
-                for course in courses
-            ])
-            
-            # Add a custom field for course selection if not exists
-            if 'course_selection' not in self.fields:
-                self.fields['course_selection'] = forms.ChoiceField(
-                    choices=course_choices,
-                    required=False,
-                    label="Select Course",
-                    widget=forms.Select(attrs={'class': 'form-control'})
-                )
-            else:
-                self.fields['course_selection'].choices = course_choices
-            
-            # Populate course_name and department_name when course is selected
-            if self.data.get('course_selection'):
-                try:
-                    course_id = int(self.data.get('course_selection'))
-                    course = Course.objects.get(id=course_id)
-                    self.initial['course_name'] = course.course_name
-                    self.initial['department_name'] = course.get_course_code_display()
-                except (ValueError, TypeError, Course.DoesNotExist):
-                    pass
 
 
 @admin.register(EnquiryForm)
@@ -401,7 +524,7 @@ class EnquiryFormAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Application Info', {
-            'fields': ('application_id', 'user', 'college', 'course_selection', 'course_name', 'department_name')
+            'fields': ('application_id', 'user', 'college', 'course_name', 'department_name')
         }),
         ('Bio-data', {
             'fields': ('first_name', 'last_name', 'gender', 'date_of_birth', 'mobile_number',
@@ -430,19 +553,6 @@ class EnquiryFormAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'college')
-    
-    def save_model(self, request, obj, form, change):
-        # Handle course selection
-        if 'course_selection' in form.cleaned_data and form.cleaned_data['course_selection']:
-            try:
-                course_id = int(form.cleaned_data['course_selection'])
-                course = Course.objects.get(id=course_id)
-                obj.course_name = course.course_name
-                obj.department_name = course.get_course_code_display()
-            except (ValueError, Course.DoesNotExist):
-                pass
-        
-        super().save_model(request, obj, form, change)
 
 
 # ==================== CUSTOM ADMIN SITE SETTINGS ====================

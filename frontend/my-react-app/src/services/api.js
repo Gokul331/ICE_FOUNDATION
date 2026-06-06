@@ -241,6 +241,222 @@ export const getTimelineEvents = async (params) => {
   }
 };
 
+// ==================== HIERARCHICAL SELECTION ENDPOINTS (NEW) ====================
+
+/**
+ * Get all colleges with their categories for dropdown initialization
+ * @returns {Promise} List of colleges with category information
+ */
+export const getAllCollegesWithCategories = async () => {
+  try {
+    const response = await API.get("colleges/with-categories/");
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching colleges with categories:", error);
+    throw error;
+  }
+};
+
+/**
+ * Step 1 & 2: Get categories offered by a specific college
+ * @param {number} collegeId - The college ID
+ * @returns {Promise} List of categories for the college
+ */
+export const getCollegeCategories = async (collegeId) => {
+  try {
+    const response = await API.get(`colleges/${collegeId}/categories/`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching categories for college ${collegeId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Step 3: Get degree types for a specific college and category
+ * @param {number} collegeId - The college ID
+ * @param {string} category - The course category code
+ * @returns {Promise} List of degree types for the category
+ */
+export const getCategoryDegreeTypes = async (collegeId, category) => {
+  try {
+    const response = await API.get(`colleges/${collegeId}/categories/${category}/degree-types/`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching degree types for college ${collegeId} category ${category}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Step 4: Get courses for a specific college, category, and degree type
+ * @param {number} collegeId - The college ID
+ * @param {string} category - The course category code
+ * @param {string} degreeType - The degree type code (ug, pg, diploma, etc.)
+ * @returns {Promise} List of courses matching the criteria
+ */
+export const getDegreeCourses = async (collegeId, category, degreeType) => {
+  try {
+    const response = await API.get(`colleges/${collegeId}/categories/${category}/degrees/${degreeType}/courses/`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching courses:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Get detailed course information for the final selection
+ * @param {number} courseId - The course ID
+ * @returns {Promise} Detailed course information
+ */
+export const getCourseDetailsForSelection = async (courseId) => {
+  try {
+    const response = await API.get(`courses/${courseId}/details/`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching course details for ${courseId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Get complete college hierarchy (all categories, degrees, courses at once)
+ * @param {number} collegeId - The college ID
+ * @returns {Promise} Complete hierarchical data for the college
+ */
+export const getCollegeHierarchy = async (collegeId) => {
+  try {
+    const response = await API.get(`colleges/${collegeId}/hierarchy/`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching college hierarchy for ${collegeId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Enhanced application submission with selected_course foreign key
+ * @param {FormData} formData - Form data including selected_course_id
+ * @returns {Promise} Submission response
+ */
+export const submitApplicationV2 = async (formData) => {
+  try {
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      throw new Error('No authentication token found. Please login again.');
+    }
+
+    const response = await API.post('/submit-application-v2/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Token ${token}`,
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error submitting application V2:', error);
+    console.error('Error response:', error.response?.data);
+    throw error;
+  }
+};
+
+// ==================== COLLEGE IMAGE ENDPOINTS ====================
+
+/**
+ * Get college gallery images
+ * @param {number} collegeId - The college ID
+ * @returns {Promise} Gallery data including all images
+ */
+export const getCollegeGallery = async (collegeId) => {
+  try {
+    const response = await API.get(`colleges/${collegeId}/gallery/`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching gallery for college ${collegeId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Get college images by category
+ * @param {number} collegeId - The college ID
+ * @param {string} category - 'general' or 'campus'
+ * @returns {Promise} Images for the specified category
+ */
+export const getCollegeImagesByCategory = async (collegeId, category) => {
+  try {
+    const response = await API.get(`colleges/${collegeId}/gallery/${category}/`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching ${category} images:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Get featured colleges for homepage
+ * @param {number} limit - Number of colleges to fetch
+ * @returns {Promise} List of featured colleges
+ */
+export const getFeaturedColleges = async (limit = 6) => {
+  try {
+    const response = await API.get(`colleges/featured/`, { params: { limit } });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching featured colleges:", error);
+    throw error;
+  }
+};
+
+// ==================== COURSE CATEGORY ENDPOINTS ====================
+
+/**
+ * Get all course categories with statistics
+ * @returns {Promise} Categories with college and course counts
+ */
+export const getCourseCategories = async () => {
+  try {
+    const response = await API.get("colleges/categories/");
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching course categories:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get colleges filtered by course categories
+ * @param {Object} params - Filter parameters (categories, city, state, etc.)
+ * @returns {Promise} Filtered colleges
+ */
+export const getCollegesByCategory = async (params) => {
+  try {
+    const response = await API.get("colleges/by-category/", { params });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching colleges by category:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get courses filtered by category
+ * @param {Object} params - Filter parameters
+ * @returns {Promise} Filtered courses
+ */
+export const getCoursesByCategory = async (params) => {
+  try {
+    const response = await API.get("courses/categories/", { params });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching courses by category:", error);
+    throw error;
+  }
+};
+
 // ==================== AUTH ENDPOINTS (No Auth Required) ====================
 
 export const register = async (userData) => {
@@ -525,7 +741,7 @@ export const getApplicationFormData = async () => {
   }
 };
 
-// FIXED: Submit Application Function
+// Original submit application (for backward compatibility)
 export const submitApplication = async (formData) => {
   try {
     const token = localStorage.getItem('token');
@@ -606,6 +822,7 @@ export const getApplicationDetail = async (applicationId) => {
   });
   return response.data;
 };
+
 export const submitScholarshipApplication = async (formData) => {
   try {
     const token = localStorage.getItem('token');
@@ -629,5 +846,48 @@ export const submitScholarshipApplication = async (formData) => {
   }
 };
 
+// ==================== USAGE EXAMPLE ====================
+/*
+// Example: Implementing the 4-step selection process
+
+async function loadColleges() {
+  const response = await getAllCollegesWithCategories();
+  const colleges = response.colleges;
+  // Populate college dropdown
+}
+
+async function onCollegeSelect(collegeId) {
+  // Step 1 & 2: Load categories for selected college
+  const categoriesRes = await getCollegeCategories(collegeId);
+  const categories = categoriesRes.categories;
+  // Populate category dropdown
+}
+
+async function onCategorySelect(collegeId, category) {
+  // Step 3: Load degree types for selected category
+  const degreeTypesRes = await getCategoryDegreeTypes(collegeId, category);
+  const degreeTypes = degreeTypesRes.degree_types;
+  // Populate degree type dropdown
+}
+
+async function onDegreeTypeSelect(collegeId, category, degreeType) {
+  // Step 4: Load courses for selected degree type
+  const coursesRes = await getDegreeCourses(collegeId, category, degreeType);
+  const courses = coursesRes.courses;
+  // Populate course dropdown
+}
+
+async function onCourseSelect(courseId) {
+  // Get detailed course information
+  const courseDetails = await getCourseDetailsForSelection(courseId);
+  // Display course details to user
+}
+
+async function submitApplication(courseId, formData) {
+  formData.append('selected_course_id', courseId);
+  const result = await submitApplicationV2(formData);
+  console.log('Application submitted:', result);
+}
+*/
 
 export default API;
