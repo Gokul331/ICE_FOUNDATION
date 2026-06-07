@@ -25,8 +25,7 @@ from django.conf import settings
 from .models import College, Course, UserProfile, EnquiryForm
 from .serializers import (
     CollegeSerializer, CollegeListSerializer, CourseSerializer,
-    UserProfileSerializer, RegisterSerializer, LoginSerializer,
-    EnquiryFormSerializer, EnquiryFormListSerializer,
+    UserProfileSerializer, EnquiryFormSerializer, EnquiryFormListSerializer,
     CollegeCourseFilterSerializer, 
     CollegeBulkCourseUpdateSerializer,
     CollegeWithCoursesSerializer,
@@ -1355,10 +1354,13 @@ def user_profile_detail(request, profile_id):
 
 
 @api_view(['GET', 'PUT', 'PATCH'])
-@permission_classes([IsAuthenticated])
 def get_current_user_profile(request):
     """Get or update the current authenticated user's profile"""
     try:
+        # This view requires authentication, so we check if user is authenticated
+        if not request.user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+        
         profile, created = UserProfile.objects.get_or_create(
             user=request.user,
             defaults={
@@ -1427,10 +1429,12 @@ def get_current_user_profile(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
 def change_password(request):
     """Change user's password"""
     try:
+        if not request.user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+        
         current_password = request.data.get('current_password')
         new_password = request.data.get('new_password')
         confirm_password = request.data.get('confirm_password')
@@ -1470,10 +1474,12 @@ def change_password(request):
 
 
 @api_view(['PUT', 'PATCH'])
-@permission_classes([IsAuthenticated])
 def update_profile(request):
     """Update the current user's profile"""
     try:
+        if not request.user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+        
         profile = UserProfile.objects.get(user=request.user)
 
         if 'email' in request.data and request.data['email'] != request.user.email:
@@ -1519,10 +1525,12 @@ def update_profile(request):
 
 
 @api_view(['PUT', 'PATCH'])
-@permission_classes([IsAuthenticated])
 def update_profile_by_id(request, profile_id):
     """Update a user profile by ID (admin only or own profile)"""
     try:
+        if not request.user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+        
         profile = UserProfile.objects.get(id=profile_id)
 
         if profile.user != request.user and not request.user.is_staff:
@@ -1572,10 +1580,12 @@ def update_profile_by_id(request, profile_id):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
 def create_or_update_profile(request):
     """Create or update the current user's profile"""
     try:
+        if not request.user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+        
         profile, created = UserProfile.objects.get_or_create(
             user=request.user,
             defaults={
@@ -1628,239 +1638,21 @@ def create_or_update_profile(request):
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# ==================== AUTH VIEWS ====================
+# ==================== AUTH VIEWS - REMOVED ====================
+# RegisterView, LoginView, CheckAuthView, LogoutView have been removed
 
-@method_decorator(csrf_exempt, name='dispatch')
-class RegisterView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
-        if serializer.is_valid():
-            try:
-                user = serializer.save()
-                token, created = Token.objects.get_or_create(user=user)
-
-                response_data = {
-                    'message': 'Registration successful',
-                    'user': {
-                        'id': user.id,
-                        'username': user.username,
-                        'email': user.email,
-                        'first_name': user.first_name,
-                        'last_name': user.last_name,
-                    },
-                    'token': token.key
-                }
-                return Response(response_data, status=status.HTTP_201_CREATED)
-            except Exception as e:
-                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class LoginView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        serializer = LoginSerializer(data=request.data)
-        if serializer.is_valid():
-            username = serializer.validated_data['username']
-            password = serializer.validated_data['password']
-
-            if re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', username):
-                try:
-                    user_obj = User.objects.get(email=username)
-                    username = user_obj.username
-                except User.DoesNotExist:
-                    return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-
-            user = authenticate(request, username=username, password=password)
-
-            if user:
-                login(request, user)
-                token, created = Token.objects.get_or_create(user=user)
-
-                response_data = {
-                    'message': 'Login successful',
-                    'user': {
-                        'id': user.id,
-                        'username': user.username,
-                        'email': user.email,
-                        'first_name': user.first_name,
-                        'last_name': user.last_name,
-                    },
-                    'token': token.key
-                }
-                return Response(response_data, status=status.HTTP_200_OK)
-
-            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class CheckAuthView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        return Response({
-            'isAuthenticated': True,
-            'user': {
-                'id': request.user.id,
-                'username': request.user.username,
-                'email': request.user.email,
-                'first_name': request.user.first_name,
-                'last_name': request.user.last_name,
-            }
-        })
-
-
-class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        try:
-            request.user.auth_token.delete()
-            logout(request)
-            return Response({'message': 'Logout successful'}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-class UserProfileView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        try:
-            profile = UserProfile.objects.get(user=request.user)
-            serializer = UserProfileSerializer(profile)
-            return Response(serializer.data)
-        except UserProfile.DoesNotExist:
-            return Response({'error': 'Profile not found'}, status=404)
-
-    def put(self, request):
-        try:
-            profile = UserProfile.objects.get(user=request.user)
-            serializer = UserProfileSerializer(profile, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data)
-            return Response(serializer.errors, status=400)
-        except UserProfile.DoesNotExist:
-            return Response({'error': 'Profile not found'}, status=404)
-
-
-# ==================== PASSWORD RESET VIEWS ====================
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def password_reset_request(request):
-    """Send password reset email"""
-    email = request.data.get('email')
-    if not email:
-        return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        user = User.objects.get(email=email)
-    except User.DoesNotExist:
-        return Response({'message': 'If an account with this email exists, a password reset link has been sent.'}, status=status.HTTP_200_OK)
-
-    token = default_token_generator.make_token(user)
-    uid = urlsafe_base64_encode(force_bytes(user.pk))
-
-    reset_link = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}/"
-
-    try:
-        subject = 'Password Reset Request - Vamshi EduCare'
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: Arial, sans-serif; }}
-                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                .header {{ background: #4CAF50; color: #fff; padding: 20px; text-align: center; }}
-                .button {{ display: inline-block; padding: 10px 20px; background: #4CAF50; color: #fff; text-decoration: none; border-radius: 5px; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>Vamshi EduCare</h1>
-                </div>
-                <div class="content">
-                    <h2>Password Reset Request</h2>
-                    <p>Hello {user.username},</p>
-                    <p>We received a request to reset your password. Click the button below to create a new password:</p>
-                    <p style="text-align: center;">
-                        <a href="{reset_link}" class="button">Reset Password</a>
-                    </p>
-                    <p>This link will expire in 24 hours.</p>
-                    <p>If you didn't request this, please ignore this email.</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        
-        send_mail(
-            subject=subject,
-            message=f'Reset your password using this link: {reset_link}',
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            html_message=html_content,
-            fail_silently=False
-        )
-    except Exception as e:
-        return Response({'error': 'Failed to send email'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    return Response({'message': 'Password reset link sent to your email'}, status=status.HTTP_200_OK)
-
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def password_reset_confirm(request):
-    """Reset password with token"""
-    uidb64 = request.data.get('uid')
-    token = request.data.get('token')
-    new_password = request.data.get('new_password')
-    confirm_password = request.data.get('confirm_password')
-
-    if not all([uidb64, token, new_password, confirm_password]):
-        return Response({'error': 'All fields are required'}, status=status.HTTP_400_BAD_REQUEST)
-
-    if new_password != confirm_password:
-        return Response({'error': 'Passwords do not match'}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        uid = force_str(urlsafe_base64_decode(uidb64))
-        user = User.objects.get(pk=uid)
-    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-        return Response({'error': 'Invalid reset link'}, status=status.HTTP_400_BAD_REQUEST)
-
-    if not default_token_generator.check_token(user, token):
-        return Response({'error': 'Invalid or expired reset token'}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        from django.contrib.auth.password_validation import validate_password
-        validate_password(new_password, user)
-    except ValidationError as e:
-        return Response({'error': e.messages}, status=status.HTTP_400_BAD_REQUEST)
-
-    user.set_password(new_password)
-    user.save()
-
-    return Response({'message': 'Password reset successfully'}, status=status.HTTP_200_OK)
-
+# ==================== PASSWORD RESET VIEWS - REMOVED ====================
+# password_reset_request and password_reset_confirm have been removed
 
 # ==================== ENQUIRY FORM VIEWS ====================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def get_application_form_data(request):
     """Fetch existing student data for pre-filling the application form"""
     try:
+        if not request.user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+        
         user = request.user
         try:
             profile = UserProfile.objects.get(user=user)
@@ -1892,10 +1684,12 @@ def get_application_form_data(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
 def submit_application(request):
     """Submit student enquiry form with file uploads"""
     try:
+        if not request.user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+        
         user = request.user
         print(f"Processing application for user: {user.id} - {user.username}")
 
@@ -2024,10 +1818,12 @@ Vamshi EduCare Team
 # ==================== ENQUIRY RETRIEVAL VIEWS ====================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def get_my_applications(request):
     """Get all enquiry forms for the current user"""
     try:
+        if not request.user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+        
         applications = EnquiryForm.objects.filter(user=request.user).order_by('-submitted_at')
         serializer = EnquiryFormListSerializer(applications, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -2036,10 +1832,12 @@ def get_my_applications(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def get_application_detail(request, application_id):
     """Get a specific enquiry form by ID"""
     try:
+        if not request.user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+        
         application = EnquiryForm.objects.get(application_id=application_id, user=request.user)
         serializer = EnquiryFormSerializer(application)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -2050,10 +1848,12 @@ def get_application_detail(request, application_id):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def download_application_pdf(request, application_id):
     """Download PDF for a specific enquiry form"""
     try:
+        if not request.user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+        
         application = EnquiryForm.objects.get(application_id=application_id, user=request.user)
         
         # Generate PDF

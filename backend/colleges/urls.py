@@ -30,7 +30,7 @@ from .views import (
     delete_college_image,
     bulk_upload_college_images,
     
-    # ==================== NEW HIERARCHICAL SELECTION VIEWS ====================
+    # ==================== HIERARCHICAL SELECTION VIEWS ====================
     get_college_categories,
     get_category_degree_types,
     get_degree_courses,
@@ -51,7 +51,7 @@ urlpatterns = [
     path('colleges/<int:college_id>/courses/', get_college_courses, name='get_college_courses'),
     path('colleges/suggest/', suggest_colleges, name='suggest_colleges'),
     
-    # ==================== HIERARCHICAL SELECTION ENDPOINTS (NEW) ====================
+    # ==================== HIERARCHICAL SELECTION ENDPOINTS ====================
     # Step 1 & 2: Get categories for a college
     path('colleges/<int:college_id>/categories/', get_college_categories, name='get_college_categories'),
     
@@ -108,12 +108,8 @@ urlpatterns = [
     path('courses/categories/', get_courses_by_category, name='get_courses_by_category'),
     path('courses/categories/<str:category>/', get_courses_by_category, name='get_courses_by_category_filtered'),
 
-    # ==================== AUTHENTICATION ====================
-    path('register/', views.RegisterView.as_view(), name='register'),
-    path('login/', views.LoginView.as_view(), name='login'),
-    path('logout/', views.LogoutView.as_view(), name='logout'),
-    path('profile/', views.UserProfileView.as_view(), name='profile'),
-    path('check-auth/', views.CheckAuthView.as_view(), name='check-auth'),
+    # ==================== AUTHENTICATION - REMOVED ====================
+    # Register, Login, Logout, CheckAuth endpoints have been removed
 
     # ==================== USER PROFILES ====================
     path('user-profiles/', views.user_profiles, name='user_profiles'),
@@ -126,9 +122,8 @@ urlpatterns = [
     path('profile/create-update/', views.create_or_update_profile, name='create_or_update_profile'),
     path('profile/update/<int:profile_id>/', views.update_profile_by_id, name='update_profile_by_id'),
 
-    # ==================== PASSWORD RESET ====================
-    path('password-reset/', views.password_reset_request, name='password_reset_request'),
-    path('password-reset-confirm/', views.password_reset_confirm, name='password_reset_confirm'),
+    # ==================== PASSWORD RESET - REMOVED ====================
+    # Password reset endpoints have been removed
 
     # ==================== ENQUIRY FORM ====================
     path('application-form-data/', get_application_form_data, name='get_application_form_data'),

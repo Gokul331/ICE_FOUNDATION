@@ -1,13 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from django.contrib.auth.password_validation import validate_password
 from django.core.mail import send_mail, EmailMultiAlternatives
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 from django.conf import settings
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
 from .models import College, Course, UserProfile, EnquiryForm
 import logging
 
@@ -315,7 +309,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
         return dict(College.COURSE_CATEGORY_CHOICES).get(obj.category, obj.category)
     
     def get_course_code_display(self, obj):
-        return dict(obj.COURSE_CODE_CHOICES).get(obj.course_code, obj.course_code)
+        return dict(obj.COURSE_NAME_CHOICES).get(obj.course_code, obj.course_code)
     
     def get_degree_type_display(self, obj):
         return dict(obj.DEGREE_TYPE_CHOICES).get(obj.degree_type, obj.degree_type)
@@ -333,7 +327,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
         return None
 
 
-# ==================== HIERARCHICAL SELECTION SERIALIZERS (NEW) ====================
+# ==================== HIERARCHICAL SELECTION SERIALIZERS ====================
 
 class CategoryInfoSerializer(serializers.Serializer):
     """Serializer for category information in hierarchical selection"""
@@ -458,224 +452,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at']
 
 
-# ==================== AUTH SERIALIZERS ====================
-
-class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
-    password2 = serializers.CharField(write_only=True, required=True)
-    phone_number = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    
-    class Meta:
-        model = User
-        fields = ['username', 'email', 'password', 'password2', 'first_name', 'last_name', 'phone_number']
-    
-    def validate(self, attrs):
-        if attrs['password'] != attrs['password2']:
-            raise serializers.ValidationError({"password": "Password fields didn't match."})
-        return attrs
-    
-    def validate_email(self, value):
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Email already exists")
-        return value
-    
-    def validate_username(self, value):
-        if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError("Username already exists")
-        return value
-    
-    def send_welcome_email(self, user, profile):
-        """Send welcome email to new user"""
-        try:
-            subject = f'Welcome to Vamshi EduCare, {user.first_name or user.username}!'
-            
-            html_content = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                    .header {{ background: #4CAF50; color: #fff; padding: 20px; text-align: center; }}
-                    .content {{ padding: 20px; }}
-                    .button {{ display: inline-block; padding: 10px 20px; background: #4CAF50; color: #fff; text-decoration: none; border-radius: 5px; }}
-                    .footer {{ text-align: center; padding: 20px; font-size: 12px; color: #666; }}
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h1>Vamshi EduCare</h1>
-                    </div>
-                    <div class="content">
-                        <h2>Welcome, {user.first_name or user.username}!</h2>
-                        <p>Thank you for registering with Vamshi EduCare. We're excited to help you find your perfect college!</p>
-                        <p>Your account has been successfully created with the following details:</p>
-                        <ul>
-                            <li><strong>Username:</strong> {user.username}</li>
-                            <li><strong>Email:</strong> {user.email}</li>
-                        </ul>
-                        <p>Here's what you can do next:</p>
-                        <ul>
-                            <li>✅ Complete your profile</li>
-                            <li>🔍 Explore colleges and courses</li>
-                            <li>🎯 Get personalized college suggestions</li>
-                        </ul>
-                        <p style="text-align: center;">
-                            <a href="{settings.FRONTEND_URL}/profile" class="button">Complete Your Profile</a>
-                        </p>
-                        <p>If you have any questions, feel free to contact our support team.</p>
-                    </div>
-                    <div class="footer">
-                        <p>© 2025 Vamshi EduCare. All rights reserved.</p>
-                        <p>Vamshi EduCare - Smart College Prediction & Admission Guidance</p>
-                    </div>
-                </div>
-            </body>
-            </html>
-            """
-            
-            text_content = f"""
-            Welcome to Vamshi EduCare, {user.first_name or user.username}!
-            
-            Thank you for registering with Vamshi EduCare. 
-            
-            Your account has been successfully created with:
-            Username: {user.username}
-            Email: {user.email}
-            
-            Next steps:
-            1. Complete your profile at {settings.FRONTEND_URL}/profile
-            2. Explore colleges and courses
-            3. Get personalized college suggestions
-            """
-            
-            email = EmailMultiAlternatives(
-                subject=subject,
-                body=text_content,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[user.email],
-                reply_to=[settings.DEFAULT_FROM_EMAIL],
-            )
-            email.attach_alternative(html_content, "text/html")
-            email.send(fail_silently=False)
-            
-            logger.info(f"Welcome email sent successfully to {user.email}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Failed to send welcome email to {user.email}: {str(e)}")
-            return False
-    
-    def create(self, validated_data):
-        validated_data.pop('password2')
-        phone_number = validated_data.pop('phone_number', '')
-        
-        user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            password=validated_data['password'],
-            first_name=validated_data.get('first_name', ''),
-            last_name=validated_data.get('last_name', '')
-        )
-        
-        profile = UserProfile.objects.create(
-            user=user,
-            first_name=validated_data.get('first_name', ''),
-            last_name=validated_data.get('last_name', ''),
-            email=validated_data['email'],
-            phone_number=phone_number or '',
-            address='',
-            city='',
-            pincode='',
-        )
-        
-        try:
-            self.send_welcome_email(user, profile)
-        except Exception as e:
-            logger.error(f"Email sending failed but user was created: {str(e)}")
-        
-        return user
-
-
-class LoginSerializer(serializers.Serializer):
-    username = serializers.CharField(required=True)
-    password = serializers.CharField(required=True, write_only=True)
-
-
-# ==================== PASSWORD RESET SERIALIZERS ====================
-
-class PasswordResetRequestSerializer(serializers.Serializer):
-    email = serializers.EmailField(required=True)
-    
-    def validate_email(self, value):
-        if not User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("No user found with this email address.")
-        return value
-    
-    def send_reset_email(self):
-        email = self.validated_data['email']
-        user = User.objects.get(email=email)
-        
-        token = default_token_generator.make_token(user)
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        reset_link = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}/"
-        
-        try:
-            subject = 'Password Reset Request - Vamshi EduCare'
-            html_content = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body {{ font-family: Arial, sans-serif; }}
-                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                    .header {{ background: #4CAF50; color: #fff; padding: 20px; text-align: center; }}
-                    .button {{ display: inline-block; padding: 10px 20px; background: #4CAF50; color: #fff; text-decoration: none; border-radius: 5px; }}
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h1>Vamshi EduCare</h1>
-                    </div>
-                    <div class="content">
-                        <h2>Password Reset Request</h2>
-                        <p>Hello {user.username},</p>
-                        <p>We received a request to reset your password. Click the button below to create a new password:</p>
-                        <p style="text-align: center;">
-                            <a href="{reset_link}" class="button">Reset Password</a>
-                        </p>
-                        <p>This link will expire in 24 hours.</p>
-                        <p>If you didn't request this, please ignore this email.</p>
-                    </div>
-                </div>
-            </body>
-            </html>
-            """
-            
-            send_mail(
-                subject=subject,
-                message=f'Reset your password using this link: {reset_link}',
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                html_message=html_content,
-                fail_silently=False,
-            )
-            return True
-        except Exception as e:
-            logger.error(f"Failed to send password reset email to {email}: {str(e)}")
-            return False
-
-
-class PasswordResetConfirmSerializer(serializers.Serializer):
-    new_password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
-    confirm_password = serializers.CharField(write_only=True, required=True)
-
-    def validate(self, attrs):
-        if attrs['new_password'] != attrs['confirm_password']:
-            raise serializers.ValidationError({"confirm_password": "Passwords don't match."})
-        return attrs
+# ==================== AUTH SERIALIZERS - REMOVED ====================
+# RegisterSerializer, LoginSerializer, PasswordResetRequestSerializer, 
+# PasswordResetConfirmSerializer have been removed
 
 
 # ==================== ENQUIRY FORM SERIALIZERS ====================
@@ -714,12 +493,12 @@ class EnquiryFormSerializer(serializers.ModelSerializer):
         return None
     
     def validate_photo(self, value):
-        if value and value.size > 5 * 1024 * 1024:
+        if value and hasattr(value, 'size') and value.size > 5 * 1024 * 1024:
             raise serializers.ValidationError("Photo size must be less than 5MB")
         return value
     
     def validate_aadhar_card(self, value):
-        if value and value.size > 5 * 1024 * 1024:
+        if value and hasattr(value, 'size') and value.size > 5 * 1024 * 1024:
             raise serializers.ValidationError("Aadhar card size must be less than 5MB")
         return value
     
