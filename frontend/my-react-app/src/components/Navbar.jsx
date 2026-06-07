@@ -187,9 +187,13 @@ function Navbar() {
       >
         {/* Logo */}
         <Link to="/" className="nb-logo" onClick={closeMobile}>
-          <div className="nb-logo-icon" whileHover={{ rotate: 8, scale: 1.08 }} transition={{ type: 'spring', stiffness: 300 }}>
+          <motion.div
+            className="nb-logo-icon"
+            whileHover={{ rotate: 8, scale: 1.08 }}
+            transition={{ type: 'spring', stiffness: 300 }}
+          >
             <img src="/Logo.png" alt="Logo" />
-          </div>
+          </motion.div>
           <div className="nb-logo-text">
             <span className="nb-logo-brand">VAMSHI EDUCARE</span>
             <span className="nb-logo-sub">CAREER GUIDANCE CENTER</span>
