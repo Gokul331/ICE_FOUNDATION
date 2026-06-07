@@ -5,19 +5,11 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: '/', // Ensure correct base path for production
+  base: '/',
   build: {
     outDir: 'dist',
     sourcemap: true,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          framer: ['framer-motion'],
-          icons: ['react-icons'],
-        },
-      },
-    },
+    // Remove rollupOptions entirely or just don't specify manualChunks
   },
   server: {
     port: 3000,

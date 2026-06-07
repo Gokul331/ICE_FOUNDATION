@@ -257,13 +257,13 @@ class CourseSerializer(serializers.ModelSerializer):
     
     def get_course_code_display(self, obj):
         return dict(obj.COURSE_NAME_CHOICES).get(obj.course_code, obj.course_code)
-
+    
     def get_course_name_display(self, obj):
         return obj.course_name
-
+    
     def get_degree_type_display(self, obj):
         return dict(obj.DEGREE_TYPE_CHOICES).get(obj.degree_type, obj.degree_type)
-
+    
     def get_college_details(self, obj):
         if obj.college:
             return {
@@ -315,7 +315,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
         return dict(College.COURSE_CATEGORY_CHOICES).get(obj.category, obj.category)
     
     def get_course_code_display(self, obj):
-        return dict(obj.COURSE_NAME_CHOICES).get(obj.course_code, obj.course_code)
+        return dict(obj.COURSE_CODE_CHOICES).get(obj.course_code, obj.course_code)
     
     def get_degree_type_display(self, obj):
         return dict(obj.DEGREE_TYPE_CHOICES).get(obj.degree_type, obj.degree_type)
