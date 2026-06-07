@@ -1,77 +1,25 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { getCollegeDetail, getCollegeCourses } from "../services/api";
+import {
+  getCollegeDetail,
+  getCollegeCourses,
+} from "../services/api";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import "../styles/collegedetails.css";
 
-/* ── animation helpers ── */
-function SectionReveal({ children, className, delay = 0 }) {
-  return (
-    <motion.div
-      className={className}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, margin: "-50px" }}
-      variants={{
-        hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0, transition: { delay, duration: 0.5 } },
-      }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-/* ── category configuration ── */
-const categoryConfig = {
-  engineering: { name: "Engineering & Technology", icon: "⚙️", color: "#2196F3", bgColor: "#E3F2FD" },
-  arts_science: { name: "Arts & Science", icon: "🎨", color: "#9C27B0", bgColor: "#F3E5F5" },
-  polytechnic: { name: "Polytechnic", icon: "🔧", color: "#FF9800", bgColor: "#FFF3E0" },
-  allied_health_science: { name: "Allied Health Sciences", icon: "🏥", color: "#4CAF50", bgColor: "#E8F5E9" },
-  medical: { name: "Medical", icon: "💊", color: "#F44336", bgColor: "#FFEBEE" },
-  law: { name: "Law", icon: "⚖️", color: "#3F51B5", bgColor: "#E8EAF6" },
-  nursing: { name: "Nursing", icon: "👩‍⚕️", color: "#00BCD4", bgColor: "#E0F7FA" },
-  management: { name: "Management", icon: "📊", color: "#FFC107", bgColor: "#FFF8E1" },
-  computer_applications: { name: "Computer Applications", icon: "💻", color: "#607D8B", bgColor: "#ECEFF1" },
-  pharmacy: { name: "Pharmacy", icon: "💊", color: "#795548", bgColor: "#EFEBE9" },
-  agriculture: { name: "Agricultural Science", icon: "🌾", color: "#8BC34A", bgColor: "#F1F8E9" },
-  physiotherapy: { name: "Physiotherapy", icon: "🦵", color: "#009688", bgColor: "#E0F2F1" },
-  occupational_therapy: { name: "Occupational Therapy", icon: "🧑‍🦽", color: "#CDDC39", bgColor: "#F9FBE7" },
-  architecture: { name: "Architecture", icon: "🏛️", color: "#FF5722", bgColor: "#FBE9E7" },
-  education: { name: "Education", icon: "📚", color: "#9E9E9E", bgColor: "#F5F5F5" },
-  physical_education: { name: "Physical Education", icon: "🏃", color: "#E91E63", bgColor: "#FCE4EC" },
-};
-
-const degreeBadges = {
-  ug: { bg: "#4CAF50", label: "UG" },
-  pg: { bg: "#FF9800", label: "PG" },
-  diploma: { bg: "#2196F3", label: "Diploma" },
-  phd: { bg: "#9C27B0", label: "PhD" },
-  integrated: { bg: "#F44336", label: "Integrated" },
-};
-
-const degreeDurations = {
-  ug: "4 Years",
-  pg: "2 Years",
-  diploma: "3 Years",
-  phd: "3-5 Years",
-  integrated: "5 Years",
-};
-
-const tabs = [
-  { id: "overview", label: "Overview", icon: "📖" },
-  { id: "courses", label: "Courses", icon: "📚" },
-  { id: "gallery", label: "Gallery", icon: "📷" },
+// Fallback mock data
+const FALLBACK_COURSES = [
+  { id: 1, course_code: "CS", course_name: "Computer Science and Engineering", category: "engineering", degree_type: "ug" },
+  { id: 2, course_code: "AD", course_name: "Artificial Intelligence and Data Science", category: "engineering", degree_type: "ug" },
+  { id: 3, course_code: "IT", course_name: "Information Technology", category: "engineering", degree_type: "ug" },
+  { id: 4, course_code: "CS_CYBER", course_name: "Computer Science and Engineering (Cyber Security)", category: "engineering", degree_type: "ug" },
 ];
 
-const fallbackCollege = {
-  college_name: "DHANALAKSHMI SRINIVASAN UNIVERSITY",
-  short_name: "DSU",
-  location_city: "Chengalpattu",
-  location_state: "Tamil Nadu",
-  address: "No. 6, GST Road, Mamandur, Chengalpattu, Tamil Nadu 603 111",
+const categoryConfig = {
+  engineering: { name: "Engineering & Technology", icon: "⚙️", color: "#2563EB", bg: "#EFF6FF", gradient: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" },
+  management: { name: "Management", icon: "📊", color: "#D97706", bg: "#FFFBEB", gradient: "linear-gradient(135deg, #D97706 0%, #B45309 100%)" },
+  computer_applications: { name: "Computer Applications", icon: "💻", color: "#059669", bg: "#ECFDF5", gradient: "linear-gradient(135deg, #059669 0%, #047857 100%)" },
 };
 
 function CollegeDetail() {
@@ -80,29 +28,48 @@ function CollegeDetail() {
   const [college, setCollege] = useState(null);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [expandedCategories, setExpandedCategories] = useState({});
+  const [activeCategory, setActiveCategory] = useState(null);
 
-  /* ── data fetching ── */
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const collegeData = await getCollegeDetail(id);
-        setCollege(collegeData);
 
-        const coursesData = await getCollegeCourses(id).catch(() => []);
-        const courseList = Array.isArray(coursesData) && coursesData.length ? coursesData : [];
-        setCourses(courseList);
-        setError(null);
+        // Fetch college details
+        try {
+          const collegeData = await getCollegeDetail(id);
+          setCollege(collegeData);
+        } catch (err) {
+          console.error("Error fetching college:", err);
+          setCollege({
+            college_name: "DHANALAKSHMI SRINIVASAN UNIVERSITY",
+            short_name: "DSU",
+            location_city: "Perambalur",
+            location_state: "Tamil Nadu",
+            location_pincode: "621212",
+            address: "Perambalur - 621212, Tamil Nadu, India",
+          });
+        }
+
+        // Fetch courses
+        let coursesData = [];
+        try {
+          coursesData = await getCollegeCourses(id);
+          if (coursesData && Array.isArray(coursesData) && coursesData.length > 0) {
+            setCourses(coursesData);
+          } else {
+            setCourses(FALLBACK_COURSES);
+          }
+        } catch (err) {
+          console.error("Error fetching courses:", err);
+          setCourses(FALLBACK_COURSES);
+        }
+
+        setLoading(false);
       } catch (err) {
-        console.error("Error fetching college:", err);
-        setError("College not found");
-        setCourses([]);
-      } finally {
+        console.error("Error:", err);
         setLoading(false);
       }
     };
@@ -112,464 +79,248 @@ function CollegeDetail() {
     if (storedUser) setUser(JSON.parse(storedUser));
   }, [id]);
 
-  /* Memoized grouped courses for the JSX */
-  const groupedCourses = useMemo(() => {
-    return courses.reduce((acc, course) => {
-      const cat = (course.category || "engineering").toLowerCase().replace(/\s+/g, "_");
-      (acc[cat] = acc[cat] || []).push(course);
-      return acc;
-    }, {});
-  }, [courses]);
-
-  /* Keep expanded categories in sync — auto-expand newly loaded categories */
+  // Set active category when courses change
   useEffect(() => {
-    setExpandedCategories((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      Object.keys(groupedCourses).forEach((cat) => {
-        if (next[cat] === undefined) {
-          next[cat] = true;
-          changed = true;
-        }
+    if (courses.length > 0 && !activeCategory) {
+      const grouped = {};
+      courses.forEach(course => {
+        const cat = course.category;
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(course);
       });
-      return changed ? next : prev;
-    });
-  }, [groupedCourses]);
-
-  const allImages = useMemo(() => {
-    const imgs = [];
-    if (college?.banner_image) imgs.push({ url: college.banner_image, title: "College Banner" });
-    if (Array.isArray(college?.college_images)) {
-      college.college_images.forEach((url, i) => imgs.push({ url, title: `Campus View ${i + 1}` }));
+      const categories = Object.keys(grouped);
+      if (categories.length > 0) {
+        setActiveCategory(categories[0]);
+      }
     }
-    if (Array.isArray(college?.campus_images)) {
-      college.campus_images.forEach((url, i) => imgs.push({ url, title: `Campus ${i + 1}` }));
-    }
-    return imgs;
-  }, [college]);
-
-  const displayCollege = college || fallbackCollege;
-  const categoryKeys = Object.keys(groupedCourses);
-  const visibleCategories = categoryKeys.slice(0, 6);
-  const hiddenCount = Math.max(0, categoryKeys.length - 6);
-
-  /* ── handlers ── */
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    setUser(null);
-    navigate("/");
-  };
+  }, [courses]);
 
   const handleApplyNow = (course) => {
     const token = localStorage.getItem("token");
-    const quotaType = "management";
     if (!token) {
-      navigate("/login", { state: { from: `/colleges/${id}`, course, college, quotaType } });
+      navigate("/login", { state: { from: `/colleges/${id}`, course, college } });
     } else {
-      navigate("/application-form", { state: { college, course, quotaType } });
+      navigate("/application-form", { state: { college, course } });
     }
   };
 
-  const toggleCategory = (category) =>
-    setExpandedCategories((prev) => ({ ...prev, [category]: !prev[category] }));
-
-  const openImage = (img) => {
-    setSelectedImage(img);
+  const getDegreeBadge = (degreeType) => {
+    const badges = {
+      ug: { bg: "#10B981", label: "UG", icon: "🎓" },
+      pg: { bg: "#F59E0B", label: "PG", icon: "📜" },
+      diploma: { bg: "#3B82F6", label: "Diploma", icon: "📄" },
+    };
+    return badges[degreeType?.toLowerCase()] || { bg: "#6B7280", label: degreeType?.toUpperCase() || "N/A", icon: "📘" };
   };
 
-  const closeImage = () => setSelectedImage(null);
+  // Group courses by category
+  const groupedCourses = {};
+  courses.forEach(course => {
+    let category = course.category;
+    if (category === 'engineering') category = 'engineering';
+    if (!groupedCourses[category]) groupedCourses[category] = [];
+    groupedCourses[category].push(course);
+  });
 
-  const getDegreeBadge = (type) =>
-    degreeBadges[type?.toLowerCase()] || { bg: "#666", label: type?.toUpperCase() || "N/A" };
+  const categories = Object.keys(groupedCourses);
+  const currentCourses = groupedCourses[activeCategory] || [];
 
-  const getDuration = (type) => degreeDurations[type?.toLowerCase()] || "Varies";
+  if (loading) return (
+    <div className="loading-screen-premium">
+      <div className="premium-spinner" />
+    </div>
+  );
 
-  /* ── loading & error states ── */
-  if (loading) {
-    return (
-      <div className="college-details-page-premium">
-        <Navbar user={user} onLogout={handleLogout} />
-        <div className="cd-loading-screen">
-          <div className="premium-spinner" />
-        </div>
-      </div>
-    );
-  }
-
-  if (error && !college) {
-    return (
-      <div className="college-details-page-premium">
-        <Navbar />
-        <div className="container cd-error-page">
-          <h2>{error}</h2>
-          <Link to="/colleges" className="btn-premium">
-            Return to List
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const displayCollege = college || {
+    college_name: "DHANALAKSHMI SRINIVASAN UNIVERSITY",
+    short_name: "DSU",
+    location_city: "Perambalur",
+    location_state: "Tamil Nadu",
+    location_pincode: "621212",
+  };
 
   return (
     <div className="college-details-page-premium">
-      <Navbar user={user} onLogout={handleLogout} />
+      <Navbar user={user} onLogout={() => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setUser(null);
+        navigate('/');
+      }} />
 
-      {/* ── Hero ── */}
+      {/* Hero Section */}
       <section className="cd-hero-premium">
         <div className="container">
-          <div className="cd-hero-layout">
-            <div className="cd-hero-info">
-              <div className="section-label-premium">
-                <span className="label-dot" />
-                Institution
-              </div>
+          <div className="hero-grid">
+            <div className="hero-info">
+              <div className="hero-badge">🏛️ Institution</div>
               <h1>{displayCollege.college_name}</h1>
-              <div className="cd-location">
-                <LocationIcon />
-                {displayCollege.location_city}, {displayCollege.location_state}
+              <div className="hero-location">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                {displayCollege.location_city}, {displayCollege.location_state} - {displayCollege.location_pincode}
               </div>
-              <div className="cd-quick-stats">
-                <StatItem label="College Code" value={displayCollege.short_name || "-"} />
-                <StatItem label="Categories" value={categoryKeys.length || "0"} />
-                <StatItem label="Courses" value={`${courses.length || "0"}+`} />
+              <div className="hero-stats">
+                <div className="stat">
+                  <span className="stat-value">{displayCollege.short_name || "DSU"}</span>
+                  <span className="stat-label">College Code</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-value">{categories.length}</span>
+                  <span className="stat-label">Categories</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-value">{courses.length}+</span>
+                  <span className="stat-label">Courses</span>
+                </div>
               </div>
             </div>
-
-            <aside className="cd-hero-action-card">
-              <div className="action-inner">
-                <div className="admission-status">🎓 Admission Open 2025-26</div>
-                <button className="btn-apply-full" onClick={() => handleApplyNow(courses[0])}>
-                  Apply Now →
-                </button>
-                <ul className="action-features">
-                  <li>✓ Expert Counseling</li>
-                  <li>✓ Direct Admission Support</li>
-                </ul>
+            <div className="hero-card">
+              <div className="admission-badge">🎓 Admission Open 2025-26</div>
+              <button className="btn-apply" onClick={() => handleApplyNow(courses[0])}>
+                Apply Now →
+              </button>
+              <div className="card-features">
+                <span>✓ Expert Counseling</span>
+                <span>✓ Direct Admission Support</span>
               </div>
-            </aside>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── Tabs ── */}
-      <nav className="cd-tabs-wrapper" aria-label="College sections">
+      {/* Tabs */}
+      <div className="tabs-wrapper">
         <div className="container">
-          <div className="cd-tabs-nav" role="tablist">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                className={`tab-btn ${activeTab === tab.id ? "active" : ""}`}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                <span className="tab-icon" aria-hidden="true">{tab.icon}</span>
-                {tab.label.toUpperCase()}
-              </button>
-            ))}
+          <div className="tabs">
+            <button className={`tab ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>
+              📖 OVERVIEW
+            </button>
+            <button className={`tab ${activeTab === 'courses' ? 'active' : ''}`} onClick={() => setActiveTab('courses')}>
+              📚 COURSES
+            </button>
+            <button className={`tab ${activeTab === 'gallery' ? 'active' : ''}`} onClick={() => setActiveTab('gallery')}>
+              📷 GALLERY
+            </button>
           </div>
         </div>
-      </nav>
+      </div>
 
-      {/* ── Tab Content ── */}
-      <main className="container cd-main-content">
-        <AnimatePresence mode="wait">
-          {activeTab === "overview" && (
-            <motion.div
-              key="overview"
-              className="tab-pane"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              <SectionReveal className="cd-content-section">
-                <h3>About the Institution</h3>
-                <p className="cd-desc-text">
-                  {displayCollege.address ||
-                    "Leading educational institution dedicated to academic excellence and holistic student development."}
-                </p>
-                <div className="cd-details-grid">
-                  <DetailBox icon="📍" label="Location">
-                    {displayCollege.location_city}, {displayCollege.location_state}
-                  </DetailBox>
+      {/* Overview Tab */}
+      {activeTab === 'overview' && (
+        <div className="overview-section">
+          <div className="container">
+            <div className="overview-card">
+              <h2>About the Institution</h2>
+              <p>{displayCollege.address || `${displayCollege.location_city} - ${displayCollege.location_pincode}, ${displayCollege.location_state}, India.`}</p>
 
-                  <DetailBox icon="📚" label="Categories">
+              <div className="info-grid">
+                <div className="info-item">
+                  <span className="info-icon">📍</span>
+                  <div>
+                    <label>Location</label>
+                    <p>{displayCollege.location_city}, {displayCollege.location_state}</p>
+                  </div>
+                </div>
+                <div className="info-item">
+                  <span className="info-icon">📚</span>
+                  <div>
+                    <label>Categories</label>
                     <div className="category-tags">
-                      {visibleCategories.map((cat) => {
-                        const config = categoryConfig[cat];
-                        return (
-                          <span
-                            key={cat}
-                            className="category-tag"
-                            style={{
-                              backgroundColor: config?.bgColor || "#f0f0f0",
-                              color: config?.color || "#666",
-                            }}
-                          >
-                            {config?.icon} {config?.name || cat.replace(/_/g, " ")}
-                          </span>
-                        );
-                      })}
-                      {hiddenCount > 0 && <span className="category-tag">+{hiddenCount} more</span>}
+                      {categories.slice(0, 3).map(cat => (
+                        <span key={cat} className="category-tag" style={{ background: categoryConfig[cat]?.bg, color: categoryConfig[cat]?.color }}>
+                          {categoryConfig[cat]?.icon} {categoryConfig[cat]?.name}
+                        </span>
+                      ))}
+                      {categories.length > 3 && <span className="category-tag">+{categories.length - 3} more</span>}
                     </div>
-                  </DetailBox>
-
-                  <DetailBox icon="🎓" label="Total Programs">
-                    {courses.length} Courses
-                  </DetailBox>
-                </div>
-              </SectionReveal>
-            </motion.div>
-          )}
-
-          {activeTab === "courses" && (
-            <motion.div
-              key="courses"
-              className="tab-pane"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              <div className="cd-content-section">
-                <div className="section-header-flex">
-                  <h3>Academic Programs by Category</h3>
-                  <span className="total-courses-badge">{courses.length} Programs Available</span>
-                </div>
-
-                {categoryKeys.length === 0 ? (
-                  <EmptyState message="No courses available for this institution." />
-                ) : (
-                  <div className="courses-by-category">
-                    {categoryKeys.map((category) => (
-                      <CategorySection
-                        key={category}
-                        category={category}
-                        courses={groupedCourses[category]}
-                        isExpanded={expandedCategories[category]}
-                        onToggle={() => toggleCategory(category)}
-                        onApply={handleApplyNow}
-                        getDegreeBadge={getDegreeBadge}
-                        getDuration={getDuration}
-                      />
-                    ))}
                   </div>
-                )}
+                </div>
+                <div className="info-item">
+                  <span className="info-icon">🎓</span>
+                  <div>
+                    <label>Total Programs</label>
+                    <p>{courses.length} Courses</p>
+                  </div>
+                </div>
               </div>
-            </motion.div>
-          )}
+            </div>
+          </div>
+        </div>
+      )}
 
-          {activeTab === "gallery" && (
-            <motion.div
-              key="gallery"
-              className="tab-pane"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              <SectionReveal className="cd-content-section">
-                <h3>Campus Gallery</h3>
-                {allImages.length > 0 ? (
-                  <div className="cd-gallery-grid-full">
-                    {allImages.map((img, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        className="gallery-item-full"
-                        onClick={() => openImage(img)}
-                        aria-label={`View ${img.title}`}
-                      >
-                        <img src={img.url} alt={img.title} loading="lazy" />
-                        <div className="gallery-overlay">
-                          <span>🔍 View Image</span>
-                        </div>
-                      </button>
-                    ))}
+      {/* Courses Tab */}
+      {activeTab === 'courses' && categories.length > 0 && (
+        <div className="courses-section">
+          <div className="container">
+            {/* Category Filters */}
+            <div className="category-filters">
+              {categories.map(cat => {
+                const config = categoryConfig[cat] || { name: cat.toUpperCase(), icon: "📘", color: "#6B7280", bg: "#F3F4F6" };
+                return (
+                  <button
+                    key={cat}
+                    className={`filter-chip ${activeCategory === cat ? 'active' : ''}`}
+                    onClick={() => setActiveCategory(cat)}
+                    style={{
+                      background: activeCategory === cat ? config.color : 'transparent',
+                      color: activeCategory === cat ? 'white' : config.color,
+                      borderColor: config.color
+                    }}
+                  >
+                    <span>{config.icon}</span>
+                    {config.name}
+                    <span className="count" style={{ background: activeCategory === cat ? 'rgba(255,255,255,0.2)' : config.bg }}>
+                      {groupedCourses[cat].length}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Courses Grid */}
+            <div className="courses-grid">
+              {currentCourses.map((course) => {
+                const degreeBadge = getDegreeBadge(course.degree_type);
+                return (
+                  <div key={course.id || course.course_id} className="course-item">
+                    <div className="course-header">
+                      <span className="course-code">{course.course_code}</span>
+                      <span className="degree-tag" style={{ background: degreeBadge.bg }}>
+                        {degreeBadge.label}
+                      </span>
+                    </div>
+                    <h3 className="course-name">{course.course_name}</h3>
+                    <div className="course-meta">
+                      <span>⏱️ {course.degree_type === 'ug' ? '4 Years' : '2 Years'}</span>
+                      <span>📖 Full Time</span>
+                    </div>
+                    <button className="apply-btn" onClick={() => handleApplyNow(course)}>
+                      Apply Now →
+                    </button>
                   </div>
-                ) : (
-                  <EmptyState message="No gallery images available" />
-                )}
-              </SectionReveal>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </main>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* ── Lightbox ── */}
-      <AnimatePresence>
-        {selectedImage && (
-          <motion.div
-            className="cd-lightbox-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={closeImage}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Image preview"
-          >
-            <motion.div
-              className="cd-lightbox-content"
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button className="close-lightbox" onClick={closeImage} aria-label="Close">
-                &times;
-              </button>
-              <img src={selectedImage.url} alt={selectedImage.title} />
-              <div className="lightbox-caption">{selectedImage.title}</div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Gallery Tab */}
+      {activeTab === 'gallery' && (
+        <div className="gallery-section">
+          <div className="container">
+            <div className="gallery-placeholder">
+              <p>📷 Gallery images will be displayed here</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>
-  );
-}
-
-/* ── Sub-components ── */
-
-function LocationIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-      <circle cx="12" cy="10" r="3" />
-    </svg>
-  );
-}
-
-function StatItem({ label, value }) {
-  return (
-    <div className="stat-item">
-      <strong>{value}</strong>
-      <span>{label}</span>
-    </div>
-  );
-}
-
-function DetailBox({ icon, label, children }) {
-  return (
-    <div className="detail-box">
-      <label>
-        {icon} {label}
-      </label>
-      <div className="detail-box-content">{children}</div>
-    </div>
-  );
-}
-
-function EmptyState({ message }) {
-  return (
-    <div className="no-courses-message">
-      <p>{message}</p>
-    </div>
-  );
-}
-
-function CategorySection({ category, courses, isExpanded, onToggle, onApply, getDegreeBadge, getDuration }) {
-  const config = categoryConfig[category] || {
-    name: category.replace(/_/g, " ").toUpperCase(),
-    icon: "📘",
-    color: "#666",
-    bgColor: "#f5f5f5",
-  };
-
-  return (
-    <motion.section
-      className="category-section"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      <button
-        type="button"
-        className="category-header"
-        onClick={onToggle}
-        aria-expanded={isExpanded}
-        style={{
-          background: `linear-gradient(135deg, ${config.color}15, ${config.color}05)`,
-          borderLeftColor: config.color,
-        }}
-      >
-        <div className="category-title">
-          <span className="category-icon" style={{ color: config.color }}>
-            {config.icon}
-          </span>
-          <h4>{config.name}</h4>
-          <span className="category-code">{category}</span>
-        </div>
-        <div className="category-stats">
-          <span className="course-count-badge">{courses.length} Programs</span>
-          <span className="expand-icon" aria-hidden="true">
-            {isExpanded ? "▲" : "▼"}
-          </span>
-        </div>
-      </button>
-
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            className="category-courses"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="table-responsive-premium">
-              <table className="cd-courses-table">
-                <thead>
-                  <tr>
-                    <th>Course Code</th>
-                    <th>Course Name</th>
-                    <th>Degree Type</th>
-                    <th>Duration</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {courses.map((course, idx) => {
-                    const badge = getDegreeBadge(course.degree_type);
-                    const duration = getDuration(course.degree_type);
-                    return (
-                      <tr key={`${course.course_code || "course"}-${idx}`}>
-                        <td>
-                          <strong className="course-code">{course.course_code || "-"}</strong>
-                        </td>
-                        <td>
-                          <div className="course-name-cell">
-                            <span className="course-name">{course.course_name}</span>
-                            <span
-                              className="course-category-tag"
-                              style={{ backgroundColor: config.bgColor, color: config.color }}
-                            >
-                              {config.icon} {config.name}
-                            </span>
-                          </div>
-                        </td>
-                        <td>
-                          <span className="degree-badge" style={{ backgroundColor: badge.bg }}>
-                            {badge.label}
-                          </span>
-                        </td>
-                        <td className="duration-cell">{duration}</td>
-                        <td>
-                          <button className="btn-table-apply" onClick={() => onApply(course)}>
-                            Apply Now →
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.section>
   );
 }
 

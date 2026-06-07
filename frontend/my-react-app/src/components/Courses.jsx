@@ -32,7 +32,6 @@ function Courses() {
   const [filters, setFilters] = useState({ degreeType: "All", category: "All" });
   const [sortBy, setSortBy] = useState("name");
   const [viewMode, setViewMode] = useState("grid");
-  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -51,10 +50,10 @@ function Courses() {
       try {
         setLoading(true);
         const [coursesData, collegesData] = await Promise.all([getCourses(), getColleges()]);
-        
+
         const coursesArray = Array.isArray(coursesData) ? coursesData : (coursesData.results || []);
         const collegesArray = Array.isArray(collegesData) ? collegesData : (collegesData.results || []);
-        
+
         const collegeMap = {};
         collegesArray.forEach(c => {
           collegeMap[c.college_id] = {
@@ -64,7 +63,7 @@ function Courses() {
             banner: c.banner_image
           };
         });
-        
+
         setCollegesMap(collegeMap);
         setCourses(coursesArray);
         setLoading(false);
@@ -75,31 +74,20 @@ function Courses() {
       }
     };
     fetchData();
-
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) setUser(JSON.parse(storedUser));
     window.scrollTo(0, 0);
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    setUser(null);
-    window.location.href = "/";
+  const handleViewCollege = (collegeId) => {
+    navigate(`/colleges/${collegeId}`);
   };
 
   const handleApplyNow = (course) => {
-    const token = localStorage.getItem("token");
     const college = collegesMap[course.college];
     const collegeData = {
       college_id: course.college,
       college_name: college?.name || "Institution",
     };
-    if (!token) {
-      navigate("/login", { state: { from: `/courses`, course, college: collegeData } });
-    } else {
-      navigate("/application-form", { state: { college: collegeData, course } });
-    }
+    navigate("/application-form", { state: { college: collegeData, course } });
   };
 
   const getDegreeTypeDisplay = (degreeType) => {
@@ -119,18 +107,18 @@ function Courses() {
       const code = c.course_code || "";
       const college = collegesMap[c.college]?.name || "";
       const category = c.category_display || c.category || "";
-      
+
       const matchesSearch = searchQuery === "" ||
         name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         code.toLowerCase().includes(searchQuery.toLowerCase()) ||
         college.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesDegreeType = filters.degreeType === "All" || 
+
+      const matchesDegreeType = filters.degreeType === "All" ||
         (c.degree_type && c.degree_type.toLowerCase() === filters.degreeType.toLowerCase());
-      
-      const matchesCategory = filters.category === "All" || 
+
+      const matchesCategory = filters.category === "All" ||
         category === filters.category;
-      
+
       return matchesSearch && matchesDegreeType && matchesCategory;
     });
 
@@ -145,13 +133,13 @@ function Courses() {
 
   return (
     <div className="courses-page">
-      <Navbar user={user} onLogout={handleLogout} />
+      <Navbar />
 
       {/* ── HERO ── */}
       <section className="courses-hero">
         <div className="hero-bg-pattern" />
         <div className="container">
-          <motion.div 
+          <motion.div
             className="courses-hero-content"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -175,7 +163,7 @@ function Courses() {
             {/* Sticky search box */}
             <div className="sticky-search-box">
               <svg className="sticky-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
               </svg>
               <input
                 type="text"
@@ -187,7 +175,7 @@ function Courses() {
             </div>
 
             <div className="filter-chips">
-              <select 
+              <select
                 className="filter-select"
                 value={filters.degreeType}
                 onChange={(e) => setFilters({ ...filters, degreeType: e.target.value })}
@@ -199,8 +187,8 @@ function Courses() {
                 <option value="phd">PhD</option>
                 <option value="integrated">Integrated</option>
               </select>
-              
-              <select 
+
+              <select
                 className="filter-select"
                 value={filters.category}
                 onChange={(e) => setFilters({ ...filters, category: e.target.value })}
@@ -217,10 +205,10 @@ function Courses() {
               </select>
               <div className="view-toggle">
                 <button className={`vt-btn ${viewMode === "grid" ? "active" : ""}`} onClick={() => setViewMode("grid")}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>
                 </button>
                 <button className={`vt-btn ${viewMode === "list" ? "active" : ""}`} onClick={() => setViewMode("list")}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
                 </button>
               </div>
             </div>
@@ -256,14 +244,14 @@ function Courses() {
                         <h3 className="course-name">{course.course_name}</h3>
                         <p className="course-clg">{collegesMap[course.college]?.name || "Institution"}</p>
                       </div>
-                      
+
                       <div className="course-card-meta">
                         <div className="c-meta-item">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" /><circle cx="12" cy="12" r="3" /></svg>
                           {course.category_display || course.category || "Engineering"}
                         </div>
                         <div className="c-meta-item">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
                           {course.degree_type?.toUpperCase() || "UG"}
                         </div>
                       </div>
@@ -280,9 +268,9 @@ function Courses() {
                           </span>
                         </div>
                       </div>
-                      
+
                       <div className="course-card-actions">
-                        <Link to={`/colleges/${course.college}`} className="btn-view-clg">View College</Link>
+                        <button className="btn-view-clg" onClick={() => handleViewCollege(course.college)}>View College</button>
                         <button className="btn-apply-now" onClick={() => handleApplyNow(course)}>Apply Now</button>
                       </div>
                     </div>

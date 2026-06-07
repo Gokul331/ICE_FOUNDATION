@@ -15,10 +15,10 @@ const fadeUp = {
 
 function CollegeImageDisplay({ college, getLogoLetters }) {
   // Use all_images from serializer or combine college_images and campus_images
-  const allImages = Array.isArray(college.all_images) 
-    ? college.all_images.filter(Boolean) 
+  const allImages = Array.isArray(college.all_images)
+    ? college.all_images.filter(Boolean)
     : (college.college_images || []).concat(college.campus_images || []).filter(Boolean);
-  
+
   const fallbackImage = college.banner_image || "";
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [hasImageError, setHasImageError] = useState(false);
@@ -91,7 +91,6 @@ function Colleges() {
   const [filters, setFilters] = useState({ city: "All", state: "All" });
   const [sortBy, setSortBy] = useState("name");
   const [viewMode, setViewMode] = useState("grid");
-  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -112,6 +111,30 @@ function Colleges() {
     return ["All", ...Array.from(states).sort()];
   }, [colleges]);
 
+  const getLogoLetters = (name) => {
+    if (!name) return "CL";
+    return name.split(" ").map(w => w[0]).join("").substring(0, 2).toUpperCase();
+  };
+
+  const handleApplyNow = (college) => {
+    const token = localStorage.getItem("token");
+    const collegeData = {
+      college_id: college.college_id || college.id,
+      college_name: college.college_name || college.name,
+    };
+    if (!token) {
+      navigate("/login", {
+        state: {
+          from: `/colleges/${college.college_id || college.id}`,
+          college: collegeData,
+          quotaType: "management"
+        }
+      });
+    } else {
+      navigate("/application-form", { state: { college: collegeData, quotaType: "management" } });
+    }
+  };
+
   useEffect(() => {
     const fetchColleges = async () => {
       try {
@@ -127,58 +150,21 @@ function Colleges() {
       }
     };
     fetchColleges();
-
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    window.scrollTo(0, 0);
   }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    setUser(null);
-    window.location.href = "/";
-  };
-
-  const handleApplyNow = (college) => {
-    const token = localStorage.getItem("token");
-    const collegeData = {
-      college_id: college.college_id || college.id,
-      college_name: college.college_name || college.name,
-    };
-    if (!token) {
-      navigate("/login", { 
-        state: { 
-          from: `/colleges/${college.college_id || college.id}`, 
-          college: collegeData, 
-          quotaType: "management" 
-        } 
-      });
-    } else {
-      navigate("/application-form", { state: { college: collegeData, quotaType: "management" } });
-    }
-  };
-
-  const getLogoLetters = (name) => {
-    if (!name) return "CL";
-    return name.split(" ").map(w => w[0]).join("").substring(0, 2).toUpperCase();
-  };
 
   const filteredAndSortedColleges = useMemo(() => {
     let filtered = colleges.filter(college => {
       const name = college.college_name || college.name || "";
       const city = college.location_city || "";
       const state = college.location_state || "";
-      
+
       const matchesSearch = searchQuery === "" ||
         name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         city.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       const matchesCity = filters.city === "All" || city === filters.city;
       const matchesState = filters.state === "All" || state === filters.state;
-      
+
       return matchesSearch && matchesCity && matchesState;
     });
 
@@ -196,13 +182,13 @@ function Colleges() {
 
   return (
     <div className="colleges-page">
-      <Navbar user={user} onLogout={handleLogout} />
+      <Navbar />
 
       {/* ── HERO ── */}
       <section className="colleges-hero">
         <div className="hero-bg-pattern" />
         <div className="container">
-          <motion.div 
+          <motion.div
             className="colleges-hero-content"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -214,13 +200,13 @@ function Colleges() {
             </div>
             <h1>Explore Top <span className="title-highlight">Colleges</span></h1>
             <p>Discover India's premier educational institutions tailored to your career aspirations.</p>
-            
+
             <div className="hero-search-box">
               <div className="search-input-wrapper">
                 <FaSearch className="search-icon" />
-                <input 
-                  type="text" 
-                  placeholder="Search by college name or city..." 
+                <input
+                  type="text"
+                  placeholder="Search by college name or city..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -248,7 +234,7 @@ function Colleges() {
             </div>
 
             <div className="filter-chips">
-              <select 
+              <select
                 className="filter-select"
                 value={filters.city}
                 onChange={(e) => setFilters({ ...filters, city: e.target.value })}
@@ -257,7 +243,7 @@ function Colleges() {
                   <option key={city} value={city}>{city}</option>
                 ))}
               </select>
-              <select 
+              <select
                 className="filter-select"
                 value={filters.state}
                 onChange={(e) => setFilters({ ...filters, state: e.target.value })}
@@ -309,7 +295,7 @@ function Colleges() {
                   <SectionReveal key={college.college_id || college.id} className="college-card-wrapper" delay={i % 6 * 0.05}>
                     <div className="college-card-premium card-3d">
                       <CollegeImageDisplay college={college} getLogoLetters={getLogoLetters} />
-                      
+
                       <div className="card-details">
                         <div className="card-top">
                           <div className="card-logo">
@@ -320,9 +306,9 @@ function Colleges() {
                             {college.location_city || "City"}, {college.location_state || "State"}
                           </div>
                         </div>
-                        
+
                         <h3 className="card-name">{college.college_name || college.name}</h3>
-                        
+
                         <div className="card-stats">
                           <div className="c-stat">
                             <span className="c-stat-label">Short Name</span>
@@ -333,7 +319,7 @@ function Colleges() {
                             <span className="c-stat-val">{college.courses_offered?.length || 0}</span>
                           </div>
                         </div>
-                        
+
                         <div className="card-actions">
                           <Link to={`/colleges/${college.college_id || college.id}`} className="btn-view">
                             View Details
