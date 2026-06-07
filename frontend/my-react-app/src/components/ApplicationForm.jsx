@@ -1,53 +1,59 @@
 ﻿import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import '../styles/applicationForm.css';
 import { SiTicktick } from "react-icons/si";
-import { submitApplication } from '../services/api'; // Changed from submitScholarshipApplication
-
-const courseOptions = [
-  'Arts',
-  'Engineering',
-  'Nursing',
-  'Pharmacy',
-  'Allied Health Science',
-  'Polytechnic',
-  'Law',
-  'Agriculture',
-];
-
-const collegeOptions = [
-  'Dhanalakshmi Srinivasan University',
-];
+import { submitApplication } from '../services/api';
 
 function ApplicationForm() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { college: passedCollege, course: passedCourse } = location.state || {};
+
   const [formData, setFormData] = useState({
-    first_name: '',        // Changed from studentName
-    last_name: '',         // Added last_name
-    mobile_number: '',     // Changed from phoneNumber
-    date_of_birth: '',     // Changed from dateOfBirth
-    email_id: '',          // Changed from email
-    aadhar_number: '',     // Changed from aadharNumber
-    father_name: '',       // Changed from fatherName
-    father_mobile: '',     // Changed from fatherNumber
-    mother_name: '',       // Changed from motherName
-    address_line1: '',     // Changed from addressLine1
-    address_line2: '',     // Changed from addressLine2
-    city: '',              // Changed from district
-    pincode: '',           // Changed from pincode
-    course_name: '',       // Changed from course
-    department_name: '',   // Changed from departmentName
-    college_id: '',        // Changed from college
-    gender: '',            // Added (required by backend)
-    community: '',         // Added (required by backend)
-    blood_group: '',       // Added (optional)
-    tenth_marks_percentage: '',     // Added for education
-    twelfth_marks_percentage: '',   // Added for education
+    first_name: '',
+    last_name: '',
+    mobile_number: '',
+    date_of_birth: '',
+    email_id: '',
+    aadhar_number: '',
+    father_name: '',
+    father_mobile: '',
+    mother_name: '',
+    mother_mobile: '',
+    address_line1: '',
+    address_line2: '',
+    city: '',
+    pincode: '',
+    course_name: passedCourse?.course_name || '',
+    department_name: passedCourse?.course_code || '',
+    college_id: passedCollege?.college_id || '',  // This should be a number
+    college_name: passedCollege?.college_name || '',
+    gender: '',
+    community: '',
+    blood_group: '',
+    tenth_marks_percentage: '',
+    twelfth_marks_percentage: '',
   });
-  
+
   const [submitted, setSubmitted] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [countdown, setCountdown] = useState(5);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Pre-fill with user data if available
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      const userData = JSON.parse(user);
+      setFormData(prev => ({
+        ...prev,
+        first_name: userData.first_name || prev.first_name,
+        last_name: userData.last_name || prev.last_name,
+        email_id: userData.email || prev.email_id,
+      }));
+    }
+  }, []);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -67,7 +73,19 @@ function ApplicationForm() {
     if (!token) {
       setError('Please login to submit application');
       setLoading(false);
+      navigate('/login');
       return;
+    }
+
+    // IMPORTANT: Convert college_id to number
+    let collegeIdNumber = null;
+    if (formData.college_id) {
+      collegeIdNumber = parseInt(formData.college_id);
+      if (isNaN(collegeIdNumber)) {
+        setError('Invalid college selection');
+        setLoading(false);
+        return;
+      }
     }
 
     // Prepare data for backend
@@ -88,18 +106,21 @@ function ApplicationForm() {
       pincode: formData.pincode,
       course_name: formData.course_name,
       department_name: formData.department_name || '',
-      college_id: formData.college_id,
+      college_id: collegeIdNumber,  // Send as number!
+      college: collegeIdNumber,     // Also send as 'college' for compatibility
       gender: formData.gender || 'male',
       community: formData.community || 'OC',
       blood_group: formData.blood_group || '',
-      tenth_marks_percentage: formData.tenth_marks_percentage || null,
-      twelfth_marks_percentage: formData.twelfth_marks_percentage || null,
+      tenth_marks_percentage: formData.tenth_marks_percentage ? parseFloat(formData.tenth_marks_percentage) : null,
+      twelfth_marks_percentage: formData.twelfth_marks_percentage ? parseFloat(formData.twelfth_marks_percentage) : null,
       has_diploma: false,
       has_ug: false,
     };
 
+    console.log('Submitting data:', submitData);
+
     try {
-      const result = await submitApplication(submitData); // Using submitApplication API
+      const result = await submitApplication(submitData);
 
       if (result.success) {
         setSubmitted(true);
@@ -111,7 +132,11 @@ function ApplicationForm() {
         console.error('Submission error:', result);
       }
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'An error occurred. Please try again.');
+      const errorMsg = err.response?.data?.error ||
+        err.response?.data?.details ||
+        err.message ||
+        'An error occurred. Please try again.';
+      setError(errorMsg);
       console.error('Unexpected error:', err);
     } finally {
       setLoading(false);
@@ -135,7 +160,7 @@ function ApplicationForm() {
       }, 1000);
 
       timer = setTimeout(() => {
-        window.location.href = '/my-applications'; // Redirect to applications list instead of external site
+        navigate('/my-applications');
       }, 5000);
     }
 
@@ -143,7 +168,7 @@ function ApplicationForm() {
       if (timer) clearTimeout(timer);
       if (countdownInterval) clearInterval(countdownInterval);
     };
-  }, [showSuccessModal]);
+  }, [showSuccessModal, navigate]);
 
   return (
     <main className="app-shell">
@@ -161,7 +186,7 @@ function ApplicationForm() {
           </p>
         </div>
       )}
-      
+
       {!showSuccessModal && (
         <section className="form-panel">
           <header className="form-header">
@@ -428,15 +453,15 @@ function ApplicationForm() {
               </div>
               <div className="field-grid">
                 <label className="field-label field-full">
-                  <span className="field-label-text">Course *</span>
-                  <select name="course_name" value={formData.course_name} onChange={handleChange} required>
-                    <option value="">Select course</option>
-                    {courseOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
+                  <span className="field-label-text">Course Name</span>
+                  <input
+                    type="text"
+                    name="course_name"
+                    value={formData.course_name}
+                    onChange={handleChange}
+                    placeholder="Course name will be auto-filled"
+                    readOnly={!!passedCourse}
+                  />
                 </label>
                 {formData.course_name && (
                   <label className="field-label field-full">
@@ -446,34 +471,30 @@ function ApplicationForm() {
                       name="department_name"
                       value={formData.department_name}
                       onChange={handleChange}
-                      placeholder="Enter department name (if applicable)"
+                      placeholder="Department name"
+                      readOnly={!!passedCourse}
                     />
                   </label>
                 )}
               </div>
             </section>
 
-            {/* College Selection */}
+            {/* College Selection - Now shows the actual college name */}
             <section className="panel-section">
               <div className="section-heading">
                 <h2>College Selection</h2>
               </div>
               <div className="college-options">
-                {collegeOptions.map((option) => (
-                  <label
-                    key={option}
-                    className={`college-option ${formData.college_id === option ? 'selected' : ''}`}
-                  >
-                    <input
-                      type="radio"
-                      name="college_id"
-                      value={option}
-                      checked={formData.college_id === option}
-                      onChange={handleChange}
-                    />
-                    <span>{option}</span>
-                  </label>
-                ))}
+                <div className="college-option selected">
+                  <span>
+                    {formData.college_name || (passedCollege?.college_name) || 'Dhanalakshmi Srinivasan University'}
+                  </span>
+                  <input
+                    type="hidden"
+                    name="college_id"
+                    value={formData.college_id || passedCollege?.college_id || 1}
+                  />
+                </div>
               </div>
             </section>
 
