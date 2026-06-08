@@ -8,14 +8,6 @@ import Navbar from "./Navbar";
 import Footer from "./Footer";
 import "../styles/collegedetails.css";
 
-// Fallback mock data
-const FALLBACK_COURSES = [
-  { id: 1, course_code: "CS", course_name: "Computer Science and Engineering", category: "engineering", degree_type: "ug" },
-  { id: 2, course_code: "AD", course_name: "Artificial Intelligence and Data Science", category: "engineering", degree_type: "ug" },
-  { id: 3, course_code: "IT", course_name: "Information Technology", category: "engineering", degree_type: "ug" },
-  { id: 4, course_code: "CS_CYBER", course_name: "Computer Science and Engineering (Cyber Security)", category: "engineering", degree_type: "ug" },
-];
-
 const categoryConfig = {
   engineering: { name: "Engineering & Technology", icon: "⚙️", color: "#2563EB", bg: "#EFF6FF", gradient: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)" },
   management: { name: "Management", icon: "📊", color: "#D97706", bg: "#FFFBEB", gradient: "linear-gradient(135deg, #D97706 0%, #B45309 100%)" },
@@ -28,6 +20,8 @@ function CollegeDetail() {
   const [college, setCollege] = useState(null);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [coursesLoading, setCoursesLoading] = useState(true);
+  const [coursesError, setCoursesError] = useState(null);
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [activeCategory, setActiveCategory] = useState(null);
@@ -36,6 +30,8 @@ function CollegeDetail() {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setCoursesLoading(true);
+        setCoursesError(null);
 
         // Fetch college details
         try {
@@ -44,33 +40,38 @@ function CollegeDetail() {
         } catch (err) {
           console.error("Error fetching college:", err);
           setCollege({
-            college_name: "DHANALAKSHMI SRINIVASAN UNIVERSITY",
-            short_name: "DSU",
-            location_city: "Perambalur",
-            location_state: "Tamil Nadu",
-            location_pincode: "621212",
-            address: "Perambalur - 621212, Tamil Nadu, India",
+            college_name: "College Details Unavailable",
+            short_name: "N/A",
+            location_city: "N/A",
+            location_state: "N/A",
+            location_pincode: "N/A",
+            address: "Address information not available",
           });
         }
 
-        // Fetch courses
-        let coursesData = [];
+        // Fetch courses - NO FALLBACK DATA
         try {
-          coursesData = await getCollegeCourses(id);
+          const coursesData = await getCollegeCourses(id);
           if (coursesData && Array.isArray(coursesData) && coursesData.length > 0) {
             setCourses(coursesData);
+            setCoursesError(null);
           } else {
-            setCourses(FALLBACK_COURSES);
+            setCourses([]);
+            setCoursesError("No courses available for this college");
           }
         } catch (err) {
           console.error("Error fetching courses:", err);
-          setCourses(FALLBACK_COURSES);
+          setCourses([]);
+          setCoursesError("Unable to load courses. Please try again later.");
+        } finally {
+          setCoursesLoading(false);
         }
 
         setLoading(false);
       } catch (err) {
         console.error("Error:", err);
         setLoading(false);
+        setCoursesLoading(false);
       }
     };
 
@@ -132,11 +133,11 @@ function CollegeDetail() {
   );
 
   const displayCollege = college || {
-    college_name: "DHANALAKSHMI SRINIVASAN UNIVERSITY",
-    short_name: "DSU",
-    location_city: "Perambalur",
-    location_state: "Tamil Nadu",
-    location_pincode: "621212",
+    college_name: "College Details",
+    short_name: "N/A",
+    location_city: "N/A",
+    location_state: "N/A",
+    location_pincode: "N/A",
   };
 
   return (
@@ -164,7 +165,7 @@ function CollegeDetail() {
               </div>
               <div className="hero-stats">
                 <div className="stat">
-                  <span className="stat-value">{displayCollege.short_name || "DSU"}</span>
+                  <span className="stat-value">{displayCollege.short_name || "N/A"}</span>
                   <span className="stat-label">College Code</span>
                 </div>
                 <div className="stat">
@@ -182,10 +183,6 @@ function CollegeDetail() {
               <button className="btn-apply" onClick={() => handleApplyNow(courses[0])}>
                 Apply Now →
               </button>
-              <div className="card-features">
-                <span>✓ Expert Counseling</span>
-                <span>✓ Direct Admission Support</span>
-              </div>
             </div>
           </div>
         </div>
@@ -252,58 +249,96 @@ function CollegeDetail() {
       )}
 
       {/* Courses Tab */}
-      {activeTab === 'courses' && categories.length > 0 && (
+      {activeTab === 'courses' && (
         <div className="courses-section">
           <div className="container">
-            {/* Category Filters */}
-            <div className="category-filters">
-              {categories.map(cat => {
-                const config = categoryConfig[cat] || { name: cat.toUpperCase(), icon: "📘", color: "#6B7280", bg: "#F3F4F6" };
-                return (
-                  <button
-                    key={cat}
-                    className={`filter-chip ${activeCategory === cat ? 'active' : ''}`}
-                    onClick={() => setActiveCategory(cat)}
-                    style={{
-                      background: activeCategory === cat ? config.color : 'transparent',
-                      color: activeCategory === cat ? 'white' : config.color,
-                      borderColor: config.color
-                    }}
-                  >
-                    <span>{config.icon}</span>
-                    {config.name}
-                    <span className="count" style={{ background: activeCategory === cat ? 'rgba(255,255,255,0.2)' : config.bg }}>
-                      {groupedCourses[cat].length}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            {/* Loading State */}
+            {coursesLoading && (
+              <div className="courses-loading">
+                <div className="premium-spinner"></div>
+                <p>Loading courses for {displayCollege.college_name}...</p>
+              </div>
+            )}
 
-            {/* Courses Grid */}
-            <div className="courses-grid">
-              {currentCourses.map((course) => {
-                const degreeBadge = getDegreeBadge(course.degree_type);
-                return (
-                  <div key={course.id || course.course_id} className="course-item">
-                    <div className="course-header">
-                      <span className="course-code">{course.course_code}</span>
-                      <span className="degree-tag" style={{ background: degreeBadge.bg }}>
-                        {degreeBadge.label}
-                      </span>
-                    </div>
-                    <h3 className="course-name">{course.course_name}</h3>
-                    <div className="course-meta">
-                      <span>⏱️ {course.degree_type === 'ug' ? '4 Years' : '2 Years'}</span>
-                      <span>📖 Full Time</span>
-                    </div>
-                    <button className="apply-btn" onClick={() => handleApplyNow(course)}>
-                      Apply Now →
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+            {/* Error State */}
+            {coursesError && !coursesLoading && (
+              <div className="courses-error">
+                <div className="error-icon">⚠️</div>
+                <h3>Unable to Load Courses</h3>
+                <p>{coursesError}</p>
+                <button
+                  className="retry-btn"
+                  onClick={() => window.location.reload()}
+                >
+                  Try Again
+                </button>
+              </div>
+            )}
+
+            {/* No Courses State */}
+            {!coursesLoading && !coursesError && courses.length === 0 && (
+              <div className="no-courses">
+                <div className="no-courses-icon">📚</div>
+                <h3>No Courses Available</h3>
+                <p>This college currently doesn't have any courses listed.</p>
+                <p>Please check back later or contact the admission office for more information.</p>
+              </div>
+            )}
+
+            {/* Courses Display */}
+            {!coursesLoading && !coursesError && categories.length > 0 && (
+              <>
+                {/* Category Filters */}
+                <div className="category-filters">
+                  {categories.map(cat => {
+                    const config = categoryConfig[cat] || { name: cat.toUpperCase(), icon: "📘", color: "#6B7280", bg: "#F3F4F6" };
+                    return (
+                      <button
+                        key={cat}
+                        className={`filter-chip ${activeCategory === cat ? 'active' : ''}`}
+                        onClick={() => setActiveCategory(cat)}
+                        style={{
+                          background: activeCategory === cat ? config.color : 'transparent',
+                          color: activeCategory === cat ? 'white' : config.color,
+                          borderColor: config.color
+                        }}
+                      >
+                        <span>{config.icon}</span>
+                        {config.name}
+                        <span className="count" style={{ background: activeCategory === cat ? 'rgba(255,255,255,0.2)' : config.bg }}>
+                          {groupedCourses[cat].length}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Courses Grid */}
+                <div className="courses-grid">
+                  {currentCourses.map((course) => {
+                    const degreeBadge = getDegreeBadge(course.degree_type);
+                    return (
+                      <div key={course.id || course.course_id} className="course-item">
+                        <div className="course-header">
+                          <span className="course-code">{course.course_code}</span>
+                          <span className="degree-tag" style={{ background: degreeBadge.bg }}>
+                            {degreeBadge.label}
+                          </span>
+                        </div>
+                        <h3 className="course-name">{course.course_name}</h3>
+                        <div className="course-meta">
+                          <span>⏱️ {course.degree_type === 'ug' ? '4 Years' : course.degree_type === 'pg' ? '2 Years' : '3 Years'}</span>
+                          <span>📖 Full Time</span>
+                        </div>
+                        <button className="apply-btn" onClick={() => handleApplyNow(course)}>
+                          Apply Now →
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
