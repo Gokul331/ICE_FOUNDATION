@@ -208,6 +208,7 @@ class College(models.Model):
 
 
 # ==================== COURSE MODEL ====================
+# ==================== COURSE MODEL ====================
 class Course(models.Model):
     DEGREE_TYPE_CHOICES = [
         ('ug', 'UG'),
@@ -277,31 +278,31 @@ class Course(models.Model):
 
     # ==================== ALLIED HEALTH SCIENCE COURSES ====================
     ALLIED_HEALTH_COURSE_CHOICES = [
-        ('BSC_ACCIDENT_EMERGENCY', 'B.Sc - Accident and Emergency Care Technology'),
-        ('BSC_CARDIO_PULMONARY', 'B.Sc - Cardio Pulmonary and Perfusion Technology'),
-        ('BSC_CARDIO_VASCULAR', 'B.Sc - Cardio Vascular Technology'),
-        ('BSC_CRITICAL_CARE', 'B.Sc - Critical Care Technology'),
-        ('BSC_DIALYSIS', 'B.Sc - Dialysis Technology'),
+        ('BSC_AECT', 'B.Sc - Accident and Emergency Care Technology'),
+        ('BSC_CPPT', 'B.Sc - Cardio Pulmonary and Perfusion Technology'),
+        ('BSC_CVT', 'B.Sc - Cardio Vascular Technology'),
+        ('BSC_CCT', 'B.Sc - Critical Care Technology'),
+        ('BSC_DT', 'B.Sc - Dialysis Technology'),
         ('BSC_MLT', 'B.Sc - Medical Laboratory Technology'),
-        ('BSC_OT_ANAESTHESIA', 'B.Sc - Operation Theatre and Anaesthesia Technology'),
+        ('BSC_OTAT', 'B.Sc - Operation Theatre and Anaesthesia Technology'),
         ('BOPTOM', 'B.Optometry'),
-        ('BSC_PHYSICIAN_ASSISTANT', 'B.Sc - Physician Assistant'),
-        ('BSC_RADIOLOGY', 'B.Sc - Radiography and Imaging Technology'),
-        ('MSC_ANAESTHESIA', 'M.Sc - Anaesthesia Tech'),
-        ('MSC_DIALYSIS', 'M.Sc - Dialysis Technology'),
-        ('MSC_MEDICAL_MICRO', 'M.Sc - Medical Microbiology'),
-        ('MSC_MEDICAL_BIOCHEM', 'M.Sc - Medical Biochemistry'),
-        ('MSC_RADIOLOGY', 'M.Sc - Radiography and Imaging Tech'),
-        ('MSC_ACCIDENT_EMERGENCY', 'M.Sc - Accident and Emergency Care'),
+        ('BSC_PA', 'B.Sc - Physician Assistant'),
+        ('BSC_RIT', 'B.Sc - Radiography and Imaging Technology'),
+        ('MSC_AT', 'M.Sc - Anaesthesia Tech'),
+        ('MSC_DT', 'M.Sc - Dialysis Technology'),
+        ('MSC_MM', 'M.Sc - Medical Microbiology'),
+        ('MSC_MB', 'M.Sc - Medical Biochemistry'),
+        ('MSC_RIT', 'M.Sc - Radiography and Imaging Tech'),
+        ('MSC_AECT', 'M.Sc - Accident and Emergency Care'),
     ]
 
     # ==================== PHARMACY COURSES ====================
     PHARMACY_COURSE_CHOICES = [
         ('BPHARM', 'B.Pharm - Bachelor of Pharmacy'),
         ('DPHARM', 'D.Pharm - Diploma in Pharmacy'),
-        ('MPHARM_PHARMACEUTICALS', 'M.Pharm - Pharmaceuticals'),
+        ('MPHARM_PHARM', 'M.Pharm - Pharmaceuticals'),
         ('MPHARM_ANALYSIS', 'M.Pharm - Pharmaceutical Analysis'),
-        ('MPHARM_PHARMACOGNOSY', 'M.Pharm - Pharmacognosy'),
+        ('MPHARM_PCOG', 'M.Pharm - Pharmacognosy'),
         ('PHARMD', 'Pharm.D'),
     ]
 
@@ -411,7 +412,12 @@ class Course(models.Model):
         help_text="Course category (e.g., Engineering, Medical, etc.)"
     )
     
-    course_code = models.CharField(max_length=50, choices=COURSE_NAME_CHOICES, help_text="Select course")
+    # IMPORTANT: Increase max_length to 100 to accommodate all course codes
+    course_code = models.CharField(
+        max_length=100,  # Changed from 50 to 100
+        choices=COURSE_NAME_CHOICES, 
+        help_text="Select course"
+    )
     course_name = models.CharField(max_length=200, help_text="Course name")
     
     degree_type = models.CharField(max_length=20, choices=DEGREE_TYPE_CHOICES)
@@ -423,12 +429,39 @@ class Course(models.Model):
     def __str__(self):
         return f"{self.get_course_code_display()} - {self.college.college_name}"
 
+    def clean(self):
+        """Validate that course_code is a valid choice"""
+        super().clean()
+        
+        # Get all valid course codes
+        valid_codes = [code for code, name in self.COURSE_NAME_CHOICES]
+        
+        # Check if the course_code is a valid code
+        if self.course_code and self.course_code not in valid_codes:
+            # If it's not a valid code, check if it might be a display name
+            valid_names = [name for code, name in self.COURSE_NAME_CHOICES]
+            if self.course_code in valid_names:
+                # Find the corresponding code
+                for code, name in self.COURSE_NAME_CHOICES:
+                    if name == self.course_code:
+                        self.course_code = code
+                        break
+            else:
+                raise ValidationError({
+                    'course_code': f"'{self.course_code}' is not a valid course code. Please select from the dropdown."
+                })
+
     def save(self, *args, **kwargs):
+        # Run validation
+        self.full_clean()
+        
         # Auto-set course_name based on course_code
         if self.course_code:
             course_dict = dict(self.COURSE_NAME_CHOICES)
             self.course_name = course_dict.get(self.course_code, self.course_code)
+        
         super().save(*args, **kwargs)
+        
         if self.college:
             self.college.sync_courses_offered()
     
@@ -459,7 +492,6 @@ class Course(models.Model):
     class Meta:
         ordering = ['college__college_name', 'category', 'course_name']
         unique_together = ['college', 'course_code']
-
 
 # Helper function to get courses by category
 def get_courses_by_category(category):
