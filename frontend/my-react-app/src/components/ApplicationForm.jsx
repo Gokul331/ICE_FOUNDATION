@@ -2,18 +2,18 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../styles/applicationForm.css';
 import { SiTicktick } from "react-icons/si";
+import { FaGraduationCap, FaUserGraduate, FaUsers, FaMapMarkerAlt, FaBookOpen, FaUniversity, FaArrowRight, FaCheckCircle } from 'react-icons/fa';
 import {
   submitApplication,
   getCollegeCategories,
   getCategoryDegreeTypes,
   getDegreeCourses,
-  getCollegeDetail
 } from '../services/api';
 
 function ApplicationForm() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { college: passedCollege, course: passedCourse, quotaType } = location.state || {};
+  const { college: passedCollege, course: passedCourse } = location.state || {};
 
   // Hierarchical selection states
   const [colleges, setColleges] = useState([]);
@@ -39,7 +39,7 @@ function ApplicationForm() {
     courses: false
   });
 
-  // Form data state
+  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -62,7 +62,6 @@ function ApplicationForm() {
     twelfth_marks_percentage: '',
   });
 
-  const [submitted, setSubmitted] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [countdown, setCountdown] = useState(5);
   const [loading, setLoading] = useState(false);
@@ -75,11 +74,7 @@ function ApplicationForm() {
         const response = await fetch('https://ice-foundation-1.onrender.com/api/colleges/');
         const data = await response.json();
         const collegesArray = Array.isArray(data) ? data : data.results || [];
-        // Remove duplicate colleges by ID
-        const uniqueColleges = collegesArray.filter((college, index, self) =>
-          index === self.findIndex(c => c.college_id === college.college_id)
-        );
-        setColleges(uniqueColleges);
+        setColleges(collegesArray);
       } catch (err) {
         console.error('Error fetching colleges:', err);
       }
@@ -107,7 +102,6 @@ function ApplicationForm() {
       if (!selectedCollege) {
         setCategories([]);
         setSelectedCategory('');
-        setSelectedCategoryName('');
         setDegreeTypes([]);
         setSelectedDegreeType('');
         setCourses([]);
@@ -119,22 +113,18 @@ function ApplicationForm() {
       try {
         const response = await getCollegeCategories(selectedCollege);
         if (response.success && response.categories) {
-          // Remove duplicate categories by code
+          // Remove duplicates by code
           const uniqueCategories = response.categories.filter((cat, index, self) =>
             index === self.findIndex(c => c.code === cat.code)
           );
           setCategories(uniqueCategories);
-        } else {
-          setCategories([]);
         }
       } catch (err) {
         console.error('Error loading categories:', err);
-        setCategories([]);
       } finally {
         setLoadingFields(prev => ({ ...prev, categories: false }));
       }
     };
-
     loadCategories();
   }, [selectedCollege]);
 
@@ -153,22 +143,18 @@ function ApplicationForm() {
       try {
         const response = await getCategoryDegreeTypes(selectedCollege, selectedCategory);
         if (response.success && response.degree_types) {
-          // Remove duplicate degree types by code
-          const uniqueDegreeTypes = response.degree_types.filter((degree, index, self) =>
-            index === self.findIndex(d => d.code === degree.code)
+          // Remove duplicates by code
+          const uniqueDegreeTypes = response.degree_types.filter((deg, index, self) =>
+            index === self.findIndex(d => d.code === deg.code)
           );
           setDegreeTypes(uniqueDegreeTypes);
-        } else {
-          setDegreeTypes([]);
         }
       } catch (err) {
         console.error('Error loading degree types:', err);
-        setDegreeTypes([]);
       } finally {
         setLoadingFields(prev => ({ ...prev, degreeTypes: false }));
       }
     };
-
     loadDegreeTypes();
   }, [selectedCollege, selectedCategory]);
 
@@ -185,29 +171,25 @@ function ApplicationForm() {
       try {
         const response = await getDegreeCourses(selectedCollege, selectedCategory, selectedDegreeType);
         if (response.success && response.courses) {
-          // Remove duplicate courses by ID
+          // Remove duplicates by id
           const uniqueCourses = response.courses.filter((course, index, self) =>
             index === self.findIndex(c => c.id === course.id)
           );
           setCourses(uniqueCourses);
-        } else {
-          setCourses([]);
         }
       } catch (err) {
         console.error('Error loading courses:', err);
-        setCourses([]);
       } finally {
         setLoadingFields(prev => ({ ...prev, courses: false }));
       }
     };
-
     loadCourses();
   }, [selectedCollege, selectedCategory, selectedDegreeType]);
 
-  // Update course name when selected course changes
+  // Update course details when selected
   useEffect(() => {
     if (selectedCourse && courses.length > 0) {
-      const course = courses.find(c => c.id === parseInt(selectedCourse) || c.id === selectedCourse);
+      const course = courses.find(c => c.id === parseInt(selectedCourse));
       if (course) {
         setSelectedCourseName(course.course_name);
         setSelectedDepartment(course.course_code_display || course.course_code);
@@ -215,23 +197,17 @@ function ApplicationForm() {
     }
   }, [selectedCourse, courses]);
 
-  // Update category name when selected category changes
   useEffect(() => {
     if (selectedCategory && categories.length > 0) {
       const category = categories.find(c => c.code === selectedCategory);
-      if (category) {
-        setSelectedCategoryName(category.name);
-      }
+      if (category) setSelectedCategoryName(category.name);
     }
   }, [selectedCategory, categories]);
 
-  // Update degree type name when selected degree type changes
   useEffect(() => {
     if (selectedDegreeType && degreeTypes.length > 0) {
       const degree = degreeTypes.find(d => d.code === selectedDegreeType);
-      if (degree) {
-        setSelectedDegreeTypeName(degree.name);
-      }
+      if (degree) setSelectedDegreeTypeName(degree.name);
     }
   }, [selectedDegreeType, degreeTypes]);
 
@@ -241,40 +217,32 @@ function ApplicationForm() {
     const college = colleges.find(c => c.college_id === collegeId);
     setCollegeName(college?.college_name || '');
     setSelectedCategory('');
-    setSelectedCategoryName('');
     setSelectedDegreeType('');
-    setSelectedDegreeTypeName('');
     setSelectedCourse('');
-    setSelectedCourseName('');
-    setSelectedDepartment('');
+    setCurrentStep(2);
   };
 
   const handleCategoryChange = (e) => {
     setSelectedCategory(e.target.value);
     setSelectedDegreeType('');
-    setSelectedDegreeTypeName('');
     setSelectedCourse('');
-    setSelectedCourseName('');
-    setSelectedDepartment('');
+    setCurrentStep(3);
   };
 
   const handleDegreeTypeChange = (e) => {
     setSelectedDegreeType(e.target.value);
     setSelectedCourse('');
-    setSelectedCourseName('');
-    setSelectedDepartment('');
+    setCurrentStep(4);
   };
 
   const handleCourseChange = (e) => {
     setSelectedCourse(e.target.value);
+    setCurrentStep(5);
   };
 
   const handleFormChange = (event) => {
     const { name, value } = event.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (event) => {
@@ -290,14 +258,12 @@ function ApplicationForm() {
       return;
     }
 
-    // Validate selections
     if (!selectedCollege || !selectedCategory || !selectedDegreeType || !selectedCourse) {
       setError('Please complete all course selections');
       setLoading(false);
       return;
     }
 
-    // Prepare data for backend
     const submitData = {
       first_name: formData.first_name,
       last_name: formData.last_name || '',
@@ -329,35 +295,51 @@ function ApplicationForm() {
       has_ug: false,
     };
 
-    console.log('Submitting data:', submitData);
-
     try {
       const result = await submitApplication(submitData);
-
       if (result.success) {
         setShowSuccessModal(true);
         setCountdown(5);
+
+        // Clear form data after successful submission
+        setFormData({
+          first_name: '',
+          last_name: '',
+          mobile_number: '',
+          date_of_birth: '',
+          email_id: '',
+          aadhar_number: '',
+          father_name: '',
+          father_mobile: '',
+          mother_name: '',
+          mother_mobile: '',
+          address_line1: '',
+          address_line2: '',
+          city: '',
+          pincode: '',
+          gender: '',
+          community: '',
+          blood_group: '',
+          tenth_marks_percentage: '',
+          twelfth_marks_percentage: '',
+        });
       } else {
-        setError(result.error || result.message || 'Failed to submit application');
+        setError(result.error || 'Failed to submit application');
       }
     } catch (err) {
-      const errorMsg = err.response?.data?.error ||
-        err.response?.data?.details ||
-        err.message ||
-        'An error occurred. Please try again.';
-      setError(errorMsg);
-      console.error('Unexpected error:', err);
+      setError(err.response?.data?.error || 'An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Countdown and redirect
+  // Countdown and redirect to home page
   useEffect(() => {
     let timer;
     let countdownInterval;
 
     if (showSuccessModal) {
+      // Countdown timer
       countdownInterval = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
@@ -368,8 +350,13 @@ function ApplicationForm() {
         });
       }, 1000);
 
+      // Redirect to home page after 5 seconds with success message
       timer = setTimeout(() => {
-        navigate('/my-applications');
+        navigate('/', {
+          state: {
+            successMessage: 'Application submitted successfully!',
+          },
+        });
       }, 5000);
     }
 
@@ -379,442 +366,216 @@ function ApplicationForm() {
     };
   }, [showSuccessModal, navigate]);
 
-  // Check if coming from college detail page (pre-selected)
-  const isPreSelected = !!passedCollege || !!passedCourse;
-
-  // Determine if all selections are made
   const isSelectionComplete = selectedCollege && selectedCategory && selectedDegreeType && selectedCourse;
 
+  const steps = [
+    { number: 1, title: 'College', icon: <FaUniversity />, isComplete: !!selectedCollege },
+    { number: 2, title: 'Category', icon: <FaBookOpen />, isComplete: !!selectedCategory },
+    { number: 3, title: 'Degree', icon: <FaGraduationCap />, isComplete: !!selectedDegreeType },
+    { number: 4, title: 'Course', icon: <FaUserGraduate />, isComplete: !!selectedCourse },
+  ];
+
   return (
-    <main className="app-shell">
+    <main className="app-shell-modern">
       {showSuccessModal && (
-        <div className="success-modal">
-          <div className="success-icon">
-            <SiTicktick />
+        <div className="success-modal-modern">
+          <div className="success-icon-modern">
+            <FaCheckCircle />
           </div>
           <h3>Application Submitted Successfully!</h3>
-          <p>
-            Thank you for submitting your application. You will be redirected to your applications page shortly.
-          </p>
+          <p>Your application has been successfully submitted. Thank you for choosing Vamshi EduCare.</p>
           <p className="redirect-note">
-            Redirecting in <span className="countdown">{countdown}</span> second{countdown !== 1 ? 's' : ''}...
+            Redirecting to <strong>Home Page</strong> in <span className="countdown">{countdown}</span> second{countdown !== 1 ? 's' : ''}...
           </p>
         </div>
       )}
 
       {!showSuccessModal && (
-        <section className="form-panel">
-          <header className="form-header">
-            <div className="form-title">
-              <img src="/Logo.png" alt="Vamshi Edu Care" className="form-logo" />
-              <div className="form-title-copy">
-                <p className="brand-name">
-                  <span className="brand-name-line">Vamshi Edu Care</span>
-                </p>
-                <h1>Enquiry Form</h1>
-                <p className="form-description">
-                  Complete your application in one go.
-                </p>
+        <div className="form-container-modern">
+          {/* Header */}
+          <div className="form-header-modern">
+            <div className="logo-section">
+              <img src="/Logo.png" alt="Logo" className="logo-modern" />
+              <div className="brand-section">
+                <span className="brand-name-modern">VAMSHI EDUCARE</span>
+                <span className="brand-tagline">Career Guidance Center</span>
               </div>
             </div>
-          </header>
+            <h1>Application Form</h1>
+            <p>Fill in the details to apply for your desired course</p>
+          </div>
 
-          <form className="application-form" onSubmit={handleSubmit}>
-            {/* ==================== COURSE SELECTION SECTION (GROUPED) ==================== */}
-            <section className="panel-section selection-group">
-              <div className="section-heading">
-                <div className="step-indicator">Step 1-4</div>
-                <h2>Course Selection</h2>
-                <p className="section-description">Select your desired course from the options below</p>
+          {/* Progress Steps */}
+          <div className="progress-steps">
+            {steps.map((step, index) => (
+              <div key={step.number} className={`step-item ${step.isComplete ? 'completed' : ''} ${currentStep === step.number ? 'active' : ''}`}>
+                <div className="step-circle">
+                  {step.isComplete ? <FaCheckCircle /> : step.number}
+                </div>
+                <div className="step-label">{step.title}</div>
+                {index < steps.length - 1 && <div className="step-line" />}
+              </div>
+            ))}
+          </div>
+
+          <form onSubmit={handleSubmit} className="form-modern">
+            {/* Course Selection Section */}
+            <div className="card-modern">
+              <div className="card-title">
+                <FaGraduationCap /> Course Selection
               </div>
 
-              <div className="selection-grid">
-                {/* College Selection */}
-                <div className="selection-item">
-                  <label className="selection-label">
-                    <span className="step-number">1</span>
-                    Select College <span className="required">*</span>
-                  </label>
-                  <select
-                    value={selectedCollege}
-                    onChange={handleCollegeChange}
-                    disabled={isPreSelected && selectedCollege}
-                    className="selection-select"
-                    required
-                  >
+              <div className="form-grid-2">
+                <div className="input-group">
+                  <label>Select College *</label>
+                  <select value={selectedCollege} onChange={handleCollegeChange} required>
                     <option value="">-- Choose College --</option>
-                    {colleges.map(college => (
-                      <option key={college.college_id} value={college.college_id}>
+                    {colleges.map((college, index) => (
+                      <option key={`college-${college.college_id}-${index}`} value={college.college_id}>
                         {college.college_name}
                       </option>
                     ))}
                   </select>
-                  {loadingFields.categories && <span className="loading-text">Loading categories...</span>}
                 </div>
 
-                {/* Category Selection */}
-                <div className="selection-item">
-                  <label className="selection-label">
-                    <span className="step-number">2</span>
-                    Select Category <span className="required">*</span>
-                  </label>
+                <div className="input-group">
+                  <label>Select Category *</label>
                   <select
                     value={selectedCategory}
                     onChange={handleCategoryChange}
-                    disabled={!selectedCollege || loadingFields.categories || (isPreSelected && selectedCategory)}
-                    className="selection-select"
+                    disabled={!selectedCollege || loadingFields.categories}
                     required
                   >
                     <option value="">-- Choose Category --</option>
-                    {categories.map(category => (
-                      <option key={category.code} value={category.code}>
-                        {category.name} ({category.course_count} courses)
+                    {categories.map((cat, index) => (
+                      <option key={`category-${cat.code}-${index}`} value={cat.code}>
+                        {cat.name}
                       </option>
                     ))}
                   </select>
                 </div>
 
-                {/* Degree Type Selection */}
-                <div className="selection-item">
-                  <label className="selection-label">
-                    <span className="step-number">3</span>
-                    Select Degree Type <span className="required">*</span>
-                  </label>
+                <div className="input-group">
+                  <label>Select Degree Type *</label>
                   <select
                     value={selectedDegreeType}
                     onChange={handleDegreeTypeChange}
-                    disabled={!selectedCategory || loadingFields.degreeTypes || (isPreSelected && selectedDegreeType)}
-                    className="selection-select"
+                    disabled={!selectedCategory || loadingFields.degreeTypes}
                     required
                   >
                     <option value="">-- Choose Degree Type --</option>
-                    {degreeTypes.map(degree => (
-                      <option key={degree.code} value={degree.code}>
-                        {degree.name}
+                    {degreeTypes.map((deg, index) => (
+                      <option key={`degree-${deg.code}-${index}`} value={deg.code}>
+                        {deg.name}
                       </option>
                     ))}
                   </select>
                 </div>
 
-                {/* Course Selection */}
-                <div className="selection-item">
-                  <label className="selection-label">
-                    <span className="step-number">4</span>
-                    Select Course <span className="required">*</span>
-                  </label>
+                <div className="input-group">
+                  <label>Select Course *</label>
                   <select
                     value={selectedCourse}
                     onChange={handleCourseChange}
-                    disabled={!selectedDegreeType || loadingFields.courses || (isPreSelected && selectedCourse)}
-                    className="selection-select"
+                    disabled={!selectedDegreeType || loadingFields.courses}
                     required
                   >
                     <option value="">-- Choose Course --</option>
-                    {courses.map(course => (
-                      <option key={course.id} value={course.id}>
-                        {course.full_name || `${course.course_code} - ${course.course_name}`}
+                    {courses.map((course, index) => (
+                      <option key={`course-${course.id}-${index}`} value={course.id}>
+                        {course.course_name} ({course.course_code})
                       </option>
                     ))}
                   </select>
                 </div>
               </div>
 
-              {/* Selection Summary Card */}
+              {/* Selection Summary */}
               {isSelectionComplete && (
-                <div className="selection-summary-card">
-                  <div className="summary-header">
-                    <span className="summary-icon">📋</span>
-                    <h3>Selected Course Summary</h3>
-                  </div>
-                  <div className="summary-content">
-                    <div className="summary-item">
-                      <span className="summary-key">College:</span>
-                      <span className="summary-value">{collegeName}</span>
-                    </div>
-                    <div className="summary-item">
-                      <span className="summary-key">Category:</span>
-                      <span className="summary-value">{selectedCategoryName}</span>
-                    </div>
-                    <div className="summary-item">
-                      <span className="summary-key">Degree Type:</span>
-                      <span className="summary-value">{selectedDegreeTypeName}</span>
-                    </div>
-                    <div className="summary-item">
-                      <span className="summary-key">Course:</span>
-                      <span className="summary-value">{selectedCourseName}</span>
-                    </div>
-                    <div className="summary-item">
-                      <span className="summary-key">Department Code:</span>
-                      <span className="summary-value">{selectedDepartment}</span>
-                    </div>
+                <div className="selection-summary-modern">
+                  <div className="summary-title">Selected Course Summary</div>
+                  <div className="summary-grid">
+                    <div><strong>College:</strong> {collegeName}</div>
+                    <div><strong>Category:</strong> {selectedCategoryName}</div>
+                    <div><strong>Degree Type:</strong> {selectedDegreeTypeName}</div>
+                    <div><strong>Course:</strong> {selectedCourseName}</div>
                   </div>
                 </div>
               )}
-            </section>
+            </div>
 
-            {/* Personal Details - Only show if course is selected */}
+            {/* Personal Details Section - Only show if course is selected */}
             {isSelectionComplete && (
               <>
-                {/* Personal Details */}
-                <section className="panel-section">
-                  <div className="section-heading">
-                    <h2>Personal Details</h2>
-                  </div>
-                  <div className="field-grid">
-                    <label className="field-label">
-                      <span className="field-label-text">First Name *</span>
-                      <input
-                        type="text"
-                        name="first_name"
-                        value={formData.first_name}
-                        onChange={handleFormChange}
-                        placeholder="Enter first name"
-                        required
-                      />
-                    </label>
-                    <label className="field-label">
-                      <span className="field-label-text">Last Name</span>
-                      <input
-                        type="text"
-                        name="last_name"
-                        value={formData.last_name}
-                        onChange={handleFormChange}
-                        placeholder="Enter last name"
-                      />
-                    </label>
-                    <label className="field-label">
-                      <span className="field-label-text">Mobile Number *</span>
-                      <input
-                        type="tel"
-                        name="mobile_number"
-                        value={formData.mobile_number}
-                        onChange={handleFormChange}
-                        placeholder="Enter mobile number"
-                        maxLength={10}
-                        required
-                      />
-                    </label>
-                    <label className="field-label">
-                      <span className="field-label-text">Date of Birth *</span>
-                      <input
-                        type="date"
-                        name="date_of_birth"
-                        value={formData.date_of_birth}
-                        onChange={handleFormChange}
-                        required
-                      />
-                    </label>
-                    <label className="field-label">
-                      <span className="field-label-text">Email ID *</span>
-                      <input
-                        type="email"
-                        name="email_id"
-                        value={formData.email_id}
-                        onChange={handleFormChange}
-                        placeholder="Enter email address"
-                        required
-                      />
-                    </label>
-                    <label className="field-label">
-                      <span className="field-label-text">Aadhar Number</span>
-                      <input
-                        type="text"
-                        name="aadhar_number"
-                        value={formData.aadhar_number}
-                        onChange={handleFormChange}
-                        placeholder="Enter Aadhar number"
-                        maxLength={12}
-                      />
-                    </label>
-                    <label className="field-label">
-                      <span className="field-label-text">Gender *</span>
+                <div className="card-modern">
+                  <div className="card-title"><FaUserGraduate /> Personal Details</div>
+                  <div className="form-grid-2">
+                    <div className="input-group"><label>First Name *</label><input type="text" name="first_name" value={formData.first_name} onChange={handleFormChange} required /></div>
+                    <div className="input-group"><label>Last Name</label><input type="text" name="last_name" value={formData.last_name} onChange={handleFormChange} /></div>
+                    <div className="input-group"><label>Mobile Number *</label><input type="tel" name="mobile_number" value={formData.mobile_number} onChange={handleFormChange} maxLength={10} required /></div>
+                    <div className="input-group"><label>Date of Birth *</label><input type="date" name="date_of_birth" value={formData.date_of_birth} onChange={handleFormChange} required /></div>
+                    <div className="input-group"><label>Email ID *</label><input type="email" name="email_id" value={formData.email_id} onChange={handleFormChange} required /></div>
+                    <div className="input-group"><label>Aadhar Number</label><input type="text" name="aadhar_number" value={formData.aadhar_number} onChange={handleFormChange} maxLength={12} /></div>
+                    <div className="input-group"><label>Gender *</label>
                       <select name="gender" value={formData.gender} onChange={handleFormChange} required>
-                        <option value="">Select Gender</option>
+                        <option value="">Select</option>
                         <option value="male">Male</option>
                         <option value="female">Female</option>
                         <option value="other">Other</option>
                       </select>
-                    </label>
-                    <label className="field-label">
-                      <span className="field-label-text">Community *</span>
+                    </div>
+                    <div className="input-group"><label>Community *</label>
                       <select name="community" value={formData.community} onChange={handleFormChange} required>
-                        <option value="">Select Community</option>
+                        <option value="">Select</option>
                         <option value="OC">OC</option>
                         <option value="BC">BC</option>
                         <option value="MBC">MBC</option>
                         <option value="SC">SC</option>
                         <option value="ST">ST</option>
-                        <option value="SCA">SCA</option>
-                        <option value="BCM">BCM</option>
-                        <option value="DNC">DNC</option>
                       </select>
-                    </label>
-                    <label className="field-label">
-                      <span className="field-label-text">Blood Group</span>
-                      <input
-                        type="text"
-                        name="blood_group"
-                        value={formData.blood_group}
-                        onChange={handleFormChange}
-                        placeholder="Blood group"
-                      />
-                    </label>
+                    </div>
+                    <div className="input-group"><label>Blood Group</label><input type="text" name="blood_group" value={formData.blood_group} onChange={handleFormChange} placeholder="Optional" /></div>
                   </div>
-                </section>
+                </div>
 
-                {/* Parent Details */}
-                <section className="panel-section">
-                  <div className="section-heading">
-                    <h2>Parent Details</h2>
+                <div className="card-modern">
+                  <div className="card-title"><FaUsers /> Parent Details</div>
+                  <div className="form-grid-2">
+                    <div className="input-group"><label>Father Name</label><input type="text" name="father_name" value={formData.father_name} onChange={handleFormChange} /></div>
+                    <div className="input-group"><label>Father Mobile</label><input type="tel" name="father_mobile" value={formData.father_mobile} onChange={handleFormChange} maxLength={10} /></div>
+                    <div className="input-group"><label>Mother Name</label><input type="text" name="mother_name" value={formData.mother_name} onChange={handleFormChange} /></div>
+                    <div className="input-group"><label>Mother Mobile</label><input type="tel" name="mother_mobile" value={formData.mother_mobile} onChange={handleFormChange} maxLength={10} /></div>
                   </div>
-                  <div className="field-grid">
-                    <label className="field-label">
-                      <span className="field-label-text">Father Name</span>
-                      <input
-                        type="text"
-                        name="father_name"
-                        value={formData.father_name}
-                        onChange={handleFormChange}
-                        placeholder="Enter father name"
-                      />
-                    </label>
-                    <label className="field-label">
-                      <span className="field-label-text">Father Mobile</span>
-                      <input
-                        type="tel"
-                        name="father_mobile"
-                        value={formData.father_mobile}
-                        onChange={handleFormChange}
-                        maxLength={10}
-                        placeholder="Enter father phone"
-                      />
-                    </label>
-                    <label className="field-label">
-                      <span className="field-label-text">Mother Name</span>
-                      <input
-                        type="text"
-                        name="mother_name"
-                        value={formData.mother_name}
-                        onChange={handleFormChange}
-                        placeholder="Enter mother name"
-                      />
-                    </label>
-                    <label className="field-label">
-                      <span className="field-label-text">Mother Mobile</span>
-                      <input
-                        type="tel"
-                        name="mother_mobile"
-                        value={formData.mother_mobile}
-                        onChange={handleFormChange}
-                        maxLength={10}
-                        placeholder="Enter mother phone"
-                      />
-                    </label>
-                  </div>
-                </section>
+                </div>
 
-                {/* Education Details */}
-                <section className="panel-section">
-                  <div className="section-heading">
-                    <h2>Education Details</h2>
+                <div className="card-modern">
+                  <div className="card-title"><FaGraduationCap /> Education Details</div>
+                  <div className="form-grid-2">
+                    <div className="input-group"><label>10th Percentage</label><input type="number" step="0.01" name="tenth_marks_percentage" value={formData.tenth_marks_percentage} onChange={handleFormChange} placeholder="Enter percentage" /></div>
+                    <div className="input-group"><label>12th Percentage</label><input type="number" step="0.01" name="twelfth_marks_percentage" value={formData.twelfth_marks_percentage} onChange={handleFormChange} placeholder="Enter percentage" />
+                      <span className='input-small'>If result not declared, enter 0 as percentage.</span></div>
                   </div>
-                  <div className="field-grid">
-                    <label className="field-label">
-                      <span className="field-label-text">10th Percentage</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        name="tenth_marks_percentage"
-                        value={formData.tenth_marks_percentage}
-                        onChange={handleFormChange}
-                        placeholder="Enter 10th percentage"
-                      />
-                    </label>
-                    <label className="field-label">
-                      <span className="field-label-text">12th Percentage</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        name="twelfth_marks_percentage"
-                        value={formData.twelfth_marks_percentage}
-                        onChange={handleFormChange}
-                        placeholder="Enter 12th percentage"
-                      />
-                    </label>
-                  </div>
-                </section>
+                </div>
 
-                {/* Address Details */}
-                <section className="panel-section">
-                  <div className="section-heading">
-                    <h2>Address Details</h2>
+                <div className="card-modern">
+                  <div className="card-title"><FaMapMarkerAlt /> Address Details</div>
+                  <div className="form-grid-2">
+                    <div className="input-group full-width"><label>Address Line 1</label><input type="text" name="address_line1" value={formData.address_line1} onChange={handleFormChange} placeholder="Street/House name" /></div>
+                    <div className="input-group full-width"><label>Address Line 2</label><input type="text" name="address_line2" value={formData.address_line2} onChange={handleFormChange} placeholder="Area/Locality" /></div>
+                    <div className="input-group"><label>City/District *</label><input type="text" name="city" value={formData.city} onChange={handleFormChange} required /></div>
+                    <div className="input-group"><label>Pincode *</label><input type="text" name="pincode" value={formData.pincode} onChange={handleFormChange} maxLength={6} required /></div>
                   </div>
-                  <div className="field-grid">
-                    <label className="field-label field-full">
-                      <span className="field-label-text">Address Line 1</span>
-                      <input
-                        type="text"
-                        name="address_line1"
-                        value={formData.address_line1}
-                        onChange={handleFormChange}
-                        placeholder="Street/House name"
-                      />
-                    </label>
-                    <label className="field-label field-full">
-                      <span className="field-label-text">Address Line 2</span>
-                      <input
-                        type="text"
-                        name="address_line2"
-                        value={formData.address_line2}
-                        onChange={handleFormChange}
-                        placeholder="Area/Locality"
-                      />
-                    </label>
-                    <label className="field-label">
-                      <span className="field-label-text">City/District *</span>
-                      <input
-                        type="text"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleFormChange}
-                        placeholder="Enter city/district"
-                        required
-                      />
-                    </label>
-                    <label className="field-label">
-                      <span className="field-label-text">Pincode *</span>
-                      <input
-                        type="text"
-                        name="pincode"
-                        value={formData.pincode}
-                        onChange={handleFormChange}
-                        placeholder="Enter pincode"
-                        maxLength={6}
-                        required
-                      />
-                    </label>
-                  </div>
-                </section>
+                </div>
               </>
             )}
 
-            {error && (
-              <div className="error-message">
-                <p style={{ color: 'red', textAlign: 'center', padding: '10px' }}>{error}</p>
-              </div>
-            )}
+            {error && <div className="error-message-modern">{error}</div>}
 
-            <div className="submit-row">
-              <button
-                type="submit"
-                className="submit-button"
-                disabled={loading || !isSelectionComplete}
-              >
-                {loading ? 'Submitting...' : 'Submit Form'}
-              </button>
-            </div>
+            <button type="submit" className="submit-btn-modern" disabled={loading || !isSelectionComplete}>
+              {loading ? 'Submitting...' : 'Submit Application'} <FaArrowRight />
+            </button>
           </form>
-        </section>
+        </div>
       )}
     </main>
   );

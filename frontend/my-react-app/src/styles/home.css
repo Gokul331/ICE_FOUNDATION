@@ -8,6 +8,58 @@
 }
 
 /* ────────────────────────────────────────────
+   SUCCESS BANNER (shown after application submit)
+   ──────────────────────────────────────────── */
+.home-success-banner {
+  position: fixed;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 560px;
+  width: calc(100% - 32px);
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2f8f5a 0%, #255669 100%);
+  color: #ffffff;
+  font-size: 0.98rem;
+  font-weight: 500;
+  box-shadow: 0 12px 30px rgba(37, 86, 105, 0.25);
+}
+
+.home-success-icon {
+  flex-shrink: 0;
+  font-size: 1.4rem;
+  color: #d4ffe4;
+}
+
+.home-success-banner span {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.home-success-close {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.home-success-close:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* ────────────────────────────────────────────
    HERO SPLIT SECTION
    ──────────────────────────────────────────── */
 .hero-split {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { getColleges } from "../services/api";
 import "../styles/home.css";
@@ -9,7 +9,7 @@ import img1 from "/5.jpeg";
 import img2 from "/2.jpg";
 import img3 from "/3.jpg";
 import img4 from "/1.jpg";
-import { FaExternalLinkSquareAlt } from "react-icons/fa";
+import { FaExternalLinkSquareAlt, FaCheckCircle, FaTimes } from "react-icons/fa";
 /* ── animation helpers ── */
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -42,6 +42,8 @@ function SectionReveal({ children, className, delay = 0 }) {
 }
 
 function Home() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [colleges, setColleges] = useState([]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -52,6 +54,9 @@ function Home() {
   const [showRightArrow, setShowRightArrow] = useState(true);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [successMessage, setSuccessMessage] = useState(
+    location.state?.successMessage || null
+  );
 
   const heroSlides = [
     {
@@ -134,6 +139,23 @@ function Home() {
     }
   }, []);
 
+  // Auto-dismiss the success banner after 5 seconds and clear the router state
+  // so a page refresh doesn't show it again.
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => {
+      setSuccessMessage(null);
+      navigate(location.pathname, { replace: true, state: {} });
+    }, 5000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [successMessage]);
+
+  const dismissSuccess = () => {
+    setSuccessMessage(null);
+    navigate(location.pathname, { replace: true, state: {} });
+  };
+
   const checkScrollPosition = () => {
     if (scrollContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
@@ -197,6 +219,32 @@ function Home() {
   return (
     <div className="home-container">
       <Navbar user={user} onLogout={handleLogout} />
+
+      {/* Success banner shown briefly after submitting an application */}
+      <AnimatePresence>
+        {successMessage && (
+          <motion.div
+            className="home-success-banner"
+            role="status"
+            aria-live="polite"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+          >
+            <FaCheckCircle className="home-success-icon" />
+            <span>{successMessage}</span>
+            <button
+              type="button"
+              className="home-success-close"
+              onClick={dismissSuccess}
+              aria-label="Dismiss success message"
+            >
+              <FaTimes />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── HERO ── */}
       <section className="hero-split">
