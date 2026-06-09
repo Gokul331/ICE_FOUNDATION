@@ -342,6 +342,7 @@ class Course(models.Model):
     LAW_COURSE_CHOICES = [
         ('BA_LLB', 'B.A. LLB (Hons.)'),
         ('BBA_LLB', 'B.B.A. LLB (Hons.)'),
+        ('BCOM_LLB', 'B.Com. LLB (Hons.)')
     ]
 
     # ==================== MANAGEMENT COURSES ====================
@@ -637,11 +638,11 @@ class EnquiryForm(models.Model):
 
     # Diploma details
     has_diploma = models.BooleanField(default=False)
-    diploma_marks_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    diploma_marks_percentage = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
 
     # UG details
     has_ug = models.BooleanField(default=False)
-    ug_marks_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    ug_marks_percentage = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
 
     # ==================== REFERENCE FIELD ====================
     reference_name = models.CharField(
