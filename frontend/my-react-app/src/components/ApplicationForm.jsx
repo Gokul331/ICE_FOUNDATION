@@ -401,7 +401,7 @@ function ApplicationForm() {
                 <span className="brand-tagline">Career Guidance Center</span>
               </div>
             </div>
-            <h1>Application Form</h1>
+            <h1>Scholarship Form</h1>
             <p>Fill in the details to apply for your desired course</p>
           </div>
 
@@ -432,7 +432,7 @@ function ApplicationForm() {
                     <option value="">-- Choose College --</option>
                     {colleges.map((college, index) => (
                       <option key={`college-${college.college_id}-${index}`} value={college.college_id}>
-                        {college.college_name}
+                        {college.location_city} - {college.college_name}
                       </option>
                     ))}
                   </select>
