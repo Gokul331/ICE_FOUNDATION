@@ -505,15 +505,15 @@ function ApplicationForm() {
 
               {/* NEW REFERENCE NAME FIELD - Full Width */}
               <div className="input-group full-width">
-                <label>Reference Name (Optional)</label>
+                <label>Reference Name</label>
                 <input
                   type="text"
                   name="reference_name"
                   value={formData.reference_name || ''}
                   onChange={handleFormChange}
-                  placeholder="Enter reference person's name (e.g., John Doe, Teacher Name, etc.)"
+                  placeholder="Enter reference name"
                 />
-                <small className="field-hint">Who referred you to this college? (Optional)</small>
+                <small className="field-hint">Who referred you to this college? </small>
               </div>
             </div>
 
