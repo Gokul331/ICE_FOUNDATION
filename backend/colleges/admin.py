@@ -739,7 +739,7 @@ class EnquiryFormAdminForm(forms.ModelForm):
 class EnquiryFormAdmin(admin.ModelAdmin):
     form = EnquiryFormAdminForm
     list_display = ('application_id', 'first_name', 'last_name', 'email_id', 'mobile_number', 
-                    'college', 'course_name', 'submitted_at')  # Remove reference_name if present
+                    'college', 'course_name', 'reference_name', 'submitted_at')  # Remove reference_name if present
     search_fields = ('application_id', 'first_name', 'last_name', 'email_id', 'mobile_number', 
                     'college__college_name', 'course_name')
     list_filter = ('college', 'gender', 'community')
@@ -747,8 +747,6 @@ class EnquiryFormAdmin(admin.ModelAdmin):
     date_hierarchy = 'submitted_at'
     list_per_page = 25
     
-    # Explicitly exclude reference_name
-    exclude = ['reference_name']  # Add this line
 
     fieldsets = (
         ('Application Info', {
