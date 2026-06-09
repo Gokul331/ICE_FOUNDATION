@@ -452,15 +452,10 @@ class UserProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at']
 
 
-# ==================== AUTH SERIALIZERS - REMOVED ====================
-# RegisterSerializer, LoginSerializer, PasswordResetRequestSerializer, 
-# PasswordResetConfirmSerializer have been removed
-
-
 # ==================== ENQUIRY FORM SERIALIZERS ====================
 
 class EnquiryFormSerializer(serializers.ModelSerializer):
-    """Serializer for EnquiryForm model"""
+    """Serializer for EnquiryForm model with reference field"""
     college_name = serializers.CharField(source='college.college_name', read_only=True)
     selected_course_details = serializers.SerializerMethodField()
     selection_path = serializers.SerializerMethodField()
@@ -502,6 +497,12 @@ class EnquiryFormSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Aadhar card size must be less than 5MB")
         return value
     
+    def validate_reference_name(self, value):
+        """Validate reference name (optional field)"""
+        if value and len(value) > 200:
+            raise serializers.ValidationError("Reference name must be less than 200 characters")
+        return value
+    
     def validate(self, data):
         """Validate that if selected_course is provided, it's active and belongs to the college"""
         selected_course = data.get('selected_course')
@@ -531,7 +532,7 @@ class EnquiryFormSerializer(serializers.ModelSerializer):
 
 
 class EnquiryFormListSerializer(serializers.ModelSerializer):
-    """Lightweight serializer for listing enquiry forms"""
+    """Lightweight serializer for listing enquiry forms with reference field"""
     college_name = serializers.CharField(source='college.college_name', read_only=True)
     course_display = serializers.SerializerMethodField()
     selection_status = serializers.SerializerMethodField()
@@ -541,7 +542,8 @@ class EnquiryFormListSerializer(serializers.ModelSerializer):
         fields = [
             'application_id', 'college_name', 'course_name', 'department_name',
             'first_name', 'last_name', 'email_id', 'mobile_number',
-            'submitted_at', 'updated_at', 'course_display', 'selection_status'
+            'submitted_at', 'updated_at', 'course_display', 'selection_status',
+            'reference_name'
         ]
     
     def get_course_display(self, obj):
@@ -567,5 +569,9 @@ class EnquiryFormCreateSerializer(serializers.ModelSerializer):
         user = validated_data.get('user')
         if user:
             validated_data['application_id'] = f"APP-{user.id}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        else:
+            # For anonymous users
+            identifier = validated_data.get('email_id') or validated_data.get('mobile_number', 'anonymous')
+            validated_data['application_id'] = f"APP-{identifier}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         
         return super().create(validated_data)

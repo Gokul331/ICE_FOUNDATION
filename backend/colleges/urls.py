@@ -75,8 +75,9 @@ urlpatterns = [
     path('colleges/<int:college_id>/hierarchy/', 
          get_college_hierarchy, name='get_college_hierarchy'),
     
-    # Enhanced application submission with selected_course foreign key
+    # ==================== APPLICATION SUBMISSION (NO AUTH REQUIRED) ====================
     path('submit-application-v2/', submit_application_v2, name='submit_application_v2'),
+    path('submit-application/', submit_application, name='submit_application'),
     
     # ==================== COLLEGE IMAGES ====================
     # Gallery and Images
@@ -88,7 +89,7 @@ urlpatterns = [
     path('colleges/featured/', get_featured_colleges, name='featured-colleges'),
     path('colleges/with-gallery/', get_colleges_with_gallery, name='colleges-with-gallery'),
     
-    # Image Management (Admin only)
+    # Image Management (Admin only - keep as is)
     path('colleges/<int:college_id>/images/', add_college_images, name='add-college-images'),
     path('colleges/<int:college_id>/banner/', update_college_banner_image, name='update-banner-image'),
     path('colleges/<int:college_id>/images/<str:category>/<int:image_index>/', delete_college_image, name='delete-college-image'),
@@ -108,10 +109,7 @@ urlpatterns = [
     path('courses/categories/', get_courses_by_category, name='get_courses_by_category'),
     path('courses/categories/<str:category>/', get_courses_by_category, name='get_courses_by_category_filtered'),
 
-    # ==================== AUTHENTICATION - REMOVED ====================
-    # Register, Login, Logout, CheckAuth endpoints have been removed
-
-    # ==================== USER PROFILES ====================
+    # ==================== USER PROFILES (Keep as is) ====================
     path('user-profiles/', views.user_profiles, name='user_profiles'),
     path('user-profiles/<int:profile_id>/', views.user_profile_detail, name='user_profile_detail'),
     
@@ -122,14 +120,10 @@ urlpatterns = [
     path('profile/create-update/', views.create_or_update_profile, name='create_or_update_profile'),
     path('profile/update/<int:profile_id>/', views.update_profile_by_id, name='update_profile_by_id'),
 
-    # ==================== PASSWORD RESET - REMOVED ====================
-    # Password reset endpoints have been removed
-
-    # ==================== ENQUIRY FORM ====================
+    # ==================== ENQUIRY FORM (NO AUTH REQUIRED) ====================
     path('application-form-data/', get_application_form_data, name='get_application_form_data'),
-    path('submit-application/', submit_application, name='submit_application'),
     
-    # ==================== MY APPLICATIONS ====================
+    # ==================== MY APPLICATIONS (Requires Auth - Keep as is) ====================
     path('my-applications/', get_my_applications, name='get_my_applications'),
     path('my-applications/<str:application_id>/', get_application_detail, name='get_application_detail'),
     

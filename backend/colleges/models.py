@@ -208,7 +208,6 @@ class College(models.Model):
 
 
 # ==================== COURSE MODEL ====================
-# ==================== COURSE MODEL ====================
 class Course(models.Model):
     DEGREE_TYPE_CHOICES = [
         ('ug', 'UG'),
@@ -412,9 +411,8 @@ class Course(models.Model):
         help_text="Course category (e.g., Engineering, Medical, etc.)"
     )
     
-    # IMPORTANT: Increase max_length to 100 to accommodate all course codes
     course_code = models.CharField(
-        max_length=100,  # Changed from 50 to 100
+        max_length=100,
         choices=COURSE_NAME_CHOICES, 
         help_text="Select course"
     )
@@ -433,15 +431,11 @@ class Course(models.Model):
         """Validate that course_code is a valid choice"""
         super().clean()
         
-        # Get all valid course codes
         valid_codes = [code for code, name in self.COURSE_NAME_CHOICES]
         
-        # Check if the course_code is a valid code
         if self.course_code and self.course_code not in valid_codes:
-            # If it's not a valid code, check if it might be a display name
             valid_names = [name for code, name in self.COURSE_NAME_CHOICES]
             if self.course_code in valid_names:
-                # Find the corresponding code
                 for code, name in self.COURSE_NAME_CHOICES:
                     if name == self.course_code:
                         self.course_code = code
@@ -452,10 +446,8 @@ class Course(models.Model):
                 })
 
     def save(self, *args, **kwargs):
-        # Run validation
         self.full_clean()
         
-        # Auto-set course_name based on course_code
         if self.course_code:
             course_dict = dict(self.COURSE_NAME_CHOICES)
             self.course_name = course_dict.get(self.course_code, self.course_code)
@@ -486,12 +478,12 @@ class Course(models.Model):
     
     @property
     def full_course_display(self):
-        """Returns formatted course display for dropdowns"""
         return f"{self.get_course_code_display()} - {self.course_name}"
 
     class Meta:
         ordering = ['college__college_name', 'category', 'course_name']
         unique_together = ['college', 'course_code']
+
 
 # Helper function to get courses by category
 def get_courses_by_category(category):
@@ -546,7 +538,7 @@ class UserProfile(models.Model):
         ordering = ['-created_at']
 
 
-# ==================== STUDENT APPLICATION MODEL ====================
+# ==================== STUDENT APPLICATION MODEL WITH NO LOGIN REQUIRED ====================
 def student_applications_directory_path(instance, filename):
     """Generate upload path for student application files"""
     return f'applications/{instance.application_id}/{filename}'
@@ -579,10 +571,11 @@ class EnquiryForm(models.Model):
     ]
 
     application_id = models.CharField(max_length=50, unique=True, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications')
+    # IMPORTANT: user field is now optional (null=True, blank=True) for anonymous submissions
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications', null=True, blank=True)
     college = models.ForeignKey(College, on_delete=models.SET_NULL, null=True, blank=True)
     
-    # NEW: Add direct relationship to Course for better data integrity
+    # Direct relationship to Course
     selected_course = models.ForeignKey(
         Course, 
         on_delete=models.SET_NULL, 
@@ -596,7 +589,7 @@ class EnquiryForm(models.Model):
     course_name = models.CharField(max_length=255, null=True, blank=True)
     department_name = models.CharField(max_length=255, null=True, blank=True)
     
-    # NEW: Store the selection path for reference
+    # Store the selection path for reference
     selected_category = models.CharField(
         max_length=50, 
         choices=College.COURSE_CATEGORY_CHOICES,
@@ -650,13 +643,22 @@ class EnquiryForm(models.Model):
     has_ug = models.BooleanField(default=False)
     ug_marks_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 
+    # ==================== REFERENCE FIELD ====================
+    reference_name = models.CharField(
+        max_length=200, 
+        null=True, 
+        blank=True,
+        help_text="Name of the person who referred the student"
+    )
+
     # File uploads
     photo = models.ImageField(upload_to=student_applications_directory_path, null=True, blank=True)
     aadhar_card = models.FileField(upload_to=student_applications_directory_path, null=True, blank=True)
 
     def __str__(self):
         course_info = f" - {self.course_name}" if self.course_name else ""
-        return f"{self.application_id} - {self.first_name} {self.last_name}{course_info}"
+        ref_info = f" (Referred by: {self.reference_name})" if self.reference_name else ""
+        return f"{self.application_id} - {self.first_name} {self.last_name}{course_info}{ref_info}"
 
     class Meta:
         verbose_name = 'Student Application'
@@ -665,7 +667,14 @@ class EnquiryForm(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.application_id:
-            self.application_id = f'APP-{self.user.id}-{datetime.now().strftime("%Y%m%d%H%M%S")}'
+            if self.user and self.user.id:
+                self.application_id = f'APP-{self.user.id}-{datetime.now().strftime("%Y%m%d%H%M%S")}'
+            else:
+                # For anonymous users, use email or mobile to generate ID
+                identifier = self.email_id or self.mobile_number or 'anonymous'
+                # Clean the identifier to remove special characters
+                clean_identifier = ''.join(c for c in identifier if c.isalnum())[:30]
+                self.application_id = f'APP-{clean_identifier}-{datetime.now().strftime("%Y%m%d%H%M%S")}'
         
         # Auto-populate course_name and department_name from selected_course
         if self.selected_course:
