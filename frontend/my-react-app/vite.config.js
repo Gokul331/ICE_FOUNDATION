@@ -13,13 +13,28 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    // Correct way - manualChunks should be a function, not an object
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
+        manualChunks(id) {
+          // Group vendor dependencies
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'vendor-react';
+            }
+            if (id.includes('axios')) {
+              return 'vendor-axios';
+            }
+            if (id.includes('framer-motion')) {
+              return 'vendor-framer';
+            }
+            if (id.includes('react-icons')) {
+              return 'vendor-icons';
+            }
+            return 'vendor';
+          }
         },
       },
     },
   },
-  base: '/',
 })
