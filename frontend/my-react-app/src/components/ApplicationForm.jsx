@@ -502,7 +502,22 @@ function ApplicationForm() {
                   </div>
                 </div>
               )}
+
+              {/* NEW REFERENCE NAME FIELD - Full Width */}
+              <div className="input-group full-width">
+                <label>Reference Name (Optional)</label>
+                <input
+                  type="text"
+                  name="reference_name"
+                  value={formData.reference_name || ''}
+                  onChange={handleFormChange}
+                  placeholder="Enter reference person's name (e.g., John Doe, Teacher Name, etc.)"
+                />
+                <small className="field-hint">Who referred you to this college? (Optional)</small>
+              </div>
             </div>
+
+
 
             {/* Personal Details Section - Only show if course is selected */}
             {isSelectionComplete && (
@@ -542,7 +557,7 @@ function ApplicationForm() {
                     <div className="input-group">
                       <label>Blood Group</label>
                       <select name="blood_group" value={formData.blood_group} onChange={handleFormChange}>
-                        <option value="">Select Blood Group (Optional)</option>
+                        <option value="">Select Blood Group </option>
                         <option value="A+">A+</option>
                         <option value="A-">A-</option>
                         <option value="B+">B+</option>
