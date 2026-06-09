@@ -756,3 +756,320 @@ def bulk_update_college_categories(request):
         
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+
+        # ==================== MISSING VIEWS FOR URLS.PY ====================
+
+@api_view(['GET'])
+def get_application_form_data(request):
+    """Get application form data - NO AUTH REQUIRED"""
+    try:
+        user = request.user if request.user.is_authenticated else None
+        
+        if user:
+            try:
+                profile = UserProfile.objects.get(user=user)
+                data = {
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': user.first_name or '',
+                    'last_name': user.last_name or '',
+                    'date_of_birth': profile.date_of_birth.isoformat() if profile.date_of_birth else None,
+                    'gender': profile.gender or '',
+                    'mobile_number': profile.phone_number or '',
+                    'email_id': profile.email or user.email,
+                    'address_line1': profile.address or '',
+                    'city': profile.city or '',
+                    'pincode': profile.pincode or '',
+                }
+            except UserProfile.DoesNotExist:
+                data = {
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': user.first_name or '',
+                    'last_name': user.last_name or '',
+                }
+        else:
+            data = {}
+        
+        return Response(data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+def get_college_categories(request, college_id):
+    """Get categories offered by a specific college"""
+    try:
+        college = College.objects.get(college_id=college_id)
+        categories_offered = college.courses_offered or []
+        
+        categories_data = []
+        for category_code in categories_offered:
+            category_name = dict(College.COURSE_CATEGORY_CHOICES).get(category_code, category_code)
+            course_count = Course.objects.filter(
+                college_id=college_id,
+                category=category_code,
+                is_active=True
+            ).count()
+            
+            categories_data.append({
+                'code': category_code,
+                'name': category_name,
+                'course_count': course_count,
+                'has_courses': course_count > 0
+            })
+        
+        return Response({
+            'success': True,
+            'college_id': college.college_id,
+            'college_name': college.college_name,
+            'total_categories': len(categories_data),
+            'categories': categories_data
+        }, status=status.HTTP_200_OK)
+        
+    except College.DoesNotExist:
+        return Response({'error': 'College not found'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+def get_category_degree_types(request, college_id, category):
+    """Get degree types for a specific college and category"""
+    try:
+        degree_types = Course.objects.filter(
+            college_id=college_id,
+            category=category,
+            is_active=True
+        ).values_list('degree_type', flat=True).distinct()
+        
+        degree_data = []
+        for degree_code in degree_types:
+            degree_name = dict(Course.DEGREE_TYPE_CHOICES).get(degree_code, degree_code.upper())
+            course_count = Course.objects.filter(
+                college_id=college_id,
+                category=category,
+                degree_type=degree_code,
+                is_active=True
+            ).count()
+            
+            degree_data.append({
+                'code': degree_code,
+                'name': degree_name,
+                'course_count': course_count,
+                'has_courses': course_count > 0
+            })
+        
+        return Response({
+            'success': True,
+            'degree_types': degree_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+def get_degree_courses(request, college_id, category, degree_type):
+    """Get courses for specific college, category, and degree type"""
+    try:
+        courses = Course.objects.filter(
+            college_id=college_id,
+            category=category,
+            degree_type=degree_type,
+            is_active=True
+        ).select_related('college')
+        
+        courses_data = []
+        for course in courses:
+            courses_data.append({
+                'id': course.course_id,
+                'course_code': course.course_code,
+                'course_code_display': course.get_course_code_display(),
+                'course_name': course.course_name,
+                'full_name': f"{course.get_course_code_display()} - {course.course_name}",
+                'degree_type': course.degree_type,
+                'degree_type_display': course.get_degree_type_display(),
+                'category': course.category,
+                'category_display': course.category_display,
+                'college_id': course.college.college_id,
+                'college_name': course.college.college_name,
+                'is_active': course.is_active
+            })
+        
+        return Response({
+            'success': True,
+            'total_courses': len(courses_data),
+            'courses': courses_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+def get_course_details_for_selection(request, course_id):
+    """Get detailed course information for final selection"""
+    try:
+        course = Course.objects.select_related('college').get(course_id=course_id, is_active=True)
+        
+        return Response({
+            'success': True,
+            'course': {
+                'id': course.course_id,
+                'course_code': course.course_code,
+                'course_code_display': course.get_course_code_display(),
+                'course_name': course.course_name,
+                'full_name': f"{course.get_course_code_display()} - {course.course_name}",
+                'degree_type': course.degree_type,
+                'degree_type_display': course.get_degree_type_display(),
+                'category': course.category,
+                'category_display': course.category_display,
+                'college_id': course.college.college_id,
+                'college_name': course.college.college_name,
+                'college_city': course.college.location_city,
+                'college_state': course.college.location_state,
+                'is_active': course.is_active
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Course.DoesNotExist:
+        return Response({'error': 'Course not found'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+def get_all_colleges_with_categories(request):
+    """Get all colleges with their offered categories"""
+    try:
+        colleges = College.objects.all().order_by('college_name')
+        
+        colleges_data = []
+        for college in colleges:
+            categories_offered = college.courses_offered or []
+            
+            colleges_data.append({
+                'id': college.college_id,
+                'name': college.college_name,
+                'short_name': college.short_name,
+                'city': college.location_city,
+                'state': college.location_state,
+                'category_count': len(categories_offered),
+                'course_count': college.courses.filter(is_active=True).count(),
+                'has_categories': len(categories_offered) > 0,
+                'primary_image': college.primary_image
+            })
+        
+        return Response({
+            'success': True,
+            'total_colleges': len(colleges_data),
+            'colleges': colleges_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+def get_college_hierarchy(request, college_id):
+    """Get complete hierarchy for a college"""
+    try:
+        college = College.objects.get(college_id=college_id)
+        categories_offered = college.courses_offered or []
+        
+        hierarchy_data = {
+            'college_id': college.college_id,
+            'college_name': college.college_name,
+            'categories': []
+        }
+        
+        for category_code in categories_offered:
+            category_name = dict(College.COURSE_CATEGORY_CHOICES).get(category_code, category_code)
+            
+            degree_types = Course.objects.filter(
+                college_id=college_id,
+                category=category_code,
+                is_active=True
+            ).values_list('degree_type', flat=True).distinct()
+            
+            category_data = {
+                'code': category_code,
+                'name': category_name,
+                'degree_types': []
+            }
+            
+            for degree_code in degree_types:
+                degree_name = dict(Course.DEGREE_TYPE_CHOICES).get(degree_code, degree_code.upper())
+                
+                courses = Course.objects.filter(
+                    college_id=college_id,
+                    category=category_code,
+                    degree_type=degree_code,
+                    is_active=True
+                ).values('course_id', 'course_code', 'course_name')
+                
+                courses_list = []
+                for course in courses:
+                    courses_list.append({
+                        'id': course['course_id'],
+                        'course_code': course['course_code'],
+                        'course_name': course['course_name'],
+                        'full_name': f"{course['course_code']} - {course['course_name']}"
+                    })
+                
+                category_data['degree_types'].append({
+                    'code': degree_code,
+                    'name': degree_name,
+                    'courses': courses_list,
+                    'course_count': len(courses_list)
+                })
+            
+            hierarchy_data['categories'].append(category_data)
+        
+        return Response({
+            'success': True,
+            'hierarchy': hierarchy_data
+        }, status=status.HTTP_200_OK)
+        
+    except College.DoesNotExist:
+        return Response({'error': 'College not found'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+def submit_application_v2(request):
+    """Enhanced version of submit_application - NO AUTH REQUIRED"""
+    return submit_application(request)
+
+
+@api_view(['GET'])
+def get_featured_colleges(request):
+    """Get featured colleges with images for homepage"""
+    try:
+        limit = int(request.GET.get('limit', 6))
+        
+        colleges = College.objects.filter(
+            Q(banner_image__isnull=False) | 
+            Q(college_images__isnull=False)
+        ).order_by('-college_id')[:limit]
+        
+        serializer = CollegeListSerializer(colleges, many=True)
+        
+        data = []
+        for idx, college in enumerate(colleges):
+            college_data = serializer.data[idx]
+            college_data['primary_image'] = college.primary_image
+            college_data['image_count'] = len(college.all_images)
+            data.append(college_data)
+        
+        return Response({
+            'success': True,
+            'count': len(data),
+            'colleges': data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
