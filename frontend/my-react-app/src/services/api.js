@@ -6,13 +6,10 @@ const API = axios.create({
   baseURL: `${API_URL}/api`,
 });
 
-// Add a request interceptor to add token to every request
+// Remove token interceptor - no authentication needed
 API.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Token ${token}`;
-    }
+    // No token added - public access only
     return config;
   },
   (error) => {
@@ -20,29 +17,18 @@ API.interceptors.request.use(
   }
 );
 
-// Add a response interceptor to handle errors
+// Response interceptor (keep for error handling but remove auth-related)
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Handle 401 Unauthorized errors
-    if (error.response?.status === 401) {
-      console.warn('Authentication failed. Clearing stored token.');
-      // Clear invalid token
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-
-      // Optional: Redirect to login page
-      // window.location.href = '/login';
-    }
-
     console.error("API Error:", error.response?.data || error.message);
     return Promise.reject(error);
   }
 );
 
-// ==================== AUTHENTICATION ====================
+// ==================== PUBLIC ENDPOINTS (No Auth Required) ====================
 
-// Password reset
+// Password reset - Public
 export const requestPasswordReset = async (email) => {
   try {
     const response = await API.post("password-reset/", { email });
@@ -66,7 +52,6 @@ export const confirmPasswordReset = async (resetData) => {
 // Colleges - Public
 export const getColleges = async (params) => {
   try {
-    // Remove any Authorization header for this request
     const response = await API.get("colleges/", { params });
     return response.data;
   } catch (error) {
@@ -241,7 +226,7 @@ export const getTimelineEvents = async (params) => {
   }
 };
 
-// ==================== HIERARCHICAL SELECTION ENDPOINTS (NEW) ====================
+// ==================== HIERARCHICAL SELECTION ENDPOINTS ====================
 
 /**
  * Get all colleges with their categories for dropdown initialization
@@ -336,25 +321,17 @@ export const getCollegeHierarchy = async (collegeId) => {
 };
 
 /**
- * Enhanced application submission with selected_course foreign key
+ * Submit application - No authentication required
  * @param {FormData} formData - Form data including selected_course_id
  * @returns {Promise} Submission response
  */
 export const submitApplicationV2 = async (formData) => {
   try {
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      throw new Error('No authentication token found. Please login again.');
-    }
-
     const response = await API.post('/submit-application-v2/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
-        'Authorization': `Token ${token}`,
       },
     });
-
     return response.data;
   } catch (error) {
     console.error('Error submitting application V2:', error);
@@ -457,283 +434,11 @@ export const getCoursesByCategory = async (params) => {
   }
 };
 
-// ==================== AUTH ENDPOINTS (No Auth Required) ====================
-
-export const register = async (userData) => {
-  try {
-    const response = await API.post("register/", userData);
-    if (response.data.token) {
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
-    }
-    return response.data;
-  } catch (error) {
-    console.error("Error registering:", error);
-    throw error;
-  }
-};
-
-export const login = async (credentials) => {
-  try {
-    const response = await API.post("login/", credentials);
-    if (response.data.token) {
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
-    }
-    return response.data;
-  } catch (error) {
-    console.error("Error logging in:", error);
-    throw error;
-  }
-};
-
-export const logout = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    if (token) {
-      await API.post("logout/", {}, {
-        headers: { Authorization: `Token ${token}` }
-      });
-    }
-  } catch (error) {
-    console.error("Error logging out:", error);
-  } finally {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-  }
-};
-
-export const checkAuth = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) return { isAuthenticated: false };
-
-    const response = await API.get("check-auth/", {
-      headers: { Authorization: `Token ${token}` }
-    });
-    return response.data;
-  } catch (error) {
-    return { isAuthenticated: false };
-  }
-};
-
-// ==================== PROTECTED ENDPOINTS (Requires Auth) ====================
-
-export const getUserProfile = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await API.get("profile/", {
-      headers: { Authorization: `Token ${token}` }
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching user profile:", error);
-    throw error;
-  }
-};
-
-export const updateUserProfile = async (data) => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await API.put("profile/", data, {
-      headers: { Authorization: `Token ${token}` }
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error updating user profile:", error);
-    throw error;
-  }
-};
-
-// User Profiles - Admin/Protected
-export const getProfiles = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await API.get("user-profiles/", {
-      headers: { Authorization: `Token ${token}` }
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching profiles:", error);
-    throw error;
-  }
-};
-
-export const getProfileDetail = async (id) => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await API.get(`user-profiles/${id}/`, {
-      headers: { Authorization: `Token ${token}` }
-    });
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching profile ${id}:`, error);
-    throw error;
-  }
-};
-
-export const createProfile = async (data) => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await API.post("user-profiles/", data, {
-      headers: { Authorization: `Token ${token}` }
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error creating profile:", error);
-    throw error;
-  }
-};
-
-export const updateProfile = async (id, data) => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await API.patch(`user-profiles/${id}/`, data, {
-      headers: { Authorization: `Token ${token}` }
-    });
-    return response.data;
-  } catch (error) {
-    console.error(`Error updating profile ${id}:`, error);
-    throw error;
-  }
-};
-
-// ==================== PROFILE UPDATE & PASSWORD CHANGE (Requires Auth) ====================
-
-export const getCurrentUserProfile = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await API.get("/profile/me/", {
-      headers: { Authorization: `Token ${token}` }
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching current user profile:", error);
-    throw error;
-  }
-};
-
-export const updateCurrentUserProfile = async (profileData) => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await API.put("/profile/update/", profileData, {
-      headers: { Authorization: `Token ${token}` }
-    });
-
-    // Update localStorage with new user data
-    if (response.data.user) {
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-    }
-
-    return response.data;
-  } catch (error) {
-    console.error("Error updating profile:", error);
-    throw error;
-  }
-};
-
-export const patchCurrentUserProfile = async (profileData) => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await API.patch("/profile/update/", profileData, {
-      headers: { Authorization: `Token ${token}` }
-    });
-
-    // Update localStorage with new user data
-    if (response.data.user) {
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-    }
-
-    return response.data;
-  } catch (error) {
-    console.error("Error patching profile:", error);
-    throw error;
-  }
-};
-
-export const createOrUpdateProfile = async (profileData) => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await API.post("/profile/create-update/", profileData, {
-      headers: { Authorization: `Token ${token}` }
-    });
-
-    // Update localStorage with new user data
-    if (response.data.user) {
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-    }
-
-    return response.data;
-  } catch (error) {
-    console.error("Error creating/updating profile:", error);
-    throw error;
-  }
-};
-
-export const updateProfileById = async (profileId, profileData) => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await API.patch(`/profile/update/${profileId}/`, profileData, {
-      headers: { Authorization: `Token ${token}` }
-    });
-
-    // Only update localStorage if it's the current user's profile
-    if (response.data.user) {
-      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-      if (currentUser.id === response.data.user.id) {
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-      }
-    }
-
-    return response.data;
-  } catch (error) {
-    console.error(`Error updating profile ${profileId}:`, error);
-    throw error;
-  }
-};
-
-export const changePassword = async (passwordData) => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await API.post("/change-password/", passwordData, {
-      headers: { Authorization: `Token ${token}` }
-    });
-
-    // Update token in localStorage if a new one is returned
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-    }
-
-    return response.data;
-  } catch (error) {
-    console.error("Error changing password:", error);
-    throw error;
-  }
-};
-
-// ==================== HOSTEL APPLICATION (Requires Auth) ====================
-
-export const applyForHostel = async (applicationData) => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await API.post("/hostel/apply/", applicationData, {
-      headers: { Authorization: `Token ${token}` }
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error applying for hostel:", error);
-    throw error;
-  }
-};
-
 // ==================== APPLICATION FORM ====================
 
 export const getApplicationFormData = async () => {
   try {
-    const token = localStorage.getItem('token');
-    const response = await API.get('application-form-data/', {
-      headers: { Authorization: `Token ${token}` }
-    });
+    const response = await API.get('application-form-data/');
     return response.data;
   } catch (error) {
     console.error('Error fetching application form data:', error);
@@ -741,22 +446,14 @@ export const getApplicationFormData = async () => {
   }
 };
 
-// Original submit application (for backward compatibility)
+// Submit application - No authentication required
 export const submitApplication = async (formData) => {
   try {
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      throw new Error('No authentication token found. Please login again.');
-    }
-
     const response = await API.post('/submit-application/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
-        'Authorization': `Token ${token}`,
       },
     });
-
     return response.data;
   } catch (error) {
     console.error('Error submitting application:', error);
@@ -765,79 +462,13 @@ export const submitApplication = async (formData) => {
   }
 };
 
-// ==================== HELPER FUNCTIONS ====================
-
-// Helper function to get user data from localStorage
-export const getStoredUser = () => {
-  const user = localStorage.getItem('user');
-  return user ? JSON.parse(user) : null;
-};
-
-// Helper function to check if user is authenticated
-export const isAuthenticated = () => {
-  return !!localStorage.getItem('token');
-};
-
-// Helper function to check if user is staff
-export const isStaff = () => {
-  const user = getStoredUser();
-  return user?.is_staff || false;
-};
-
-// Helper function to get auth token
-export const getAuthToken = () => {
-  return localStorage.getItem('token');
-};
-
-// Helper function to clear auth data
-export const clearAuthData = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-};
-
-// Get all applications for current user
-export const getMyApplications = async () => {
-  const token = localStorage.getItem('token');
-  const response = await axios.get(`${API_URL}/api/my-applications/`, {
-    headers: { Authorization: `Token ${token}` }
-  });
-  return response.data;
-};
-
-// Download PDF for a specific application
-export const downloadApplicationPDF = async (applicationId) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.get(`${API_URL}/api/download-application-pdf/${applicationId}/`, {
-    headers: { Authorization: `Token ${token}` },
-    responseType: 'blob'
-  });
-  return response.data;
-};
-
-// Get single application details
-export const getApplicationDetail = async (applicationId) => {
-  const token = localStorage.getItem('token');
-  const response = await axios.get(`${API_URL}/api/my-applications/${applicationId}/`, {
-    headers: { Authorization: `Token ${token}` }
-  });
-  return response.data;
-};
-
 export const submitScholarshipApplication = async (formData) => {
   try {
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      throw new Error('No authentication token found. Please login again.');
-    }
-
     const response = await API.post('/submit-scholarship-application/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
-        'Authorization': `Token ${token}`,
       },
     });
-
     return response.data;
   } catch (error) {
     console.error('Error submitting scholarship application:', error);
