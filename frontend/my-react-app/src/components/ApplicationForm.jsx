@@ -524,17 +524,35 @@ function ApplicationForm() {
                         <option value="other">Other</option>
                       </select>
                     </div>
-                    <div className="input-group"><label>Community *</label>
+                    <div className="input-group">
+                      <label>Community *</label>
                       <select name="community" value={formData.community} onChange={handleFormChange} required>
-                        <option value="">Select</option>
+                        <option value="">Select Community</option>
                         <option value="OC">OC</option>
                         <option value="BC">BC</option>
                         <option value="MBC">MBC</option>
                         <option value="SC">SC</option>
                         <option value="ST">ST</option>
+                        <option value="SCA">SCA</option>
+                        <option value="BCM">BCM</option>
+                        <option value="DNC">DNC</option>
                       </select>
                     </div>
-                    <div className="input-group"><label>Blood Group</label><input type="text" name="blood_group" value={formData.blood_group} onChange={handleFormChange} placeholder="Optional" /></div>
+
+                    <div className="input-group">
+                      <label>Blood Group</label>
+                      <select name="blood_group" value={formData.blood_group} onChange={handleFormChange}>
+                        <option value="">Select Blood Group (Optional)</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
 
