@@ -377,7 +377,7 @@ function ApplicationForm() {
 
   return (
     <main className="app-shell-modern">
-      {showSuccessModal(
+      {showSuccessModal && (
         <div className="success-modal-modern">
           <div className="success-icon-modern">
             <FaCheckCircle />
