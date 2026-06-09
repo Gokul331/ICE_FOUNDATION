@@ -739,7 +739,7 @@ class EnquiryFormAdminForm(forms.ModelForm):
 class EnquiryFormAdmin(admin.ModelAdmin):
     form = EnquiryFormAdminForm
     list_display = ('application_id', 'first_name', 'last_name', 'email_id', 'mobile_number', 
-                    'college', 'course_name', 'reference_name', 'submitted_at')  # Remove reference_name if present
+                    'college', 'course_name', 'reference_name', 'submitted_at') 
     search_fields = ('application_id', 'first_name', 'last_name', 'email_id', 'mobile_number', 
                     'college__college_name', 'course_name')
     list_filter = ('college', 'gender', 'community')
@@ -750,7 +750,7 @@ class EnquiryFormAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Application Info', {
-            'fields': ('application_id', 'user', 'college', 'course_name', 'department_name')
+            'fields': ('application_id', 'user', 'college', 'course_name', 'department_name', 'reference_name')
         }),
         ('Bio-data', {
             'fields': ('first_name', 'last_name', 'gender', 'date_of_birth', 'mobile_number',
@@ -776,6 +776,7 @@ class EnquiryFormAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         })
     )
+
 # ==================== CUSTOM ADMIN SITE SETTINGS ====================
 admin.site.site_header = "Vamshi EduCare Administration"
 admin.site.site_title = "Vamshi EduCare Admin Portal"

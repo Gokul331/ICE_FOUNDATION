@@ -238,6 +238,12 @@ class Course(models.Model):
         ('MECHATRONICS', 'Mechatronics Engineering'),
         ('ENV', 'Environmental Science and Technology'),
         ('ECE', 'Electrical and Computer Engineering'),
+        ('MCA', 'Master of Computer Applications'),
+    ('MBA', 'Master of Business Administration'),
+    ('ME_CADCAM', 'M.E - CAD/CAM'),
+    ('ME_CSE', 'M.E - Computer Science and Engineering'),
+    ('ME_CS', 'M.E - Communication Systems'),
+    ('ME_PED', 'M.E - Power Electronics and Drives'),
     ]
 
     # ==================== ARTS & SCIENCE COURSES ====================
@@ -262,11 +268,19 @@ class Course(models.Model):
         ('BA_PUBLIC_ADMIN', 'B.A Public Administration'),
         ('BA_SOCIAL_WORK', 'B.A Social Work'),
         ('BSC_HOTEL_MGT', 'B.Sc - Hotel Management & Catering Science'),
+        ('BSC_AIML', 'B.Sc - Artificial Intelligence and Machine Learning'),
+    ('BSC_BC', 'B.Sc - Biochemistry'),
+    ('BSC_BT', 'B.Sc - Biotechnology'),
+    ('BSC_MB', 'B.Sc - Microbiology'),
+    ('BSC_MATHS', 'B.Sc - Mathematics'),
+    ('BSC_FTCD', 'B.Sc - Fashion Technology and Costume Designing'),
+        ('MA_TAMIL', 'M.A Tamil'),
         ('MA_ENGLISH', 'M.A English'),
         ('MSC_CS', 'M.Sc Computer Science'),
         ('MSC_IT', 'M.Sc Information Technology'),
         ('MCOM', 'M.Com'),
         ('MCOM_CA', 'M.Com (CA)'),
+        ('MCA', 'M.C.A'),
         ('MSC_BIOCHEM', 'MSc Biochemistry'),
         ('MSC_BIO_TECH', 'M.Sc Biotechnology'),
         ('MSC_MATHS', 'M.Sc Mathematics'),
@@ -296,6 +310,7 @@ class Course(models.Model):
         ('MSC_MB', 'M.Sc - Medical Biochemistry'),
         ('MSC_RIT', 'M.Sc - Radiography and Imaging Tech'),
         ('MSC_AECT', 'M.Sc - Accident and Emergency Care'),
+
     ]
 
     # ==================== PHARMACY COURSES ====================
@@ -319,6 +334,7 @@ class Course(models.Model):
     # ==================== PHYSIOTHERAPY COURSES ====================
     PHYSIOTHERAPY_COURSE_CHOICES = [
         ('BPT', 'B.P.T - Bachelor of Physiotherapy'),
+        ('MPT_MUSCULOSKELETAL', 'M.P.T - Musculoskeletal Science'),
         ('MPT_ORTHO', 'M.P.T - Orthopaedics'),
         ('MPT_NEURO', 'M.P.T - Neurology'),
         ('MPT_SPORTS', 'M.P.T - Sports & Fitness'),
