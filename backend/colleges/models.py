@@ -672,7 +672,7 @@ class EnquiryForm(models.Model):
     def __str__(self):
         course_info = f" - {self.course_name}" if self.course_name else ""
       
-        return f"{self.application_id} - {self.first_name} {self.last_name}{course_info}{ref_info}"
+        return f"{self.application_id} - {self.first_name} {self.last_name}{course_info}"
 
     class Meta:
         verbose_name = 'Student Application'

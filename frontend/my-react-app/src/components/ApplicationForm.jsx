@@ -60,7 +60,7 @@ function ApplicationForm() {
     blood_group: '',
     tenth_marks_percentage: '',
     twelfth_marks_percentage: '',
-    reference_name: '', // Added reference field
+
   });
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -270,7 +270,7 @@ function ApplicationForm() {
       blood_group: formData.blood_group || '',
       tenth_marks_percentage: formData.tenth_marks_percentage ? parseFloat(formData.tenth_marks_percentage) : null,
       twelfth_marks_percentage: formData.twelfth_marks_percentage ? parseFloat(formData.twelfth_marks_percentage) : null,
-      reference_name: formData.reference_name || '', // Added reference field
+
       has_diploma: false,
       has_ug: false,
     };
@@ -302,7 +302,7 @@ function ApplicationForm() {
           blood_group: '',
           tenth_marks_percentage: '',
           twelfth_marks_percentage: '',
-          reference_name: '',
+
         });
       } else {
         setError(result.error || 'Failed to submit application');
