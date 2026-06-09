@@ -60,6 +60,7 @@ function ApplicationForm() {
     blood_group: '',
     tenth_marks_percentage: '',
     twelfth_marks_percentage: '',
+    reference_name: '', // Added reference field
   });
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -80,20 +81,6 @@ function ApplicationForm() {
       }
     };
     fetchColleges();
-  }, []);
-
-  // Pre-fill user data
-  useEffect(() => {
-    const user = localStorage.getItem('user');
-    if (user) {
-      const userData = JSON.parse(user);
-      setFormData(prev => ({
-        ...prev,
-        first_name: userData.first_name || prev.first_name,
-        last_name: userData.last_name || prev.last_name,
-        email_id: userData.email || prev.email_id,
-      }));
-    }
   }, []);
 
   // Load categories when college changes
@@ -250,14 +237,6 @@ function ApplicationForm() {
     setLoading(true);
     setError(null);
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setError('Please login to submit application');
-      setLoading(false);
-      navigate('/login');
-      return;
-    }
-
     if (!selectedCollege || !selectedCategory || !selectedDegreeType || !selectedCourse) {
       setError('Please complete all course selections');
       setLoading(false);
@@ -291,6 +270,7 @@ function ApplicationForm() {
       blood_group: formData.blood_group || '',
       tenth_marks_percentage: formData.tenth_marks_percentage ? parseFloat(formData.tenth_marks_percentage) : null,
       twelfth_marks_percentage: formData.twelfth_marks_percentage ? parseFloat(formData.twelfth_marks_percentage) : null,
+      reference_name: formData.reference_name || '', // Added reference field
       has_diploma: false,
       has_ug: false,
     };
@@ -322,6 +302,7 @@ function ApplicationForm() {
           blood_group: '',
           tenth_marks_percentage: '',
           twelfth_marks_percentage: '',
+          reference_name: '',
         });
       } else {
         setError(result.error || 'Failed to submit application');
@@ -503,7 +484,7 @@ function ApplicationForm() {
                 </div>
               )}
 
-              {/* NEW REFERENCE NAME FIELD - Full Width */}
+              {/* Reference Name Field */}
               <div className="input-group full-width">
                 <label>Reference Name</label>
                 <input
@@ -513,11 +494,9 @@ function ApplicationForm() {
                   onChange={handleFormChange}
                   placeholder="Enter reference name"
                 />
-                <small className="field-hint">Who referred you to this college? </small>
+                <small className="field-hint">Who referred you to this college? (Optional)</small>
               </div>
             </div>
-
-
 
             {/* Personal Details Section - Only show if course is selected */}
             {isSelectionComplete && (
@@ -557,7 +536,7 @@ function ApplicationForm() {
                     <div className="input-group">
                       <label>Blood Group</label>
                       <select name="blood_group" value={formData.blood_group} onChange={handleFormChange}>
-                        <option value="">Select Blood Group </option>
+                        <option value="">Select Blood Group</option>
                         <option value="A+">A+</option>
                         <option value="A-">A-</option>
                         <option value="B+">B+</option>
