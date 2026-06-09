@@ -377,13 +377,13 @@ function ApplicationForm() {
 
   return (
     <main className="app-shell-modern">
-      {showSuccessModal && (
+      {showSuccessModal(
         <div className="success-modal-modern">
           <div className="success-icon-modern">
             <FaCheckCircle />
           </div>
           <h3>Application Submitted Successfully!</h3>
-          <p>Your application has been successfully submitted. Thank you for choosing Vamshi EduCare.</p>
+          <p>We will reach you soon. Thank you for choosing <span className='brand-name-modern'>Vamshi Educare</span></p>
           <p className="redirect-note">
             Redirecting to <strong>Home Page</strong> in <span className="countdown">{countdown}</span> second{countdown !== 1 ? 's' : ''}...
           </p>

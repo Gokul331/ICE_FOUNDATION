@@ -57,7 +57,7 @@ body {
 
 /* Header */
 .form-header-modern {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: linear-gradient(180deg, #ffffff, #4c71a7 100%);
   color: white;
   padding: 32px 40px;
   text-align: center;
@@ -75,7 +75,7 @@ body {
   width: 60px;
   height: 60px;
   border-radius: 16px;
-  background: white;
+
   padding: 8px;
 }
 
@@ -84,25 +84,34 @@ body {
 }
 
 .brand-name-modern {
-  font-size: 1.2rem;
+  font-size: 1.8rem;
   font-weight: 700;
   letter-spacing: 2px;
   display: block;
+  background: linear-gradient(180deg, #1a2a6c 0%, #f3a900 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* This is required! */
 }
 
 .brand-tagline {
-  font-size: 0.75rem;
+  font-size: 1rem;
+  font-weight: 500;
   opacity: 0.8;
+  color: #1f2937;
 }
 
 .form-header-modern h1 {
-  font-size: 1.8rem;
+  font-size: 2rem;
   margin-bottom: 8px;
+  color: rgb(14, 31, 117);
 }
 
 .form-header-modern p {
   opacity: 0.9;
   font-size: 0.9rem;
+  color: #1f2937;
 }
 
 /* Progress Steps */
@@ -387,13 +396,20 @@ select option {
   box-shadow: var(--shadow-lg);
   z-index: 1000;
   animation: fadeInUp 0.3s ease-out;
+
+}
+
+.success-icon-modern {
+  place-items: center;
 }
 
 .success-icon-modern svg {
   width: 60px;
   height: 60px;
+  text-align: center;
   color: var(--secondary);
   margin-bottom: 20px;
+
 }
 
 .success-modal-modern h3 {
