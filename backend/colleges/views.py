@@ -239,7 +239,7 @@ def submit_application(request):
             pincode=request.data.get('pincode', ''),
             tenth_marks_percentage=request.data.get('tenth_marks_percentage') or None,
             twelfth_marks_percentage=request.data.get('twelfth_marks_percentage') or None,
-            reference_name=request.data.get('reference_name', ''),
+            
         )
 
         return Response({

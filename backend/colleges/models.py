@@ -663,13 +663,7 @@ class EnquiryForm(models.Model):
     has_ug = models.BooleanField(default=False)
     ug_marks_percentage = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
 
-    # ==================== REFERENCE FIELD ====================
-    reference_name = models.CharField(
-        max_length=200, 
-        null=True, 
-        blank=True,
-        help_text="Name of the person who referred the student"
-    )
+  
 
     # File uploads
     photo = models.ImageField(upload_to=student_applications_directory_path, null=True, blank=True)
@@ -677,7 +671,7 @@ class EnquiryForm(models.Model):
 
     def __str__(self):
         course_info = f" - {self.course_name}" if self.course_name else ""
-        ref_info = f" (Referred by: {self.reference_name})" if self.reference_name else ""
+      
         return f"{self.application_id} - {self.first_name} {self.last_name}{course_info}{ref_info}"
 
     class Meta:
