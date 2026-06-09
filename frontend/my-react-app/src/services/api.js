@@ -6,10 +6,9 @@ const API = axios.create({
   baseURL: `${API_URL}/api`,
 });
 
-// Remove token interceptor - no authentication needed
+// No authentication interceptor - public access only
 API.interceptors.request.use(
   (config) => {
-    // No token added - public access only
     return config;
   },
   (error) => {
@@ -17,7 +16,7 @@ API.interceptors.request.use(
   }
 );
 
-// Response interceptor (keep for error handling but remove auth-related)
+// Response interceptor for error handling
 API.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -26,9 +25,9 @@ API.interceptors.response.use(
   }
 );
 
-// ==================== PUBLIC ENDPOINTS (No Auth Required) ====================
+// ==================== PUBLIC ENDPOINTS ====================
 
-// Password reset - Public
+// Password reset
 export const requestPasswordReset = async (email) => {
   try {
     const response = await API.post("password-reset/", { email });
@@ -49,7 +48,7 @@ export const confirmPasswordReset = async (resetData) => {
   }
 };
 
-// Colleges - Public
+// Colleges
 export const getColleges = async (params) => {
   try {
     const response = await API.get("colleges/", { params });
@@ -90,7 +89,7 @@ export const getCollegeFees = async (collegeId, params = {}) => {
   }
 };
 
-// Hostels - Public
+// Hostels
 export const getCollegeHostels = async (collegeId) => {
   try {
     const response = await API.get(`colleges/${collegeId}/hostels/`);
@@ -141,7 +140,7 @@ export const suggestColleges = async (params) => {
   }
 };
 
-// Courses - Public
+// Courses
 export const getCourses = async (params) => {
   try {
     const response = await API.get("courses/", { params });
@@ -162,7 +161,6 @@ export const getCourseDetail = async (id) => {
   }
 };
 
-// Get course fees
 export const getCourseFees = async (courseId) => {
   try {
     const response = await API.get(`courses/${courseId}/fees/`);
@@ -173,7 +171,7 @@ export const getCourseFees = async (courseId) => {
   }
 };
 
-// Fees - Public
+// Fees
 export const getFilteredFees = async (params = {}) => {
   try {
     const response = await API.get("fees/filter/", { params });
@@ -215,7 +213,7 @@ export const getFeeComparison = async (collegeIds, params = {}) => {
   }
 };
 
-// Timeline Events - Public
+// Timeline Events
 export const getTimelineEvents = async (params) => {
   try {
     const response = await API.get("timeline/", { params });
@@ -228,10 +226,6 @@ export const getTimelineEvents = async (params) => {
 
 // ==================== HIERARCHICAL SELECTION ENDPOINTS ====================
 
-/**
- * Get all colleges with their categories for dropdown initialization
- * @returns {Promise} List of colleges with category information
- */
 export const getAllCollegesWithCategories = async () => {
   try {
     const response = await API.get("colleges/with-categories/");
@@ -242,11 +236,6 @@ export const getAllCollegesWithCategories = async () => {
   }
 };
 
-/**
- * Step 1 & 2: Get categories offered by a specific college
- * @param {number} collegeId - The college ID
- * @returns {Promise} List of categories for the college
- */
 export const getCollegeCategories = async (collegeId) => {
   try {
     const response = await API.get(`colleges/${collegeId}/categories/`);
@@ -257,12 +246,6 @@ export const getCollegeCategories = async (collegeId) => {
   }
 };
 
-/**
- * Step 3: Get degree types for a specific college and category
- * @param {number} collegeId - The college ID
- * @param {string} category - The course category code
- * @returns {Promise} List of degree types for the category
- */
 export const getCategoryDegreeTypes = async (collegeId, category) => {
   try {
     const response = await API.get(`colleges/${collegeId}/categories/${category}/degree-types/`);
@@ -273,13 +256,6 @@ export const getCategoryDegreeTypes = async (collegeId, category) => {
   }
 };
 
-/**
- * Step 4: Get courses for a specific college, category, and degree type
- * @param {number} collegeId - The college ID
- * @param {string} category - The course category code
- * @param {string} degreeType - The degree type code (ug, pg, diploma, etc.)
- * @returns {Promise} List of courses matching the criteria
- */
 export const getDegreeCourses = async (collegeId, category, degreeType) => {
   try {
     const response = await API.get(`colleges/${collegeId}/categories/${category}/degrees/${degreeType}/courses/`);
@@ -290,11 +266,6 @@ export const getDegreeCourses = async (collegeId, category, degreeType) => {
   }
 };
 
-/**
- * Get detailed course information for the final selection
- * @param {number} courseId - The course ID
- * @returns {Promise} Detailed course information
- */
 export const getCourseDetailsForSelection = async (courseId) => {
   try {
     const response = await API.get(`courses/${courseId}/details/`);
@@ -305,11 +276,6 @@ export const getCourseDetailsForSelection = async (courseId) => {
   }
 };
 
-/**
- * Get complete college hierarchy (all categories, degrees, courses at once)
- * @param {number} collegeId - The college ID
- * @returns {Promise} Complete hierarchical data for the college
- */
 export const getCollegeHierarchy = async (collegeId) => {
   try {
     const response = await API.get(`colleges/${collegeId}/hierarchy/`);
@@ -320,33 +286,8 @@ export const getCollegeHierarchy = async (collegeId) => {
   }
 };
 
-/**
- * Submit application - No authentication required
- * @param {FormData} formData - Form data including selected_course_id
- * @returns {Promise} Submission response
- */
-export const submitApplicationV2 = async (formData) => {
-  try {
-    const response = await API.post('/submit-application-v2/', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error submitting application V2:', error);
-    console.error('Error response:', error.response?.data);
-    throw error;
-  }
-};
-
 // ==================== COLLEGE IMAGE ENDPOINTS ====================
 
-/**
- * Get college gallery images
- * @param {number} collegeId - The college ID
- * @returns {Promise} Gallery data including all images
- */
 export const getCollegeGallery = async (collegeId) => {
   try {
     const response = await API.get(`colleges/${collegeId}/gallery/`);
@@ -357,12 +298,6 @@ export const getCollegeGallery = async (collegeId) => {
   }
 };
 
-/**
- * Get college images by category
- * @param {number} collegeId - The college ID
- * @param {string} category - 'general' or 'campus'
- * @returns {Promise} Images for the specified category
- */
 export const getCollegeImagesByCategory = async (collegeId, category) => {
   try {
     const response = await API.get(`colleges/${collegeId}/gallery/${category}/`);
@@ -373,11 +308,6 @@ export const getCollegeImagesByCategory = async (collegeId, category) => {
   }
 };
 
-/**
- * Get featured colleges for homepage
- * @param {number} limit - Number of colleges to fetch
- * @returns {Promise} List of featured colleges
- */
 export const getFeaturedColleges = async (limit = 6) => {
   try {
     const response = await API.get(`colleges/featured/`, { params: { limit } });
@@ -390,10 +320,6 @@ export const getFeaturedColleges = async (limit = 6) => {
 
 // ==================== COURSE CATEGORY ENDPOINTS ====================
 
-/**
- * Get all course categories with statistics
- * @returns {Promise} Categories with college and course counts
- */
 export const getCourseCategories = async () => {
   try {
     const response = await API.get("colleges/categories/");
@@ -404,11 +330,6 @@ export const getCourseCategories = async () => {
   }
 };
 
-/**
- * Get colleges filtered by course categories
- * @param {Object} params - Filter parameters (categories, city, state, etc.)
- * @returns {Promise} Filtered colleges
- */
 export const getCollegesByCategory = async (params) => {
   try {
     const response = await API.get("colleges/by-category/", { params });
@@ -419,11 +340,6 @@ export const getCollegesByCategory = async (params) => {
   }
 };
 
-/**
- * Get courses filtered by category
- * @param {Object} params - Filter parameters
- * @returns {Promise} Filtered courses
- */
 export const getCoursesByCategory = async (params) => {
   try {
     const response = await API.get("courses/categories/", { params });
@@ -446,7 +362,7 @@ export const getApplicationFormData = async () => {
   }
 };
 
-// Submit application - No authentication required
+// Submit application - NO AUTHENTICATION REQUIRED
 export const submitApplication = async (formData) => {
   try {
     const response = await API.post('/submit-application/', formData, {
@@ -457,6 +373,21 @@ export const submitApplication = async (formData) => {
     return response.data;
   } catch (error) {
     console.error('Error submitting application:', error);
+    console.error('Error response:', error.response?.data);
+    throw error;
+  }
+};
+
+export const submitApplicationV2 = async (formData) => {
+  try {
+    const response = await API.post('/submit-application-v2/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error submitting application V2:', error);
     console.error('Error response:', error.response?.data);
     throw error;
   }
@@ -477,48 +408,39 @@ export const submitScholarshipApplication = async (formData) => {
   }
 };
 
-// ==================== USAGE EXAMPLE ====================
-/*
-// Example: Implementing the 4-step selection process
+// Get applications (public)
+export const getMyApplications = async () => {
+  try {
+    const response = await API.get('/my-applications/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching applications:', error);
+    throw error;
+  }
+};
 
-async function loadColleges() {
-  const response = await getAllCollegesWithCategories();
-  const colleges = response.colleges;
-  // Populate college dropdown
-}
+// Download application PDF
+export const downloadApplicationPDF = async (applicationId) => {
+  try {
+    const response = await API.get(`/download-application-pdf/${applicationId}/`, {
+      responseType: 'blob'
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error downloading PDF:', error);
+    throw error;
+  }
+};
 
-async function onCollegeSelect(collegeId) {
-  // Step 1 & 2: Load categories for selected college
-  const categoriesRes = await getCollegeCategories(collegeId);
-  const categories = categoriesRes.categories;
-  // Populate category dropdown
-}
-
-async function onCategorySelect(collegeId, category) {
-  // Step 3: Load degree types for selected category
-  const degreeTypesRes = await getCategoryDegreeTypes(collegeId, category);
-  const degreeTypes = degreeTypesRes.degree_types;
-  // Populate degree type dropdown
-}
-
-async function onDegreeTypeSelect(collegeId, category, degreeType) {
-  // Step 4: Load courses for selected degree type
-  const coursesRes = await getDegreeCourses(collegeId, category, degreeType);
-  const courses = coursesRes.courses;
-  // Populate course dropdown
-}
-
-async function onCourseSelect(courseId) {
-  // Get detailed course information
-  const courseDetails = await getCourseDetailsForSelection(courseId);
-  // Display course details to user
-}
-
-async function submitApplication(courseId, formData) {
-  formData.append('selected_course_id', courseId);
-  const result = await submitApplicationV2(formData);
-  console.log('Application submitted:', result);
-}
-*/
+// Get single application details
+export const getApplicationDetail = async (applicationId) => {
+  try {
+    const response = await API.get(`/my-applications/${applicationId}/`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching application detail:', error);
+    throw error;
+  }
+};
 
 export default API;
