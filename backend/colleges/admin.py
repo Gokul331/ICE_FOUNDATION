@@ -739,13 +739,16 @@ class EnquiryFormAdminForm(forms.ModelForm):
 class EnquiryFormAdmin(admin.ModelAdmin):
     form = EnquiryFormAdminForm
     list_display = ('application_id', 'first_name', 'last_name', 'email_id', 'mobile_number', 
-                    'college', 'course_name', 'submitted_at')
+                    'college', 'course_name', 'submitted_at')  # Remove reference_name if present
     search_fields = ('application_id', 'first_name', 'last_name', 'email_id', 'mobile_number', 
                     'college__college_name', 'course_name')
     list_filter = ('college', 'gender', 'community')
     readonly_fields = ('application_id', 'submitted_at', 'updated_at')
     date_hierarchy = 'submitted_at'
     list_per_page = 25
+    
+    # Explicitly exclude reference_name
+    exclude = ['reference_name']  # Add this line
 
     fieldsets = (
         ('Application Info', {
@@ -775,11 +778,6 @@ class EnquiryFormAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         })
     )
-    
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related('user', 'college')
-
-
 # ==================== CUSTOM ADMIN SITE SETTINGS ====================
 admin.site.site_header = "Vamshi EduCare Administration"
 admin.site.site_title = "Vamshi EduCare Admin Portal"
