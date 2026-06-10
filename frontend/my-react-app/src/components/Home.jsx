@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { getColleges } from "../services/api";
 import "../styles/home.css";
@@ -43,7 +43,6 @@ function SectionReveal({ children, className, delay = 0 }) {
 
 function Home() {
   const location = useLocation();
-  const navigate = useNavigate();
   const [colleges, setColleges] = useState([]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -54,46 +53,56 @@ function Home() {
   const [showRightArrow, setShowRightArrow] = useState(true);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [successMessage, setSuccessMessage] = useState(
-    location.state?.successMessage || null
-  );
+
+  useEffect(() => {
+    if (location.state?.success) {
+      setAlertMessage({
+        show: true,
+        message: location.state.message || "Application submitted successfully!",
+        type: "success"
+      });
+    } else if (location.state?.error) {
+      setAlertMessage({
+        show: true,
+        message: location.state.message || "An error occurred. Please try again.",
+        type: "error"
+      });
+    }
+  }, [location.state]);
 
   const heroSlides = [
     {
       image: img1,
-      badge: "Trusted by 100+ colleges across Tamil Nadu",
+
       lines: ["Bridge the gap to", "your dream", "college journey"],
       desc: "Personalized guidance, scholarship support, and admissions strategy from experts who know what top colleges want.",
       primaryLabel: "Explore Our Branches",
       primaryTo: "/colleges",
-      
+
     },
     {
       image: img2,
-      badge: "5000+ Scholarships Available",
       lines: ["Discover the", "right library", "for your future"],
       desc: "Explore thousands of resources, scholarship opportunities and academic support to help you succeed in your higher education journey.",
       primaryLabel: "Explore Infrastructure",
       primaryTo: "/infrastructure",
-      
+
     },
     {
       image: img3,
-      badge: "World-Class Laboratory Facilities",
       lines: ["Hands-on learning", "in cutting-edge", "laboratories"],
-      desc: "Find colleges equipped with state-of-the-art labs for Engineering, Medical, and Allied Sciences to ignite your passion for research.",
+      desc: "Colleges equipped with state-of-the-art labs for Engineering, Medical, and Allied Sciences to ignite your passion for research.",
       primaryLabel: "Explore Courses",
       primaryTo: "/courses",
-    
+
     },
     {
       image: img4,
-      badge: "95% Student Success Rate",
       lines: ["Your dream campus", "is just one step", "away"],
       desc: "From application to admission, our expert counselors walk you through every stage of your college journey with confidence.",
       primaryLabel: "Call Assistance",
       primaryTo: "/contact",
-     
+
     },
   ];
 
@@ -131,30 +140,6 @@ function Home() {
     fetchColleges();
   }, []);
 
-  useEffect(() => {
-    const stored = localStorage.getItem("user");
-    const token = localStorage.getItem("token");
-    if (stored && token) {
-      try { setUser(JSON.parse(stored)); } catch {}
-    }
-  }, []);
-
-  // Auto-dismiss the success banner after 5 seconds and clear the router state
-  // so a page refresh doesn't show it again.
-  useEffect(() => {
-    if (!successMessage) return;
-    const timer = setTimeout(() => {
-      setSuccessMessage(null);
-      navigate(location.pathname, { replace: true, state: {} });
-    }, 5000);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [successMessage]);
-
-  const dismissSuccess = () => {
-    setSuccessMessage(null);
-    navigate(location.pathname, { replace: true, state: {} });
-  };
 
   const checkScrollPosition = () => {
     if (scrollContainerRef.current) {
@@ -218,33 +203,7 @@ function Home() {
 
   return (
     <div className="home-container">
-      <Navbar user={user} onLogout={handleLogout} />
-
-      {/* Success banner shown briefly after submitting an application */}
-      <AnimatePresence>
-        {successMessage && (
-          <motion.div
-            className="home-success-banner"
-            role="status"
-            aria-live="polite"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-          >
-            <FaCheckCircle className="home-success-icon" />
-            <span>{successMessage}</span>
-            <button
-              type="button"
-              className="home-success-close"
-              onClick={dismissSuccess}
-              aria-label="Dismiss success message"
-            >
-              <FaTimes />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <Navbar />
 
       {/* ── HERO ── */}
       <section className="hero-split">
@@ -259,9 +218,9 @@ function Home() {
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 1.5, ease: [0.4, 0, 0.2, 1] }}
             >
-              <img 
-                src={heroSlides[currentSlide].image} 
-                alt="Hero Slide" 
+              <img
+                src={heroSlides[currentSlide].image}
+                alt="Hero Slide"
                 className="hero-full-img"
               />
             </motion.div>
@@ -282,7 +241,7 @@ function Home() {
           >
             <div className="hero-badge floating-3d">
               <span className="badge-pulse" />
-              Direct Admission {new Date().getFullYear()} - {new Date().getFullYear() + 1} Open
+              Admission {new Date().getFullYear()} - {new Date().getFullYear() + 1} Open
             </div>
 
             <h1 className="hero-title">
@@ -295,12 +254,12 @@ function Home() {
 
             <div className="hero-buttons">
               <Link
-                to={ heroSlides[currentSlide].primaryTo}
+                to={heroSlides[currentSlide].primaryTo}
                 className="btn-dark"
               >
-                { heroSlides[currentSlide].primaryLabel} <FaExternalLinkSquareAlt style={{ marginLeft: "6px", fontSize: "0.9em" }} />
+                {heroSlides[currentSlide].primaryLabel} <FaExternalLinkSquareAlt style={{ marginLeft: "6px", fontSize: "0.9em" }} />
               </Link>
-              
+
             </div>
 
             <div className="hero-trust">
@@ -328,7 +287,7 @@ function Home() {
                 <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
-            
+
             <div className="hero-nav-dots">
               {heroSlides.map((_, i) => (
                 <button
@@ -433,7 +392,7 @@ function Home() {
                   <span className="service-icon">{service.icon}</span>
                   <h3 className="service-card-title">{service.title}</h3>
                 </div>
-                
+
                 <p className="service-card-desc">{service.desc}</p>
                 <div className="service-card-line" />
               </motion.div>
