@@ -478,9 +478,9 @@ class EnquiryFormAdminForm(forms.ModelForm):
 class EnquiryFormAdmin(admin.ModelAdmin):
     form = EnquiryFormAdminForm
     list_display = ('application_id', 'user_status', 'first_name', 'last_name', 'email_id', 'mobile_number', 
-                    'college', 'course_name', 'reference_name', 'submitted_at')  # Added reference_name
+                    'college', 'course_name', 'reference_name', 'submitted_at')
     search_fields = ('application_id', 'first_name', 'last_name', 'email_id', 'mobile_number', 
-                    'college__college_name', 'course_name', 'reference_name')  # Added reference_name
+                    'college__college_name', 'course_name', 'reference_name')
     list_filter = ('college', 'gender', 'community')
     readonly_fields = ('application_id', 'submitted_at', 'updated_at')
     date_hierarchy = 'submitted_at'
@@ -525,7 +525,6 @@ class EnquiryFormAdmin(admin.ModelAdmin):
         })
     )
     
-    # Add custom actions for bulk operations
     actions = ['export_as_csv', 'mark_as_has_diploma', 'clear_user_association']
     
     def export_as_csv(self, request, queryset):
@@ -576,25 +575,25 @@ class EnquiryFormAdmin(admin.ModelAdmin):
         self.message_user(request, f"Removed user association from {updated} application(s).")
     clear_user_association.short_description = "Clear user association"
     
-    # Override save_model to handle user field properly
     def save_model(self, request, obj, form, change):
         """Handle saving with optional user field"""
-        # If user field is empty in form, ensure it's set to None
         if not obj.user_id:
             obj.user = None
         super().save_model(request, obj, form, change)
     
-    # Add custom column for user status
+    # FIXED: Use mark_safe instead of format_html
     def user_status(self, obj):
-        if obj.user:
+        """Display user status with proper formatting"""
+        if obj and obj.user:
             return mark_safe(
                 '<span style="background: #4CAF50; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px;">✓ Registered</span>'
             )
-        return mark_safe(
-            '<span style="background: #9E9E9E; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px;">👤 Guest</span>'
-        )
+        elif obj and not obj.user:
+            return mark_safe(
+                '<span style="background: #9E9E9E; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px;">👤 Guest</span>'
+            )
+        return mark_safe('<span style="background: #FF9800; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px;">-</span>')
     user_status.short_description = "User Type"
-
 
 # Optional: Add inline for User to show their applications
 class UserEnquiryInline(admin.TabularInline):
