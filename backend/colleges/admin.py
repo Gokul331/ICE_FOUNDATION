@@ -224,7 +224,6 @@ class CourseForm(forms.ModelForm):
         self.fields['degree_type'].required = False
         self.fields['course_code'].required = False
 
-
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
     form = CourseForm
@@ -312,9 +311,139 @@ class CourseAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('college')
     
     def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-        if obj.college:
-            obj.college.sync_courses_offered()
+        """Save model with duplicate checking (college, course_code, degree_type)"""
+        try:
+            # Check if course already exists for this college with same course_code AND degree_type
+            existing = Course.objects.filter(
+                college=obj.college,
+                course_code=obj.course_code,
+                degree_type=obj.degree_type  # Check degree_type as well
+            ).exclude(pk=obj.pk if obj.pk else None).first()
+            
+            if existing:
+                error_msg = (
+                    f'❌ Duplicate Course!\n\n'
+                    f'Course "{obj.course_code}" with degree type "{obj.get_degree_type_display()}" '
+                    f'already exists for college "{obj.college.college_name}".\n\n'
+                    f'Existing Course:\n'
+                    f'  • Course Name: {existing.course_name}\n'
+                    f'  • Degree Type: {existing.get_degree_type_display()}\n'
+                    f'  • Category: {existing.get_category_display()}'
+                )
+                self.message_user(request, error_msg, level='ERROR')
+                return
+            
+            # Also check for same course with different degree type (warning only)
+            same_course_diff_degree = Course.objects.filter(
+                college=obj.college,
+                course_code=obj.course_code
+            ).exclude(degree_type=obj.degree_type).exclude(pk=obj.pk if obj.pk else None).first()
+            
+            if same_course_diff_degree:
+                warning_msg = (
+                    f'⚠️ Warning: Course "{obj.course_code}" exists for this college '
+                    f'with a DIFFERENT degree type ({same_course_diff_degree.get_degree_type_display()}). '
+                    f'Are you sure you want to add it as {obj.get_degree_type_display()}?'
+                )
+                self.message_user(request, warning_msg, level='WARNING')
+            
+            super().save_model(request, obj, form, change)
+            
+            if obj.college:
+                obj.college.sync_courses_offered()
+                
+            if not change:
+                self.message_user(request, f'✅ Course "{obj.course_code}" ({obj.get_degree_type_display()}) added successfully!', level='SUCCESS')
+                
+        except Exception as e:
+            self.message_user(request, f'❌ Error saving course: {str(e)}', level='ERROR')
+    
+    # Custom actions
+    actions = ['find_duplicate_courses', 'export_courses_csv', 'merge_duplicate_courses']
+    
+    def find_duplicate_courses(self, request, queryset):
+        """Find duplicate courses (same college, course_code, degree_type)"""
+        from collections import defaultdict
+        
+        duplicates = defaultdict(list)
+        
+        for course in queryset:
+            key = (course.college_id, course.course_code, course.degree_type)
+            duplicates[key].append(course)
+        
+        duplicate_count = 0
+        duplicate_list = []
+        
+        for key, courses in duplicates.items():
+            if len(courses) > 1:
+                duplicate_count += len(courses) - 1
+                college_name = courses[0].college.college_name
+                course_code = courses[0].course_code
+                degree_type = courses[0].get_degree_type_display()
+                duplicate_list.append(f'• {college_name}: {course_code} ({degree_type}) - {len(courses)} copies')
+        
+        if duplicate_list:
+            message = f'Found {duplicate_count} duplicate(s):\n' + '\n'.join(duplicate_list)
+            self.message_user(request, message, level='WARNING')
+        else:
+            self.message_user(request, 'No duplicate courses found in selection.', level='SUCCESS')
+    find_duplicate_courses.short_description = "Find duplicate courses (college + code + degree)"
+    
+    def merge_duplicate_courses(self, request, queryset):
+        """Merge duplicate courses (keep first, delete others)"""
+        from collections import defaultdict
+        from django.db import transaction
+        
+        duplicates = defaultdict(list)
+        
+        for course in queryset:
+            key = (course.college_id, course.course_code, course.degree_type)
+            duplicates[key].append(course)
+        
+        merged_count = 0
+        deleted_count = 0
+        
+        with transaction.atomic():
+            for key, courses in duplicates.items():
+                if len(courses) > 1:
+                    # Keep the first one, delete the rest
+                    keep = courses[0]
+                    for delete_course in courses[1:]:
+                        delete_course.delete()
+                        deleted_count += 1
+                    merged_count += 1
+        
+        self.message_user(
+            request,
+            f'✅ Merged {merged_count} duplicate groups. Deleted {deleted_count} duplicate courses.',
+            level='SUCCESS'
+        )
+    merge_duplicate_courses.short_description = "Merge duplicate courses (keep first)"
+    
+    def export_courses_csv(self, request, queryset):
+        """Export selected courses to CSV"""
+        import csv
+        from django.http import HttpResponse
+        
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="courses_export.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow(['College', 'Course Code', 'Course Name', 'Category', 'Degree Type', 'Status'])
+        
+        for course in queryset:
+            writer.writerow([
+                course.college.college_name,
+                course.course_code,
+                course.course_name,
+                course.get_category_display(),
+                course.get_degree_type_display(),
+                'Active' if course.is_active else 'Inactive'
+            ])
+        
+        self.message_user(request, f'Exported {queryset.count()} courses to CSV.', level='SUCCESS')
+        return response
+    export_courses_csv.short_description = "Export selected courses to CSV"
     
     # ==================== AJAX ENDPOINTS ====================
     
@@ -324,8 +453,94 @@ class CourseAdmin(admin.ModelAdmin):
             path('load-categories/', self.load_categories, name='load_categories'),
             path('load-degree-types/', self.load_degree_types, name='load_degree_types'),
             path('load-courses/', self.load_courses, name='load_courses'),
+            path('check-duplicate/', self.check_duplicate, name='check_duplicate'),
+            path('check-full-duplicate/', self.check_full_duplicate, name='check_full_duplicate'),
         ]
         return custom_urls + urls
+    
+    def check_duplicate(self, request):
+        """AJAX endpoint to check if course already exists (college + course_code only)"""
+        college_id = request.GET.get('college_id')
+        course_code = request.GET.get('course_code')
+        
+        if college_id and course_code:
+            exists = Course.objects.filter(
+                college_id=college_id,
+                course_code=course_code
+            ).exists()
+            
+            if exists:
+                # Get details of existing courses
+                existing_courses = Course.objects.filter(
+                    college_id=college_id,
+                    course_code=course_code
+                ).values('degree_type', 'course_name')
+                
+                degree_types = [c['degree_type'] for c in existing_courses]
+                degree_names = [dict(Course.DEGREE_TYPE_CHOICES).get(dt, dt) for dt in degree_types]
+                
+                return JsonResponse({
+                    'exists': exists,
+                    'message': f'Course already exists for this college! Existing degree types: {", ".join(degree_names)}',
+                    'existing_degrees': degree_names
+                })
+            else:
+                return JsonResponse({
+                    'exists': False,
+                    'message': 'Course code available'
+                })
+        return JsonResponse({'exists': False})
+    
+    def check_full_duplicate(self, request):
+        """AJAX endpoint to check exact duplicate (college + course_code + degree_type)"""
+        college_id = request.GET.get('college_id')
+        course_code = request.GET.get('course_code')
+        degree_type = request.GET.get('degree_type')
+        
+        if college_id and course_code and degree_type:
+            exists = Course.objects.filter(
+                college_id=college_id,
+                course_code=course_code,
+                degree_type=degree_type
+            ).exists()
+            
+            if exists:
+                course = Course.objects.filter(
+                    college_id=college_id,
+                    course_code=course_code,
+                    degree_type=degree_type
+                ).first()
+                
+                return JsonResponse({
+                    'exists': exists,
+                    'message': f'❌ EXACT DUPLICATE: Course "{course_code}" with degree type "{course.get_degree_type_display()}" already exists!',
+                    'existing_course': {
+                        'name': course.course_name,
+                        'degree': course.get_degree_type_display(),
+                        'category': course.get_category_display()
+                    }
+                })
+            else:
+                # Check if same course exists with different degree type
+                same_course = Course.objects.filter(
+                    college_id=college_id,
+                    course_code=course_code
+                ).exclude(degree_type=degree_type).first()
+                
+                if same_course:
+                    return JsonResponse({
+                        'exists': False,
+                        'warning': True,
+                        'message': f'⚠️ Course "{course_code}" exists with DIFFERENT degree type ({same_course.get_degree_type_display()}). You can add it as {dict(Course.DEGREE_TYPE_CHOICES).get(degree_type, degree_type)}.',
+                        'existing_degree': same_course.get_degree_type_display()
+                    })
+                else:
+                    return JsonResponse({
+                        'exists': False,
+                        'warning': False,
+                        'message': '✓ Course code available for this degree type'
+                    })
+        return JsonResponse({'exists': False, 'warning': False})
     
     def load_categories(self, request):
         """AJAX endpoint to load categories based on selected college"""
@@ -385,12 +600,14 @@ class CourseAdmin(admin.ModelAdmin):
         degree_type = request.GET.get('degree_type')
         
         if college_id and category and degree_type:
+            # Get existing courses with exact match
             existing_courses = Course.objects.filter(
                 college_id=college_id,
                 category=category,
                 degree_type=degree_type
             ).values_list('course_code', flat=True)
             
+            # Get all available courses for this category
             category_courses = self.get_courses_for_category(category)
             
             courses = []
@@ -432,8 +649,6 @@ class CourseAdmin(admin.ModelAdmin):
         css = {
             'all': ['admin/css/course_admin.css']
         }
-
-
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('first_name', 'last_name', 'email', 'phone_number', 'city', 'created_at')
