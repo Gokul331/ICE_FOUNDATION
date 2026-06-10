@@ -1,3 +1,9 @@
+/* ============================================
+   COURSE ADMIN CUSTOM STYLES
+   Enhanced with better visual feedback
+   ============================================ */
+
+/* Loading Spinner */
 .loading-spinner {
     display: inline-block;
     width: 20px;
@@ -7,44 +13,319 @@
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-left: 10px;
+    vertical-align: middle;
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
-.field-category .help, 
+/* Loading state for selects */
+select.loading {
+    opacity: 0.6;
+    cursor: wait;
+    background-color: #f9f9f9;
+}
+
+/* Help Text Styling */
+.field-category .help,
 .field-degree_type .help,
 .field-course_code .help {
     color: #666;
     font-size: 12px;
     margin-top: 5px;
+    transition: all 0.3s ease;
 }
 
+/* Success Message Styling */
+.help.success {
+    color: #2e7d32;
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-top: 8px;
+    border-left: 3px solid #4caf50;
+    font-size: 12px;
+    animation: slideDown 0.3s ease;
+}
+
+/* Warning Message Styling */
+.help.warning {
+    color: #e65100;
+    background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-top: 8px;
+    border-left: 3px solid #ff9800;
+    font-size: 12px;
+    animation: slideDown 0.3s ease;
+}
+
+/* Error Message Styling */
+.help.error {
+    color: #c62828;
+    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-top: 8px;
+    border-left: 3px solid #f44336;
+    font-size: 12px;
+    animation: slideDown 0.3s ease;
+}
+
+/* Info Message Styling */
+.help.info {
+    color: #1565c0;
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-top: 8px;
+    border-left: 3px solid #2196f3;
+    font-size: 12px;
+    animation: slideDown 0.3s ease;
+}
+
+/* Slide down animation */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Disabled Select Styling */
 .field-category select:disabled,
 .field-degree_type select:disabled,
 .field-course_code select:disabled {
     background-color: #f5f5f5;
     color: #999;
     cursor: not-allowed;
+    border-color: #ddd;
 }
 
+/* Form Row Styling */
 .form-row {
     margin-bottom: 15px;
-    padding: 10px;
+    padding: 10px 0;
     border-bottom: 1px solid #eee;
+    transition: background-color 0.2s ease;
+}
+
+.form-row:hover {
+    background-color: #fafafa;
 }
 
 .form-row:last-child {
     border-bottom: none;
 }
 
-/* Success message styling */
-.help {
-    color: #2e7d32;
-    background: #e8f5e9;
+/* Fieldset Styling */
+fieldset.module {
+    background: #fff;
+    border: 1px solid #e3e3e3;
+    border-radius: 8px;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+fieldset.module h2 {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 12px 15px;
+    margin: -15px -20px 15px -20px;
+    border-radius: 8px 8px 0 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    border-bottom: 1px solid #e3e3e3;
+}
+
+/* Description text styling */
+.description {
+    background: #f8f9fa;
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    font-size: 12px;
+    color: #666;
+    border-left: 3px solid #3498db;
+}
+
+/* Step indicator styling */
+.step-indicator {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    text-align: center;
+    background: #3498db;
+    color: white;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+/* Course code select option styling */
+#id_course_code option {
+    padding: 8px;
+}
+
+#id_course_code option[value=""] {
+    color: #999;
+    font-style: italic;
+}
+
+/* Course name field auto-fill highlight */
+#id_course_name {
+    transition: background-color 0.3s ease;
+}
+
+#id_course_name:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+}
+
+/* Auto-fill animation */
+@keyframes highlightField {
+    0% {
+        background-color: #e8f5e9;
+        border-color: #4caf50;
+    }
+
+    100% {
+        background-color: transparent;
+        border-color: #ccc;
+    }
+}
+
+.highlight-field {
+    animation: highlightField 1s ease;
+}
+
+/* Button styling for form actions */
+.submit-row {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.submit-row input.default {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    border: none;
+    padding: 10px 20px;
+    font-weight: 600;
+    border-radius: 6px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.submit-row input.default:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .form-row {
+        padding: 8px 0;
+    }
+
+    .help.success,
+    .help.warning,
+    .help.error,
+    .help.info {
+        font-size: 11px;
+        padding: 6px 10px;
+    }
+
+    .loading-spinner {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+
+    .field-category select:disabled,
+    .field-degree_type select:disabled,
+    .field-course_code select:disabled {
+        background-color: #2d2d2d;
+        color: #aaa;
+        border-color: #444;
+    }
+
+    .help.success {
+        background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+        color: #fff;
+    }
+
+    .help.warning {
+        background: linear-gradient(135deg, #e65100 0%, #ef6c00 100%);
+        color: #fff;
+    }
+
+    .help.error {
+        background: linear-gradient(135deg, #b71c1c 0%, #c62828 100%);
+        color: #fff;
+    }
+
+    .help.info {
+        background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
+        color: #fff;
+    }
+}
+
+/* Tooltip styling for better UX */
+[data-tooltip] {
+    position: relative;
+    cursor: help;
+}
+
+[data-tooltip]:before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
     padding: 5px 10px;
+    background: #333;
+    color: #fff;
+    font-size: 11px;
     border-radius: 4px;
-    margin-top: 5px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 1000;
+}
+
+[data-tooltip]:hover:before {
+    opacity: 1;
+}
+
+/* Print styles */
+@media print {
+
+    .loading-spinner,
+    .help,
+    .description {
+        display: none;
+    }
+
+    select:disabled {
+        background-color: transparent !important;
+        color: #000 !important;
+    }
 }

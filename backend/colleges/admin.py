@@ -7,6 +7,7 @@ from django.contrib.admin.widgets import AdminTextareaWidget
 from django import forms
 from django.http import JsonResponse
 from django.urls import path
+from django.utils import timezone  # Add this import
 from .models import College, Course, UserProfile, EnquiryForm
 
 
@@ -365,12 +366,11 @@ class CourseAdmin(admin.ModelAdmin):
             
             degree_list = []
             for dt_code in Course.DEGREE_TYPE_CHOICES:
-                if dt_code[0] in degree_types or True:  # Show all degree types
-                    degree_list.append({
-                        'value': dt_code[0],
-                        'display': dt_code[1],
-                        'has_existing': dt_code[0] in degree_types
-                    })
+                degree_list.append({
+                    'value': dt_code[0],
+                    'display': dt_code[1],
+                    'has_existing': dt_code[0] in degree_types
+                })
             
             return JsonResponse({
                 'success': True,
@@ -436,265 +436,6 @@ class CourseAdmin(admin.ModelAdmin):
         }
 
 
-# ==================== CUSTOM CSS FOR COURSE ADMIN ====================
-# Create a file at: static/admin/css/course_admin.css
-"""
-.loading-spinner {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 2px solid #f3f3f3;
-    border-top: 2px solid #3498db;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-left: 10px;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.field-category .help, 
-.field-degree_type .help,
-.field-course_code .help {
-    color: #666;
-    font-size: 12px;
-    margin-top: 5px;
-}
-
-.field-category select:disabled,
-.field-degree_type select:disabled,
-.field-course_code select:disabled {
-    background-color: #f5f5f5;
-    color: #999;
-    cursor: not-allowed;
-}
-
-.form-row {
-    margin-bottom: 15px;
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-}
-
-.form-row:last-child {
-    border-bottom: none;
-}
-"""
-
-# ==================== JAVASCRIPT FOR COURSE ADMIN ====================
-# Create a file at: static/admin/js/course_admin.js
-"""
-(function($) {
-    'use strict';
-    
-    // Wait for the DOM to be ready
-    $(document).ready(function() {
-        var collegeSelect = $('#id_college');
-        var categorySelect = $('#id_category');
-        var degreeTypeSelect = $('#id_degree_type');
-        var courseCodeSelect = $('#id_course_code');
-        var loadingSpinner = null;
-        
-        // Create loading spinner
-        function showLoading(selectElement) {
-            var spinner = $('<span class="loading-spinner"></span>');
-            selectElement.after(spinner);
-            selectElement.prop('disabled', true);
-            return spinner;
-        }
-        
-        function hideLoading(spinner, selectElement) {
-            if (spinner) spinner.remove();
-            selectElement.prop('disabled', false);
-        }
-        
-        // Load categories when college changes
-        function loadCategories() {
-            var collegeId = collegeSelect.val();
-            
-            if (!collegeId) {
-                categorySelect.empty().append('<option value="">-- Select College First --</option>');
-                categorySelect.prop('disabled', true);
-                degreeTypeSelect.empty().append('<option value="">-- Select Category First --</option>');
-                degreeTypeSelect.prop('disabled', true);
-                courseCodeSelect.empty().append('<option value="">-- Select Degree Type First --</option>');
-                courseCodeSelect.prop('disabled', true);
-                return;
-            }
-            
-            var spinner = showLoading(categorySelect);
-            
-            $.ajax({
-                url: '/admin/colleges/course/load-categories/',
-                data: { college_id: collegeId },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        categorySelect.empty();
-                        categorySelect.append('<option value="">-- Select Category --</option>');
-                        
-                        $.each(response.categories, function(i, category) {
-                            categorySelect.append(
-                                $('<option></option>').val(category.value).html(category.display)
-                            );
-                        });
-                        
-                        categorySelect.prop('disabled', false);
-                        categorySelect.trigger('change');
-                        
-                        // Show help text
-                        if (response.has_categories) {
-                            categorySelect.closest('.form-row').find('.help').remove();
-                            categorySelect.after('<div class="help">✓ Categories loaded successfully. Select a category to continue.</div>');
-                        } else {
-                            categorySelect.after('<div class="help">⚠ No categories found for this college. Please add categories in the College admin.</div>');
-                        }
-                    } else {
-                        categorySelect.empty().append('<option value="">-- Error loading categories --</option>');
-                        categorySelect.prop('disabled', true);
-                    }
-                    hideLoading(spinner, categorySelect);
-                },
-                error: function() {
-                    categorySelect.empty().append('<option value="">-- Error loading categories --</option>');
-                    categorySelect.prop('disabled', true);
-                    hideLoading(spinner, categorySelect);
-                }
-            });
-        }
-        
-        // Load degree types when category changes
-        function loadDegreeTypes() {
-            var collegeId = collegeSelect.val();
-            var category = categorySelect.val();
-            
-            if (!collegeId || !category) {
-                degreeTypeSelect.empty().append('<option value="">-- Select Category First --</option>');
-                degreeTypeSelect.prop('disabled', true);
-                courseCodeSelect.empty().append('<option value="">-- Select Degree Type First --</option>');
-                courseCodeSelect.prop('disabled', true);
-                return;
-            }
-            
-            var spinner = showLoading(degreeTypeSelect);
-            
-            $.ajax({
-                url: '/admin/colleges/course/load-degree-types/',
-                data: { 
-                    college_id: collegeId,
-                    category: category
-                },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        degreeTypeSelect.empty();
-                        degreeTypeSelect.append('<option value="">-- Select Degree Type --</option>');
-                        
-                        $.each(response.degree_types, function(i, degreeType) {
-                            var optionText = degreeType.display;
-                            if (degreeType.has_existing) {
-                                optionText += ' ✓ (exists)';
-                            }
-                            degreeTypeSelect.append(
-                                $('<option></option>').val(degreeType.value).html(optionText)
-                            );
-                        });
-                        
-                        degreeTypeSelect.prop('disabled', false);
-                        degreeTypeSelect.trigger('change');
-                        
-                        degreeTypeSelect.closest('.form-row').find('.help').remove();
-                        degreeTypeSelect.after('<div class="help">✓ Select the degree type for this course.</div>');
-                    } else {
-                        degreeTypeSelect.empty().append('<option value="">-- Error loading degree types --</option>');
-                        degreeTypeSelect.prop('disabled', true);
-                    }
-                    hideLoading(spinner, degreeTypeSelect);
-                },
-                error: function() {
-                    degreeTypeSelect.empty().append('<option value="">-- Error loading degree types --</option>');
-                    degreeTypeSelect.prop('disabled', true);
-                    hideLoading(spinner, degreeTypeSelect);
-                }
-            });
-        }
-        
-        // Load courses when degree type changes
-        function loadCourses() {
-            var collegeId = collegeSelect.val();
-            var category = categorySelect.val();
-            var degreeType = degreeTypeSelect.val();
-            
-            if (!collegeId || !category || !degreeType) {
-                courseCodeSelect.empty().append('<option value="">-- Select Degree Type First --</option>');
-                courseCodeSelect.prop('disabled', true);
-                return;
-            }
-            
-            var spinner = showLoading(courseCodeSelect);
-            
-            $.ajax({
-                url: '/admin/colleges/course/load-courses/',
-                data: {
-                    college_id: collegeId,
-                    category: category,
-                    degree_type: degreeType
-                },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        courseCodeSelect.empty();
-                        courseCodeSelect.append('<option value="">-- Select Course --</option>');
-                        
-                        var hasAvailableCourses = false;
-                        $.each(response.courses, function(i, course) {
-                            if (!course.exists) {
-                                hasAvailableCourses = true;
-                                courseCodeSelect.append(
-                                    $('<option></option>').val(course.value).html(course.display)
-                                );
-                            }
-                        });
-                        
-                        if (!hasAvailableCourses) {
-                            courseCodeSelect.append('<option value="">-- No new courses available for this combination --</option>');
-                            courseCodeSelect.prop('disabled', true);
-                            courseCodeSelect.closest('.form-row').find('.help').remove();
-                            courseCodeSelect.after('<div class="help">⚠ All courses for this combination already exist.</div>');
-                        } else {
-                            courseCodeSelect.prop('disabled', false);
-                            courseCodeSelect.closest('.form-row').find('.help').remove();
-                            courseCodeSelect.after('<div class="help">✓ Select a course from the list above.</div>');
-                        }
-                    } else {
-                        courseCodeSelect.empty().append('<option value="">-- Error loading courses --</option>');
-                        courseCodeSelect.prop('disabled', true);
-                    }
-                    hideLoading(spinner, courseCodeSelect);
-                },
-                error: function() {
-                    courseCodeSelect.empty().append('<option value="">-- Error loading courses --</option>');
-                    courseCodeSelect.prop('disabled', true);
-                    hideLoading(spinner, courseCodeSelect);
-                }
-            });
-        }
-        
-        // Attach event handlers
-        collegeSelect.on('change', loadCategories);
-        categorySelect.on('change', loadDegreeTypes);
-        degreeTypeSelect.on('change', loadCourses);
-        
-        // If editing an existing course, trigger initial load
-        if (collegeSelect.val()) {
-            loadCategories();
-        }
-    });
-})(django.jQuery);
-"""
-
-
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('first_name', 'last_name', 'email', 'phone_number', 'city', 'created_at')
@@ -738,7 +479,7 @@ class EnquiryFormAdminForm(forms.ModelForm):
 @admin.register(EnquiryForm)
 class EnquiryFormAdmin(admin.ModelAdmin):
     form = EnquiryFormAdminForm
-    list_display = ('application_id', 'first_name', 'last_name', 'email_id', 'mobile_number', 
+    list_display = ('application_id', 'user_status', 'first_name', 'last_name', 'email_id', 'mobile_number', 
                     'college', 'course_name', 'submitted_at') 
     search_fields = ('application_id', 'first_name', 'last_name', 'email_id', 'mobile_number', 
                     'college__college_name', 'course_name')
@@ -747,7 +488,6 @@ class EnquiryFormAdmin(admin.ModelAdmin):
     date_hierarchy = 'submitted_at'
     list_per_page = 25
     
-
     fieldsets = (
         ('Application Info', {
             'fields': ('application_id', 'user', 'college', 'course_name', 'department_name')
@@ -767,6 +507,11 @@ class EnquiryFormAdmin(admin.ModelAdmin):
                       'has_diploma', 'diploma_marks_percentage',
                       'has_ug', 'ug_marks_percentage')
         }),
+        ('Selection Path (Optional)', {
+            'fields': ('selected_course', 'selected_category', 'selected_degree_type'),
+            'classes': ('collapse',),
+            'description': 'These fields are auto-populated when a course is selected'
+        }),
         ('Document Uploads', {
             'fields': ('photo', 'aadhar_card'),
             'classes': ('collapse',)
@@ -776,6 +521,90 @@ class EnquiryFormAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         })
     )
+    
+    # Add custom actions for bulk operations
+    actions = ['export_as_csv', 'mark_as_has_diploma', 'clear_user_association']
+    
+    def export_as_csv(self, request, queryset):
+        """Export selected applications as CSV"""
+        import csv
+        from django.http import HttpResponse
+        
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="applications.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow([
+            'Application ID', 'Name', 'Email', 'Mobile', 'College', 'Course', 
+            'Submitted Date', '10th %', '12th %', 'Community', 'City', 'User Type'
+        ])
+        
+        for obj in queryset:
+            writer.writerow([
+                obj.application_id,
+                f"{obj.first_name} {obj.last_name}",
+                obj.email_id,
+                obj.mobile_number,
+                obj.college.college_name if obj.college else 'N/A',
+                obj.course_name,
+                obj.submitted_at.strftime('%Y-%m-%d %H:%M'),
+                obj.tenth_marks_percentage or 'N/A',
+                obj.twelfth_marks_percentage or 'N/A',
+                obj.community or 'N/A',
+                obj.city or 'N/A',
+                'Registered' if obj.user else 'Guest'
+            ])
+        
+        self.message_user(request, f"Exported {queryset.count()} applications to CSV.")
+        return response
+    
+    export_as_csv.short_description = "Export selected applications to CSV"
+    
+    def mark_as_has_diploma(self, request, queryset):
+        """Bulk mark applications as having diploma"""
+        updated = queryset.update(has_diploma=True)
+        self.message_user(request, f"Marked {updated} application(s) as having diploma.")
+    mark_as_has_diploma.short_description = "Mark as has diploma"
+    
+    def clear_user_association(self, request, queryset):
+        """Bulk remove user association (set user to NULL)"""
+        updated = queryset.update(user=None)
+        self.message_user(request, f"Removed user association from {updated} application(s).")
+    clear_user_association.short_description = "Clear user association"
+    
+    # Override save_model to handle user field properly
+    def save_model(self, request, obj, form, change):
+        """Handle saving with optional user field"""
+        # If user field is empty in form, ensure it's set to None
+        if not obj.user_id:
+            obj.user = None
+        super().save_model(request, obj, form, change)
+    
+    # Add custom column for user status
+    def user_status(self, obj):
+        if obj.user:
+            return format_html(
+                '<span style="background: #4CAF50; color: white; padding: 2px 8px; border-radius: 12px;">✓ Registered</span>'
+            )
+        return format_html(
+            '<span style="background: #9E9E9E; color: white; padding: 2px 8px; border-radius: 12px;">👤 Guest</span>'
+        )
+    user_status.short_description = "User Type"
+
+
+# Optional: Add inline for User to show their applications
+class UserEnquiryInline(admin.TabularInline):
+    """Inline display of user's applications in User admin"""
+    model = EnquiryForm
+    fields = ('application_id', 'college', 'course_name', 'submitted_at')
+    readonly_fields = ('application_id', 'college', 'course_name', 'submitted_at')
+    extra = 0
+    can_delete = False
+    show_change_link = True
+    
+    def has_add_permission(self, request, obj=None):
+        return False
+
 
 # ==================== CUSTOM ADMIN SITE SETTINGS ====================
 admin.site.site_header = "Vamshi EduCare Administration"

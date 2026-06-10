@@ -561,13 +561,88 @@ class EnquiryFormCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = EnquiryForm
         fields = '__all__'
-        read_only_fields = ['application_id', 'submitted_at', 'updated_at', 'course_name', 'department_name', 'user']
+        read_only_fields = [
+            'application_id', 'submitted_at', 'updated_at', 
+            'course_name', 'department_name', 'user', 'selected_category', 
+            'selected_degree_type', 'college'
+        ]
+    
+    def validate_selected_course(self, value):
+        """Validate that the selected course is active"""
+        if value and not value.is_active:
+            raise serializers.ValidationError("The selected course is not active")
+        return value
     
     def create(self, validated_data):
+        # Remove user if present (for anonymous submissions)
+        validated_data.pop('user', None)
+        
+        # Auto-populate from selected_course if present
+        selected_course = validated_data.get('selected_course')
+        if selected_course:
+            validated_data['course_name'] = selected_course.course_name
+            validated_data['department_name'] = selected_course.get_course_code_display()
+            validated_data['selected_category'] = selected_course.category
+            validated_data['selected_degree_type'] = selected_course.degree_type
+            validated_data['college'] = selected_course.college
+        
         # Generate application ID
         from datetime import datetime
-        user = validated_data.pop('user', None)
         identifier = validated_data.get('email_id') or validated_data.get('mobile_number', 'anonymous')
-        validated_data['application_id'] = f"APP-{identifier}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        # Clean identifier to remove special characters
+        clean_identifier = ''.join(c for c in identifier if c.isalnum())[:30]
+        validated_data['application_id'] = f"APP-{clean_identifier}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         
-        return super().create(validated_data)
+        # Create the enquiry form
+        enquiry = EnquiryForm.objects.create(**validated_data)
+        
+        # Send email notification (optional)
+        try:
+            self._send_confirmation_email(enquiry)
+        except Exception as e:
+            logger.error(f"Failed to send confirmation email: {e}")
+        
+        return enquiry
+    
+    def _send_confirmation_email(self, enquiry):
+        """Send confirmation email to the applicant"""
+        subject = f"Application Received - {enquiry.application_id}"
+        html_content = f"""
+        <html>
+            <body>
+                <h2>Thank you for your application!</h2>
+                <p>Dear {enquiry.first_name},</p>
+                <p>Your application has been received successfully.</p>
+                <p><strong>Application ID:</strong> {enquiry.application_id}</p>
+                <p><strong>Course Applied:</strong> {enquiry.course_name}</p>
+                <p>Our team will review your application and contact you shortly.</p>
+                <br>
+                <p>Best regards,<br>VAMSHI EDUCARE Team</p>
+            </body>
+        </html>
+        """
+        
+        text_content = f"""
+        Thank you for your application!
+        
+        Dear {enquiry.first_name},
+        
+        Your application has been received successfully.
+        
+        Application ID: {enquiry.application_id}
+        Course Applied: {enquiry.course_name}
+        
+        Our team will review your application and contact you shortly.
+        
+        Best regards,
+        VAMSHI EDUCARE Team
+        """
+        
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[enquiry.email_id]
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send()
