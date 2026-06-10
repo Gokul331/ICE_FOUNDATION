@@ -573,6 +573,12 @@ class EnquiryFormCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("The selected course is not active")
         return value
     
+    def validate_reference_name(self, value):
+        """Validate reference name length"""
+        if value and len(value) > 200:
+            raise serializers.ValidationError("Reference name must be less than 200 characters")
+        return value
+    
     def create(self, validated_data):
         # Remove user if present (for anonymous submissions)
         validated_data.pop('user', None)
@@ -615,6 +621,7 @@ class EnquiryFormCreateSerializer(serializers.ModelSerializer):
                 <p>Your application has been received successfully.</p>
                 <p><strong>Application ID:</strong> {enquiry.application_id}</p>
                 <p><strong>Course Applied:</strong> {enquiry.course_name}</p>
+                <p><strong>Referred By:</strong> {enquiry.reference_name or 'N/A'}</p>
                 <p>Our team will review your application and contact you shortly.</p>
                 <br>
                 <p>Best regards,<br>VAMSHI EDUCARE Team</p>
@@ -631,6 +638,7 @@ class EnquiryFormCreateSerializer(serializers.ModelSerializer):
         
         Application ID: {enquiry.application_id}
         Course Applied: {enquiry.course_name}
+        Referred By: {enquiry.reference_name or 'N/A'}
         
         Our team will review your application and contact you shortly.
         

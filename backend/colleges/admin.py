@@ -7,7 +7,7 @@ from django.contrib.admin.widgets import AdminTextareaWidget
 from django import forms
 from django.http import JsonResponse
 from django.urls import path
-from django.utils import timezone  # Add this import
+from django.utils import timezone
 from .models import College, Course, UserProfile, EnquiryForm
 
 
@@ -385,14 +385,12 @@ class CourseAdmin(admin.ModelAdmin):
         degree_type = request.GET.get('degree_type')
         
         if college_id and category and degree_type:
-            # Get existing courses
             existing_courses = Course.objects.filter(
                 college_id=college_id,
                 category=category,
                 degree_type=degree_type
             ).values_list('course_code', flat=True)
             
-            # Get all available courses for this category
             category_courses = self.get_courses_for_category(category)
             
             courses = []
@@ -480,9 +478,9 @@ class EnquiryFormAdminForm(forms.ModelForm):
 class EnquiryFormAdmin(admin.ModelAdmin):
     form = EnquiryFormAdminForm
     list_display = ('application_id', 'user_status', 'first_name', 'last_name', 'email_id', 'mobile_number', 
-                    'college', 'course_name', 'submitted_at') 
+                    'college', 'course_name', 'reference_name', 'submitted_at')  # Added reference_name
     search_fields = ('application_id', 'first_name', 'last_name', 'email_id', 'mobile_number', 
-                    'college__college_name', 'course_name')
+                    'college__college_name', 'course_name', 'reference_name')  # Added reference_name
     list_filter = ('college', 'gender', 'community')
     readonly_fields = ('application_id', 'submitted_at', 'updated_at')
     date_hierarchy = 'submitted_at'
@@ -506,6 +504,11 @@ class EnquiryFormAdmin(admin.ModelAdmin):
             'fields': ('tenth_marks_percentage', 'twelfth_marks_percentage', 
                       'has_diploma', 'diploma_marks_percentage',
                       'has_ug', 'ug_marks_percentage')
+        }),
+        ('Reference Information', {
+            'fields': ('reference_name',),
+            'classes': ('collapse',),
+            'description': 'Name of the person who referred this student (optional)'
         }),
         ('Selection Path (Optional)', {
             'fields': ('selected_course', 'selected_category', 'selected_degree_type'),
@@ -536,7 +539,7 @@ class EnquiryFormAdmin(admin.ModelAdmin):
         writer = csv.writer(response)
         writer.writerow([
             'Application ID', 'Name', 'Email', 'Mobile', 'College', 'Course', 
-            'Submitted Date', '10th %', '12th %', 'Community', 'City', 'User Type'
+            'Submitted Date', '10th %', '12th %', 'Community', 'City', 'User Type', 'Referred By'
         ])
         
         for obj in queryset:
@@ -552,7 +555,8 @@ class EnquiryFormAdmin(admin.ModelAdmin):
                 obj.twelfth_marks_percentage or 'N/A',
                 obj.community or 'N/A',
                 obj.city or 'N/A',
-                'Registered' if obj.user else 'Guest'
+                'Registered' if obj.user else 'Guest',
+                obj.reference_name or 'N/A'
             ])
         
         self.message_user(request, f"Exported {queryset.count()} applications to CSV.")
@@ -583,11 +587,11 @@ class EnquiryFormAdmin(admin.ModelAdmin):
     # Add custom column for user status
     def user_status(self, obj):
         if obj.user:
-            return format_html(
-                '<span style="background: #4CAF50; color: white; padding: 2px 8px; border-radius: 12px;">✓ Registered</span>'
+            return mark_safe(
+                '<span style="background: #4CAF50; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px;">✓ Registered</span>'
             )
-        return format_html(
-            '<span style="background: #9E9E9E; color: white; padding: 2px 8px; border-radius: 12px;">👤 Guest</span>'
+        return mark_safe(
+            '<span style="background: #9E9E9E; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px;">👤 Guest</span>'
         )
     user_status.short_description = "User Type"
 
@@ -596,14 +600,24 @@ class EnquiryFormAdmin(admin.ModelAdmin):
 class UserEnquiryInline(admin.TabularInline):
     """Inline display of user's applications in User admin"""
     model = EnquiryForm
-    fields = ('application_id', 'college', 'course_name', 'submitted_at')
-    readonly_fields = ('application_id', 'college', 'course_name', 'submitted_at')
+    fields = ('application_id', 'college', 'course_name', 'reference_name', 'submitted_at')
+    readonly_fields = ('application_id', 'college', 'course_name', 'reference_name', 'submitted_at')
     extra = 0
     can_delete = False
     show_change_link = True
     
     def has_add_permission(self, request, obj=None):
         return False
+
+
+# Uncomment below to add inline to User admin
+# from django.contrib.auth.admin import UserAdmin
+# 
+# class CustomUserAdmin(UserAdmin):
+#     inlines = [UserEnquiryInline]
+# 
+# admin.site.unregister(User)
+# admin.site.register(User, CustomUserAdmin)
 
 
 # ==================== CUSTOM ADMIN SITE SETTINGS ====================

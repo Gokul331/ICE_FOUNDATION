@@ -239,11 +239,11 @@ class Course(models.Model):
         ('ENV', 'Environmental Science and Technology'),
         ('ECE', 'Electrical and Computer Engineering'),
         ('MCA', 'Master of Computer Applications'),
-    ('MBA', 'Master of Business Administration'),
-    ('ME_CADCAM', 'M.E - CAD/CAM'),
-    ('ME_CSE', 'M.E - Computer Science and Engineering'),
-    ('ME_CS', 'M.E - Communication Systems'),
-    ('ME_PED', 'M.E - Power Electronics and Drives'),
+        ('MBA', 'Master of Business Administration'),
+        ('ME_CADCAM', 'M.E - CAD/CAM'),
+        ('ME_CSE', 'M.E - Computer Science and Engineering'),
+        ('ME_CS', 'M.E - Communication Systems'),
+        ('ME_PED', 'M.E - Power Electronics and Drives'),
     ]
 
     # ==================== ARTS & SCIENCE COURSES ====================
@@ -269,11 +269,11 @@ class Course(models.Model):
         ('BA_SOCIAL_WORK', 'B.A Social Work'),
         ('BSC_HOTEL_MGT', 'B.Sc - Hotel Management & Catering Science'),
         ('BSC_AIML', 'B.Sc - Artificial Intelligence and Machine Learning'),
-    ('BSC_BC', 'B.Sc - Biochemistry'),
-    ('BSC_BT', 'B.Sc - Biotechnology'),
-    ('BSC_MB', 'B.Sc - Microbiology'),
-    ('BSC_MATHS', 'B.Sc - Mathematics'),
-    ('BSC_FTCD', 'B.Sc - Fashion Technology and Costume Designing'),
+        ('BSC_BC', 'B.Sc - Biochemistry'),
+        ('BSC_BT', 'B.Sc - Biotechnology'),
+        ('BSC_MB', 'B.Sc - Microbiology'),
+        ('BSC_MATHS', 'B.Sc - Mathematics'),
+        ('BSC_FTCD', 'B.Sc - Fashion Technology and Costume Designing'),
         ('MA_TAMIL', 'M.A Tamil'),
         ('MA_ENGLISH', 'M.A English'),
         ('MSC_CS', 'M.Sc Computer Science'),
@@ -300,7 +300,7 @@ class Course(models.Model):
         ('BSC_OTAT', 'B.Sc - Operation Theatre and Anaesthesia Technology'),
         ('BSC_APBH', 'B.Sc - Applied Psychology and Behavioural Health'),
         ('BSC_CND', 'B.Sc - Nutrition and Dietetics'),
-    ('BSC_NEP', 'B.Sc - Neuro Electro Physiology'),
+        ('BSC_NEP', 'B.Sc - Neuro Electro Physiology'),
         ('BOPTOM', 'B.Optometry'),
         ('BSC_PA', 'B.Sc - Physician Assistant'),
         ('BSC_RIT', 'B.Sc - Radiography and Imaging Technology'),
@@ -310,7 +310,6 @@ class Course(models.Model):
         ('MSC_MB', 'M.Sc - Medical Biochemistry'),
         ('MSC_RIT', 'M.Sc - Radiography and Imaging Tech'),
         ('MSC_AECT', 'M.Sc - Accident and Emergency Care'),
-
     ]
 
     # ==================== PHARMACY COURSES ====================
@@ -663,7 +662,13 @@ class EnquiryForm(models.Model):
     has_ug = models.BooleanField(default=False)
     ug_marks_percentage = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
 
-  
+    # Reference field - who referred the student
+    reference_name = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        help_text="Name of the person who referred the student (optional)"
+    )
 
     # File uploads
     photo = models.ImageField(upload_to=student_applications_directory_path, null=True, blank=True)
@@ -671,8 +676,8 @@ class EnquiryForm(models.Model):
 
     def __str__(self):
         course_info = f" - {self.course_name}" if self.course_name else ""
-      
-        return f"{self.application_id} - {self.first_name} {self.last_name}{course_info}"
+        reference_info = f" (Referred by: {self.reference_name})" if self.reference_name else ""
+        return f"{self.application_id} - {self.first_name} {self.last_name}{course_info}{reference_info}"
 
     class Meta:
         verbose_name = 'Student Application'
