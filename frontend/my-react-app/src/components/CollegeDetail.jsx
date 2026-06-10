@@ -32,13 +32,6 @@ const BookIcon = () => (
   </svg>
 );
 
-const GraduationIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-    <path d="M22 10v6M2 10l10-5 10 5-10 5-10-5z" />
-    <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
-  </svg>
-);
-
 const ClockIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
     <circle cx="12" cy="12" r="10" />
@@ -74,6 +67,38 @@ const PhoneIcon = () => (
   </svg>
 );
 
+const CloseIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+// Lightbox Component
+const Lightbox = ({ images, currentIndex, onClose, onPrev, onNext }) => {
+  if (!images.length) return null;
+
+  return (
+    <div className="gallery-lightbox" onClick={onClose}>
+      <button className="lightbox-close" onClick={onClose}>
+        <CloseIcon />
+      </button>
+      <button className="lightbox-prev" onClick={(e) => { e.stopPropagation(); onPrev(); }}>
+        ‹
+      </button>
+      <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
+        <img src={images[currentIndex]} alt={`Gallery ${currentIndex + 1}`} />
+        <div className="lightbox-counter">
+          {currentIndex + 1} / {images.length}
+        </div>
+      </div>
+      <button className="lightbox-next" onClick={(e) => { e.stopPropagation(); onNext(); }}>
+        ›
+      </button>
+    </div>
+  );
+};
+
 function CollegeDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -84,6 +109,10 @@ function CollegeDetail() {
   const [coursesError, setCoursesError] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [activeCategory, setActiveCategory] = useState(null);
+
+  // Gallery state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -105,6 +134,10 @@ function CollegeDetail() {
             location_state: "N/A",
             location_pincode: "N/A",
             address: "Address information not available",
+            all_images: [],
+            college_images: [],
+            campus_images: [],
+            banner_image: null,
           });
         }
 
@@ -177,6 +210,44 @@ function CollegeDetail() {
   const categories = Object.keys(groupedCourses);
   const currentCourses = groupedCourses[activeCategory] || [];
 
+  // Get all gallery images
+  const getAllGalleryImages = () => {
+    const images = [];
+    if (college?.college_images && Array.isArray(college.college_images)) {
+      images.push(...college.college_images);
+    }
+    if (college?.campus_images && Array.isArray(college.campus_images)) {
+      images.push(...college.campus_images);
+    }
+    if (college?.banner_image) {
+      images.unshift(college.banner_image);
+    }
+    return images;
+  };
+
+  const galleryImages = getAllGalleryImages();
+  const hasGallery = galleryImages.length > 0;
+
+  // Lightbox handlers
+  const openLightbox = (index) => {
+    setCurrentImageIndex(index);
+    setLightboxOpen(true);
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+    document.body.style.overflow = 'unset';
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev === 0 ? galleryImages.length - 1 : prev - 1));
+  };
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev === galleryImages.length - 1 ? 0 : prev + 1));
+  };
+
   if (loading) return (
     <div className="loading-screen">
       <div className="spinner" />
@@ -213,7 +284,7 @@ function CollegeDetail() {
               <div className="hero-stats">
                 <div className="stat-item">
                   <span className="stat-value">{displayCollege.short_name || "N/A"}</span>
-                  <span className="stat-label">College Type</span>
+                  <span className="stat-label">Short Name</span>
                 </div>
                 <div className="stat-divider" />
                 <div className="stat-item">
@@ -261,7 +332,7 @@ function CollegeDetail() {
               className={`tab-btn ${activeTab === 'gallery' ? 'active' : ''}`}
               onClick={() => setActiveTab('gallery')}
             >
-              Gallery
+              Gallery {hasGallery && `(${galleryImages.length})`}
             </button>
           </div>
         </div>
@@ -292,7 +363,7 @@ function CollegeDetail() {
                   <div className="info-value">{displayCollege.location_pincode || "N/A"}</div>
                 </div>
                 <div className="info-row">
-                  <div className="info-label">College Code</div>
+                  <div className="info-label">College Short Name</div>
                   <div className="info-value">{displayCollege.short_name || "N/A"}</div>
                 </div>
                 <div className="info-row">
@@ -301,27 +372,7 @@ function CollegeDetail() {
                 </div>
               </div>
 
-              {/* Contact Information */}
-              <div className="contact-section">
-                <div className="section-header">
-                  <MailIcon />
-                  <h3>Contact Information</h3>
-                </div>
-                <div className="contact-grid">
-                  {displayCollege.email && (
-                    <div className="contact-item">
-                      <MailIcon />
-                      <span>{displayCollege.email}</span>
-                    </div>
-                  )}
-                  {displayCollege.phone && (
-                    <div className="contact-item">
-                      <PhoneIcon />
-                      <span>{displayCollege.phone}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
+
             </div>
           </div>
         </section>
@@ -418,12 +469,47 @@ function CollegeDetail() {
       {activeTab === 'gallery' && (
         <section className="gallery-section">
           <div className="container">
-            <div className="gallery-placeholder">
-              <div className="placeholder-icon">🏛️</div>
-              <p>Gallery images will be displayed here</p>
-            </div>
+            {!hasGallery ? (
+              <div className="gallery-placeholder">
+                <div className="placeholder-icon">🖼️</div>
+                <p>No gallery images available for this institution.</p>
+              </div>
+            ) : (
+              <>
+                <div className="section-header">
+                  <h2>Photo Gallery</h2>
+                </div>
+                <div className="gallery-grid">
+                  {galleryImages.map((img, idx) => (
+                    <div
+                      key={idx}
+                      className="gallery-item"
+                      onClick={() => openLightbox(idx)}
+                    >
+                      <img src={img} alt={`Gallery ${idx + 1}`} loading="lazy" />
+                      <div className="gallery-item-overlay">
+                        <span className="gallery-item-caption">
+                          View Image {idx + 1}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </section>
+      )}
+
+      {/* Lightbox Modal */}
+      {lightboxOpen && hasGallery && (
+        <Lightbox
+          images={galleryImages}
+          currentIndex={currentImageIndex}
+          onClose={closeLightbox}
+          onPrev={prevImage}
+          onNext={nextImage}
+        />
       )}
 
       <Footer />
