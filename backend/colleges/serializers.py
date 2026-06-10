@@ -561,17 +561,13 @@ class EnquiryFormCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = EnquiryForm
         fields = '__all__'
-        read_only_fields = ['application_id', 'submitted_at', 'updated_at', 'course_name', 'department_name']
+        read_only_fields = ['application_id', 'submitted_at', 'updated_at', 'course_name', 'department_name', 'user']
     
     def create(self, validated_data):
         # Generate application ID
         from datetime import datetime
-        user = validated_data.get('user')
-        if user:
-            validated_data['application_id'] = f"APP-{user.id}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        else:
-            # For anonymous users
-            identifier = validated_data.get('email_id') or validated_data.get('mobile_number', 'anonymous')
-            validated_data['application_id'] = f"APP-{identifier}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        user = validated_data.pop('user', None)
+        identifier = validated_data.get('email_id') or validated_data.get('mobile_number', 'anonymous')
+        validated_data['application_id'] = f"APP-{identifier}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         
         return super().create(validated_data)

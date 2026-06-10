@@ -592,7 +592,7 @@ class EnquiryForm(models.Model):
 
     application_id = models.CharField(max_length=50, unique=True, editable=False)
     # IMPORTANT: user field is now optional (null=True, blank=True) for anonymous submissions
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications', null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     college = models.ForeignKey(College, on_delete=models.SET_NULL, null=True, blank=True)
     
     # Direct relationship to Course
