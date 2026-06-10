@@ -60,7 +60,7 @@ function ApplicationForm() {
     blood_group: '',
     tenth_marks_percentage: '',
     twelfth_marks_percentage: '',
-
+    reference_name: ''
   });
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -273,6 +273,7 @@ function ApplicationForm() {
 
       has_diploma: false,
       has_ug: false,
+      reference_name: formData.reference_name || '',
     };
 
     try {
@@ -302,7 +303,7 @@ function ApplicationForm() {
           blood_group: '',
           tenth_marks_percentage: '',
           twelfth_marks_percentage: '',
-
+          reference_name: '',
         });
       } else {
         setError(result.error || 'Failed to submit application');

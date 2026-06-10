@@ -950,7 +950,7 @@ def submit_application_simple(request):
 
         # Generate application ID
         if user:
-            application_id = f'APP-{user.id}-{datetime.now().strftime("%Y%m%d%H%M%S")}'
+            application_id = f'APP-{datetime.now().strftime("%Y%m%d%H%M%S")}'
         else:
             email_or_mobile = request.data.get('email_id') or request.data.get('mobile_number', 'anonymous')
             clean_identifier = ''.join(c for c in email_or_mobile if c.isalnum())[:30]
