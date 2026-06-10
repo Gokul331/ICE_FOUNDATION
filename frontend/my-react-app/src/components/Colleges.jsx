@@ -153,7 +153,7 @@ function Colleges() {
   const [colleges, setColleges] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({ city: "All", category: "All" });
-  const [sortBy, setSortBy] = useState("popularity"); // Changed default to "popularity"
+  const [sortBy, setSortBy] = useState("popularity");
   const [viewMode, setViewMode] = useState("grid");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -223,22 +223,12 @@ function Colleges() {
   };
 
   const handleApplyNow = (college) => {
-    const token = localStorage.getItem("token");
     const collegeData = {
       college_id: college.college_id || college.id,
       college_name: college.college_name || college.name,
     };
-    if (!token) {
-      navigate("/login", {
-        state: {
-          from: `/colleges/${college.college_id || college.id}`,
-          college: collegeData,
-          quotaType: "management"
-        }
-      });
-    } else {
-      navigate("/application-form", { state: { college: collegeData, quotaType: "management" } });
-    }
+    // Direct navigation to application form without login check
+    navigate("/application-form", { state: { college: collegeData, quotaType: "management" } });
   };
 
   useEffect(() => {
@@ -308,7 +298,7 @@ function Colleges() {
           // Popularity-based sorting: Priority cities first (Trichy, Perambalur, Coimbatore)
           const getCityPriority = (city) => {
             const index = cityPriorityOrder.indexOf(city);
-            return index === -1 ? 999 : index; // Non-priority cities get high index
+            return index === -1 ? 999 : index;
           };
 
           const priorityA = getCityPriority(cityA);
