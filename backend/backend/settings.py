@@ -11,9 +11,9 @@ os.makedirs(SAVED_APPLICATIONS_DIR, exist_ok=True)
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-&z+ca)$#0^a(l^nve5dhf0y*8c32om^-$ey#oij06cst@1cpy8')
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'  # Changed to False by default
 # ALLOWED_HOSTS - critical for Render (NO SPACES)
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,ice-foundation-1.onrender.com,.vercel.app,aceconsultancy.org,www.aceconsultancy.org').split(',')
-# CSRF settings for Render - Includes ice-foundation-1 and aceconsultancy.org
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://ice-foundation-1.onrender.com,https://*.vercel.app,https://aceconsultancy.org,https://www.aceconsultancy.org,http://localhost:5173,http://localhost:3000').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,ice-foundation-1.onrender.com,.vercel.app,dsuvamshieducare.org,www.dsuvamshieducare.org').split(',')
+# CSRF settings for Render - Includes ice-foundation-1 and dsuvamshieducare.org
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://ice-foundation-1.onrender.com,https://*.vercel.app,https://dsuvamshieducare.org,https://www.dsuvamshieducare.org,http://localhost:5173,http://localhost:3000').split(',')
 # ==================== APPLICATION DEFINITION ====================
 INSTALLED_APPS = [
     'admin_interface',
@@ -127,8 +127,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5179",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
-    "https://aceconsultancy.org",
-    "https://www.aceconsultancy.org",
+    "https://dsuvamshieducare.org",
+    "https://www.dsuvamshieducare.org",
 ]
 # Add any CORS origins from environment variable
 env_cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '')
@@ -138,7 +138,7 @@ if env_cors_origins:
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://ice-foundation-1\.onrender\.com$",
     r"^https://.*\.vercel\.app$",
-    r"^https://(www\.)?aceconsultancy\.org$",
+    r"^https://(www\.)?dsuvamshieducare\.org$",
 ]
 # Allow credentials (cookies, authorization headers)
 CORS_ALLOW_CREDENTIALS = True
@@ -242,7 +242,7 @@ else:
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'ICE Foundation <noreply@icefoundation.com>')
 SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
 # Frontend URL for email links
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://aceconsultancy.org')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://dsuvamshieducare.org')
 # ==================== LOGGING ====================
 LOG_LEVEL = os.environ.get('DJANGO_LOG_LEVEL', 'INFO')
 LOGGING = {

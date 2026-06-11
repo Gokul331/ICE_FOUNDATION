@@ -301,7 +301,7 @@ function CollegeDetail() {
             <div className="hero-action">
               <div className="admission-status">
                 <span className="status-dot" />
-                Admissions Open 2025-26
+                Admission {new Date().getFullYear()} - {new Date().getFullYear() + 1} Open
               </div>
               <button className="apply-primary-btn" onClick={() => courses.length > 0 && handleApplyNow(courses[0])}>
                 Apply Now
