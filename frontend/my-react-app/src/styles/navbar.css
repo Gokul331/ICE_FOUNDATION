@@ -4,26 +4,29 @@
    ============================================================ */
 
 :root {
-  --nb-primary:      #1a2a6c;     /* Deep navy blue from your logo */
-  --nb-primary-dark: #0f1a4a;     /* Darker shade for hover states */
-  --nb-accent:       #f3a900;     /* Golden yellow accent */
+  --nb-primary: #1a2a6c;
+  /* Deep navy blue from your logo */
+  --nb-primary-dark: #0f1a4a;
+  /* Darker shade for hover states */
+  --nb-accent: #f3a900;
+  /* Golden yellow accent */
   --nb-accent-light: rgba(243, 169, 0, 0.1);
-  --nb-accent-glow:  rgba(243, 169, 0, 0.25);
-  --nb-white:        #ffffff;
-  --nb-dark:         #1a1a2e;
-  --nb-text:         #2d2d3f;
-  --nb-muted:        #6c6c7a;
-  --nb-border:       rgba(0, 0, 0, 0.08);
-  --nb-surface:      rgba(255, 255, 255, 0.98);
-  --nb-radius-sm:    8px;
-  --nb-radius-md:    14px;
-  --nb-radius-lg:    20px;
-  --nb-shadow-sm:    0 2px 12px rgba(0, 0, 0, 0.06);
-  --nb-shadow-md:    0 8px 32px rgba(0, 0, 0, 0.10);
-  --nb-shadow-lg:    0 20px 60px rgba(0, 0, 0, 0.14);
-  --nb-height:       76px;
+  --nb-accent-glow: rgba(243, 169, 0, 0.25);
+  --nb-white: #ffffff;
+  --nb-dark: #1a1a2e;
+  --nb-text: #2d2d3f;
+  --nb-muted: #6c6c7a;
+  --nb-border: rgba(0, 0, 0, 0.08);
+  --nb-surface: #ffffff;
+  --nb-radius-sm: 8px;
+  --nb-radius-md: 14px;
+  --nb-radius-lg: 20px;
+  --nb-shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.06);
+  --nb-shadow-md: 0 8px 32px rgba(0, 0, 0, 0.10);
+  --nb-shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.14);
+  --nb-height: 76px;
   --nb-height-mobile: 64px;
-  --nb-transition:   0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --nb-transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ── ROOT NAV ──────────────────────────────────────────────── */
@@ -39,17 +42,17 @@
   gap: 1.5rem;
   padding: 0 5%;
   height: var(--nb-height);
-  background: rgba(255, 255, 255, 0.98);
+  background: #ffffff;
+  /* Solid white background */
   border-bottom: 1px solid var(--nb-border);
   transition: all var(--nb-transition);
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  backdrop-filter: blur(20px);
 }
 
-/* Scrolled state */
+/* Scrolled state - keep white background */
 .nb-root.scrolled {
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(20px);
+  background: #ffffff;
+  /* Solid white background */
   box-shadow: var(--nb-shadow-md);
   border-bottom-color: transparent;
 }
@@ -271,6 +274,7 @@
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -441,8 +445,13 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 /* ── MOBILE MENU PANEL ─────────────────────────────────────── */
@@ -452,7 +461,8 @@
   right: 0;
   height: 100vh;
   width: min(85vw, 380px);
-  background: var(--nb-white);
+  background: #ffffff;
+  /* Solid white background */
   z-index: 1002;
   display: flex;
   flex-direction: column;
@@ -466,6 +476,7 @@
   from {
     transform: translateX(100%);
   }
+
   to {
     transform: translateX(0);
   }
@@ -492,7 +503,8 @@
   justify-content: space-between;
   padding: 20px;
   border-bottom: 1px solid var(--nb-border);
-  background: linear-gradient(135deg, rgba(26, 42, 108, 0.03), rgba(243, 169, 0, 0.02));
+  background: #ffffff;
+  /* Solid white background */
   flex-shrink: 0;
 }
 
@@ -718,7 +730,6 @@
 /* mobile sub-items */
 .nb-mob-sub {
   overflow: hidden;
-  
   border-top: 1px solid var(--nb-border);
 }
 
@@ -815,12 +826,12 @@
   .nb-root {
     padding: 0 4%;
   }
-  
+
   .nb-link {
     padding: 0.5rem 1rem;
     font-size: 0.95rem;
   }
-  
+
   .nb-cta {
     padding: 0.5rem 1.2rem;
     font-size: 0.9rem;
@@ -832,22 +843,22 @@
   :root {
     --nb-height: 70px;
   }
-  
+
   .nb-logo-icon {
     width: 60px;
     height: 60px;
   }
-  
+
   .nb-logo-brand {
     font-size: 1.4rem;
     letter-spacing: 0.06em;
   }
-  
+
   .nb-logo-sub {
     font-size: 0.7rem;
     letter-spacing: 0.06em;
   }
-  
+
   .nb-links,
   .nb-right {
     display: none;
@@ -856,7 +867,7 @@
   .nb-hamburger {
     display: flex;
   }
-  
+
   .nb-mobile {
     width: 85vw;
     max-width: 320px;
@@ -868,56 +879,56 @@
   :root {
     --nb-height: var(--nb-height-mobile);
   }
-  
+
   .nb-root {
     padding: 0 4%;
   }
-  
+
   .nb-logo-icon {
     width: 54px;
     height: 54px;
   }
-  
+
   .nb-logo-brand {
     font-size: 1.2rem;
   }
-  
+
   .nb-logo-text {
     gap: 0;
   }
-  
+
   .nb-mobile {
     width: 100vw;
     max-width: none;
   }
-  
+
   .nb-mob-header {
     padding: 16px;
   }
-  
+
   .nb-mob-links {
     padding: 12px;
   }
-  
+
   .nb-mob-link {
     padding: 10px 12px;
     font-size: 14px;
   }
-  
+
   .nb-mob-user-trigger {
     padding: 14px;
   }
-  
+
   .nb-mob-user-avatar {
     width: 40px;
     height: 40px;
     font-size: 16px;
   }
-  
+
   .nb-mob-user-name {
     font-size: 14px;
   }
-  
+
   .nb-mob-user-email {
     font-size: 11px;
     max-width: 150px;
@@ -929,35 +940,35 @@
   .nb-logo-brand {
     font-size: 1rem;
   }
-  
+
   .nb-logo-icon {
     width: 60px;
     height: 60px;
   }
-  
+
   .nb-mob-brand {
     font-size: 14px;
   }
-  
+
   .nb-mob-sub {
     font-size: 9px;
   }
-  
+
   .nb-mob-link {
     padding: 10px;
     font-size: 13px;
   }
-  
+
   .nb-mob-sub-item {
     padding: 10px 20px;
     font-size: 13px;
   }
-  
+
   .nb-mob-cta {
     padding: 12px;
     font-size: 14px;
   }
-  
+
   .nb-mob-footer {
     padding: 16px;
   }
@@ -969,11 +980,11 @@
     font-size: 0.9rem;
     letter-spacing: 0.04em;
   }
-  
+
   .nb-mob-user-email {
     max-width: 120px;
   }
-  
+
   .nb-mob-user-info {
     max-width: calc(100% - 56px);
   }
@@ -984,12 +995,12 @@
   .nb-root {
     padding: 0 8%;
   }
-  
+
   .nb-link {
     padding: 0.6rem 1.4rem;
     font-size: 1.05rem;
   }
-  
+
   .nb-cta {
     padding: 0.7rem 1.8rem;
     font-size: 1rem;
@@ -998,17 +1009,18 @@
 
 /* Touch Device Optimizations */
 @media (hover: none) and (pointer: coarse) {
+
   .nb-link:hover,
   .nb-cta:hover,
   .nb-dd-item:hover,
   .nb-mob-link:hover {
     transform: none;
   }
-  
+
   .nb-avatar-btn:hover .nb-avatar {
     transform: none;
   }
-  
+
   .nb-link,
   .nb-cta,
   .nb-dd-item,
@@ -1019,6 +1031,7 @@
 
 /* Accessibility */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -1036,12 +1049,12 @@
     background: white;
     color: black;
   }
-  
+
   .nb-hamburger,
   .nb-right {
     display: none;
   }
-  
+
   .nb-links {
     display: flex;
   }

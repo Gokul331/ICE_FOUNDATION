@@ -11,6 +11,10 @@
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   --radius: 12px;
+  --error: #dc2626;
+  --error-light: #fee2e2;
+  --success: #10b981;
+  --warning: #f59e0b;
 }
 
 * {
@@ -40,18 +44,18 @@ body {
   border-radius: 24px;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
-  animation: fadeInUp 0.5s ease-out;
+  animation: fadeInCenter 0.5s ease-out;
 }
 
-@keyframes fadeInUp {
+@keyframes fadeInCenter {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: scale(0.95) translateY(-20px);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: scale(1) translateY(0);
   }
 }
 
@@ -75,7 +79,6 @@ body {
   width: 60px;
   height: 60px;
   border-radius: 16px;
-
   padding: 8px;
 }
 
@@ -92,7 +95,6 @@ body {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  /* This is required! */
 }
 
 .brand-tagline {
@@ -186,7 +188,7 @@ body {
   display: none;
 }
 
-/* Form Container - FIXED */
+/* Form Container */
 .form-modern {
   padding: 32px 40px;
   max-height: 70vh;
@@ -238,7 +240,7 @@ body {
   gap: 20px;
 }
 
-/* Input Groups - FIXED */
+/* Input Groups */
 .input-group {
   display: flex;
   flex-direction: column;
@@ -255,9 +257,26 @@ body {
   font-size: 0.85rem;
   font-weight: 500;
   color: var(--dark);
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-/* FIXED: Select and Input styles */
+/* Required field star */
+.required-star {
+  color: var(--error);
+  font-size: 1rem;
+  margin-left: 2px;
+}
+
+/* Field hint */
+.field-hint {
+  font-size: 0.7rem;
+  color: var(--gray);
+  margin-top: 4px;
+  display: block;
+}
+
 .input-group input,
 .input-group select {
   padding: 12px 16px;
@@ -268,7 +287,155 @@ body {
   background: white;
   width: 100%;
   min-width: 0;
-  /* Prevents overflow */
+}
+
+/* ==================== VALIDATION STYLES ==================== */
+
+/* Error state for input groups */
+.input-group.has-error input,
+.input-group.has-error select {
+  border-color: var(--error);
+  background-color: var(--error-light);
+  padding-right: 40px;
+}
+
+/* Error message styling */
+.error-message {
+  color: var(--error);
+  font-size: 0.7rem;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: slideDown 0.2s ease-out;
+}
+
+.error-message svg {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* Success state for inputs */
+.input-group.has-success input,
+.input-group.has-success select {
+  border-color: var(--success);
+  background-color: #f0fdf4;
+}
+
+/* Success message */
+.success-message {
+  color: var(--success);
+  font-size: 0.7rem;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: slideDown 0.2s ease-out;
+}
+
+/* Warning state */
+.input-group.has-warning input,
+.input-group.has-warning select {
+  border-color: var(--warning);
+  background-color: #fffbeb;
+}
+
+/* Warning message */
+.warning-message {
+  color: var(--warning);
+  font-size: 0.7rem;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Error icon inside input */
+.input-group .error-icon {
+  position: absolute;
+  right: 12px;
+  top: 42px;
+  color: var(--error);
+  font-size: 16px;
+  pointer-events: none;
+}
+
+/* Success icon inside input */
+.input-group .success-icon {
+  position: absolute;
+  right: 12px;
+  top: 42px;
+  color: var(--success);
+  font-size: 16px;
+  pointer-events: none;
+}
+
+/* Animation for error messages */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-2px);
+  }
+
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+/* Shake animation for error */
+.input-group.has-error input,
+.input-group.has-error select {
+  animation: shake 0.3s ease-in-out;
+}
+
+/* Focus states for validation */
+.input-group.has-error input:focus,
+.input-group.has-error select:focus {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.input-group.has-success input:focus,
+.input-group.has-success select:focus {
+  border-color: var(--success);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* Disabled states */
+.input-group select:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Read-only states */
+.input-group input:read-only {
+  background-color: #f3f4f6;
+  cursor: default;
 }
 
 /* Custom dropdown arrow */
@@ -282,7 +449,11 @@ body {
   padding-right: 40px;
 }
 
-/* FIXED: Option styles - prevents overflow */
+/* Error state custom dropdown arrow */
+.input-group.has-error select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23dc2626'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+}
+
 select option {
   padding: 8px 12px;
   white-space: normal;
@@ -291,26 +462,17 @@ select option {
   color: var(--dark);
 }
 
-/* Long text handling */
 .input-group select {
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
 }
 
-/* Focus states */
 .input-group input:focus,
 .input-group select:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-}
-
-/* Disabled states */
-.input-group select:disabled {
-  background-color: #f3f4f6;
-  cursor: not-allowed;
-  opacity: 0.7;
 }
 
 /* Selection Summary */
@@ -372,7 +534,7 @@ select option {
   cursor: not-allowed;
 }
 
-/* Error Message */
+/* Error Message - Global */
 .error-message-modern {
   background: #fee2e2;
   color: #dc2626;
@@ -381,44 +543,332 @@ select option {
   margin-bottom: 20px;
   font-size: 0.85rem;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  animation: slideDown 0.3s ease-out;
 }
 
-/* Success Modal */
-.success-modal-modern {
+/* Success Message - Global */
+.success-message-modern {
+  background: #d1fae5;
+  color: #065f46;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-size: 0.85rem;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  animation: slideDown 0.3s ease-out;
+}
+
+/* ==================== SUCCESS MODAL WITH BURST EFFECT ==================== */
+
+/* Modal Overlay */
+.success-modal-overlay {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeInOverlay 0.3s ease-out;
+}
+
+/* Success Modal Container */
+.success-modal-modern {
+  position: relative;
   background: white;
   padding: 40px;
   border-radius: 24px;
   text-align: center;
-  box-shadow: var(--shadow-lg);
-  z-index: 1000;
-  animation: fadeInUp 0.3s ease-out;
-
+  max-width: 450px;
+  width: 90%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: modalPopIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  margin: 20px;
 }
 
+/* Close Button */
+.success-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: var(--gray);
+  transition: color 0.2s;
+  line-height: 1;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.success-modal-close:hover {
+  color: var(--dark);
+  background: var(--light-gray);
+}
+
+/* Success Icon Container - Burst Effect */
 .success-icon-modern {
-  place-items: center;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px auto;
+  width: 100px;
+  height: 100px;
 }
 
+/* Main Icon */
 .success-icon-modern svg {
-  width: 60px;
-  height: 60px;
-  text-align: center;
+  width: 72px;
+  height: 72px;
   color: var(--secondary);
-  margin-bottom: 20px;
-
+  animation: iconBurst 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 4px 12px rgba(16, 185, 129, 0.3));
 }
 
+/* Burst Ring 1 */
+.success-icon-modern::before {
+  content: '';
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, rgba(16, 185, 129, 0) 70%);
+  border-radius: 50%;
+  animation: ringBurst1 0.8s ease-out forwards;
+  z-index: 1;
+}
+
+/* Burst Ring 2 */
+.success-icon-modern::after {
+  content: '';
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.3) 0%, rgba(245, 158, 11, 0) 70%);
+  border-radius: 50%;
+  animation: ringBurst2 0.8s ease-out 0.15s forwards;
+  z-index: 0;
+}
+
+/* Sparkle Particles */
+.sparkle-particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: var(--secondary);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Heading styling */
 .success-modal-modern h3 {
   color: var(--dark);
+  font-size: 24px;
   margin-bottom: 12px;
+  font-weight: 600;
 }
 
+/* Paragraph styling */
 .success-modal-modern p {
   color: var(--gray);
+  font-size: 16px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.brand-name-modern {
+  font-weight: 600;
+  background: linear-gradient(180deg, #1a2a6c 0%, #f3a900 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.redirect-note {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+  color: var(--gray);
+}
+
+.countdown {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary);
+  display: inline-block;
+  min-width: 24px;
+  animation: countdownPulse 1s ease-in-out infinite;
+}
+
+/* Animations */
+@keyframes fadeInOverlay {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(-30px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes iconBurst {
+  0% {
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
+  }
+
+  30% {
+    transform: scale(1.3) rotate(0deg);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(0.95);
+  }
+
+  70% {
+    transform: scale(1.1);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes ringBurst1 {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+@keyframes ringBurst2 {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+@keyframes countdownPulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* Confetti Particles Animation */
+@keyframes particleFly {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(var(--tx, 0), var(--ty, 0)) scale(0);
+    opacity: 0;
+  }
+}
+
+/* For Framer Motion version */
+.success-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px auto;
+  width: 120px;
+  height: 120px;
+}
+
+.success-ripple {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.4) 0%, rgba(16, 185, 129, 0) 70%);
+  pointer-events: none;
+}
+
+.success-ripple-2 {
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.3) 0%, rgba(245, 158, 11, 0) 70%);
+}
+
+.success-circle {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.4);
+  z-index: 2;
+  cursor: default;
+}
+
+.success-check-icon {
+  width: 50px;
+  height: 50px;
+  color: white;
+}
+
+.confetti-particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 3;
 }
 
 /* ==================== RESPONSIVE STYLES ==================== */
@@ -467,10 +917,47 @@ select option {
     gap: 8px;
   }
 
-  /* Fix for selects on mobile */
   .input-group select {
     font-size: 16px;
-    /* Prevents zoom on iOS */
+  }
+}
+
+@media (max-width: 640px) {
+  .success-modal-modern {
+    padding: 32px 24px;
+    width: 95%;
+  }
+
+  .success-icon-modern svg {
+    width: 56px;
+    height: 56px;
+  }
+
+  .success-modal-modern h3 {
+    font-size: 20px;
+  }
+
+  .success-modal-modern p {
+    font-size: 14px;
+  }
+
+  .countdown {
+    font-size: 16px;
+  }
+
+  .success-container {
+    width: 100px;
+    height: 100px;
+  }
+
+  .success-circle {
+    width: 70px;
+    height: 70px;
+  }
+
+  .success-check-icon {
+    width: 40px;
+    height: 40px;
   }
 }
 
@@ -488,12 +975,16 @@ select option {
   }
 
   .logo-modern {
-    width: 45px;
-    height: 45px;
+    width: 80px;
+    height: 80px;
   }
 
   .brand-name-modern {
-    font-size: 0.9rem;
+    font-size: 1.6rem;
+    background: linear-gradient(180deg, #1a2a6c 0%, #f3a900 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   .input-group input,
@@ -530,7 +1021,8 @@ select option {
 
   .submit-btn-modern,
   .progress-steps,
-  .form-header-modern {
+  .form-header-modern,
+  .success-modal-overlay {
     display: none;
   }
 
@@ -543,4 +1035,9 @@ select option {
 .input-small {
   font-size: small;
   color: #6b7280;
+}
+
+/* Full width helper */
+.full-width {
+  grid-column: 1 / -1;
 }

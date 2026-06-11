@@ -1,14 +1,59 @@
 ﻿import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import '../styles/applicationForm.css';
-import { SiTicktick } from "react-icons/si";
-import { FaGraduationCap, FaUserGraduate, FaUsers, FaMapMarkerAlt, FaBookOpen, FaUniversity, FaArrowRight, FaCheckCircle } from 'react-icons/fa';
+import { FaGraduationCap, FaUserGraduate, FaUsers, FaMapMarkerAlt, FaBookOpen, FaUniversity, FaArrowRight, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
 import {
   submitApplication,
   getCollegeCategories,
   getCategoryDegreeTypes,
   getDegreeCourses,
 } from '../services/api';
+
+// Success Icon Component
+const SuccessIconWithBurst = () => {
+  const confetti = Array.from({ length: 24 });
+
+  return (
+    <div className="success-container">
+      <motion.div
+        className="success-ripple"
+        initial={{ scale: 0, opacity: 0.6 }}
+        animate={{ scale: 1.5, opacity: 0 }}
+        transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+      />
+      <motion.div
+        className="success-ripple success-ripple-2"
+        initial={{ scale: 0, opacity: 0.4 }}
+        animate={{ scale: 2, opacity: 0 }}
+        transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
+      />
+      <motion.div
+        className="success-circle"
+        initial={{ scale: 0, rotate: -180 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ type: "spring", stiffness: 260, damping: 16, delay: 0.1 }}
+      >
+        <FaCheckCircle className="success-check-icon" />
+      </motion.div>
+      {confetti.map((_, i) => {
+        const angle = (i / confetti.length) * Math.PI * 2;
+        const distance = 100 + Math.random() * 30;
+        const rotation = Math.random() * 360;
+        return (
+          <motion.div
+            key={i}
+            className="confetti-particle"
+            style={{ backgroundColor: `hsl(${Math.random() * 360}, 80%, 55%)` }}
+            initial={{ x: 0, y: 0, opacity: 1, scale: 0 }}
+            animate={{ x: Math.cos(angle) * distance, y: Math.sin(angle) * distance, opacity: 0, scale: 1, rotate: rotation }}
+            transition={{ duration: 0.8, delay: 0.3 + Math.random() * 0.2, ease: "easeOut" }}
+          />
+        );
+      })}
+    </div>
+  );
+};
 
 function ApplicationForm() {
   const location = useLocation();
@@ -63,10 +108,227 @@ function ApplicationForm() {
     reference_name: ''
   });
 
+  // Validation errors state
+  const [validationErrors, setValidationErrors] = useState({});
+  const [touched, setTouched] = useState({});
+
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [countdown, setCountdown] = useState(5);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Calculate date limits for date of birth picker
+  const getDateLimits = () => {
+    const today = new Date();
+    const minDate = new Date(today.getFullYear() - 30, today.getMonth(), today.getDate());
+    const maxDate = new Date(today.getFullYear() - 15, today.getMonth(), today.getDate());
+
+    const minDateStr = minDate.toISOString().split('T')[0];
+    const maxDateStr = maxDate.toISOString().split('T')[0];
+
+    return { min: minDateStr, max: maxDateStr };
+  };
+
+  const dateLimits = getDateLimits();
+
+  // Format Aadhar number with spaces (xxxx xxxx xxxx)
+  const formatAadhar = (value) => {
+    // Remove all non-digits
+    const cleaned = value.replace(/\D/g, '');
+    // Limit to 12 digits
+    const truncated = cleaned.slice(0, 12);
+    // Add spaces every 4 digits
+    const formatted = truncated.replace(/(\d{4})(?=\d)/g, '$1 ');
+    return formatted;
+  };
+
+  // Format mobile number (limit to 10 digits)
+  const formatMobile = (value) => {
+    return value.replace(/\D/g, '').slice(0, 10);
+  };
+
+  // Format percentage (limit to 3 digits before decimal, 2 after)
+  const formatPercentage = (value) => {
+    // Allow only numbers and decimal point
+    let cleaned = value.replace(/[^\d.]/g, '');
+    // Ensure only one decimal point
+    const parts = cleaned.split('.');
+    if (parts.length > 2) {
+      cleaned = parts[0] + '.' + parts.slice(1).join('');
+    }
+    // Limit integer part to 3 digits
+    if (parts[0].length > 3) {
+      parts[0] = parts[0].slice(0, 3);
+      cleaned = parts.join('.');
+    }
+    // Limit decimal part to 2 digits
+    if (parts[1] && parts[1].length > 2) {
+      cleaned = parts[0] + '.' + parts[1].slice(0, 2);
+    }
+    // Limit total length
+    if (cleaned.length > 6) {
+      cleaned = cleaned.slice(0, 6);
+    }
+    return cleaned;
+  };
+
+  // Validation Functions
+  const validateMobileNumber = (number) => {
+    const mobileRegex = /^[6-9]\d{9}$/;
+    if (!number) return 'Mobile number is required';
+    if (!mobileRegex.test(number)) return 'Enter a valid 10-digit mobile number starting with 6,7,8,9';
+    return '';
+  };
+
+  const validateDateOfBirth = (dob) => {
+    if (!dob) return 'Date of birth is required';
+
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
+    if (age < 15) return 'Age must be 15 years or above';
+    if (age > 100) return 'Please enter a valid date of birth';
+    return '';
+  };
+
+  const validatePercentage = (percentage, fieldName) => {
+    if (!percentage) return '';
+    const num = parseFloat(percentage);
+    if (isNaN(num)) return 'Please enter a valid number';
+    if (num < 0 || num > 100) return `${fieldName} must be between 0 and 100`;
+    return '';
+  };
+
+  const validateEmail = (email) => {
+    if (!email) return 'Email is required';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return 'Enter a valid email address';
+    return '';
+  };
+
+  const validateAadhar = (aadhar) => {
+    if (!aadhar) return '';
+    // Remove spaces for validation
+    const cleanAadhar = aadhar.replace(/\s/g, '');
+    const aadharRegex = /^\d{12}$/;
+    if (!aadharRegex.test(cleanAadhar)) return 'Aadhar number must be 12 digits';
+    return '';
+  };
+
+  const validatePincode = (pincode) => {
+    if (!pincode) return 'Pincode is required';
+    const pincodeRegex = /^\d{6}$/;
+    if (!pincodeRegex.test(pincode)) return 'Enter a valid 6-digit pincode';
+    return '';
+  };
+
+  const validateName = (name, fieldName) => {
+    if (!name) return `${fieldName} is required`;
+    if (name.length < 2) return `${fieldName} must be at least 2 characters`;
+    if (name.length > 50) return `${fieldName} must be less than 50 characters`;
+    if (!/^[a-zA-Z\s]*$/.test(name)) return `${fieldName} should only contain letters`;
+    return '';
+  };
+
+  const validateField = (name, value) => {
+    switch (name) {
+      case 'first_name':
+        return validateName(value, 'First name');
+      case 'last_name':
+        return value ? validateName(value, 'Last name') : '';
+      case 'mobile_number':
+        return validateMobileNumber(value);
+      case 'date_of_birth':
+        return validateDateOfBirth(value);
+      case 'email_id':
+        return validateEmail(value);
+      case 'aadhar_number':
+        return validateAadhar(value);
+      case 'father_name':
+        return value ? validateName(value, 'Father name') : '';
+      case 'father_mobile':
+        return value ? validateMobileNumber(value) : '';
+      case 'mother_name':
+        return value ? validateName(value, 'Mother name') : '';
+      case 'mother_mobile':
+        return value ? validateMobileNumber(value) : '';
+      case 'city':
+        if (!value) return 'City/District is required';
+        if (!/^[a-zA-Z\s]*$/.test(value)) return 'City should only contain letters';
+        return '';
+      case 'pincode':
+        return validatePincode(value);
+      case 'tenth_marks_percentage':
+        return validatePercentage(value, '10th percentage');
+      case 'twelfth_marks_percentage':
+        return validatePercentage(value, '12th percentage');
+      case 'gender':
+        if (!value) return 'Gender is required';
+        return '';
+      case 'community':
+        if (!value) return 'Community is required';
+        return '';
+      default:
+        return '';
+    }
+  };
+
+  const handleBlur = (fieldName) => {
+    setTouched({ ...touched, [fieldName]: true });
+    let value = formData[fieldName];
+
+    // Special handling for Aadhar - remove spaces for validation
+    if (fieldName === 'aadhar_number') {
+      value = value.replace(/\s/g, '');
+    }
+
+    const error = validateField(fieldName, value);
+    if (error) {
+      setValidationErrors({ ...validationErrors, [fieldName]: error });
+    } else {
+      const newErrors = { ...validationErrors };
+      delete newErrors[fieldName];
+      setValidationErrors(newErrors);
+    }
+  };
+
+  const handleFormChange = (event) => {
+    const { name, value } = event.target;
+    let formattedValue = value;
+
+    // Apply formatting based on field type
+    if (name === 'aadhar_number') {
+      formattedValue = formatAadhar(value);
+    } else if (name === 'mobile_number' || name === 'father_mobile' || name === 'mother_mobile') {
+      formattedValue = formatMobile(value);
+    } else if (name === 'tenth_marks_percentage' || name === 'twelfth_marks_percentage') {
+      formattedValue = formatPercentage(value);
+    }
+
+    setFormData((prev) => ({ ...prev, [name]: formattedValue }));
+
+    // Real-time validation
+    if (touched[name]) {
+      let validationValue = formattedValue;
+      if (name === 'aadhar_number') {
+        validationValue = formattedValue.replace(/\s/g, '');
+      }
+      const error = validateField(name, validationValue);
+      if (error) {
+        setValidationErrors({ ...validationErrors, [name]: error });
+      } else {
+        const newErrors = { ...validationErrors };
+        delete newErrors[name];
+        setValidationErrors(newErrors);
+      }
+    }
+  };
 
   // Fetch colleges on mount
   useEffect(() => {
@@ -100,7 +362,6 @@ function ApplicationForm() {
       try {
         const response = await getCollegeCategories(selectedCollege);
         if (response.success && response.categories) {
-          // Remove duplicates by code
           const uniqueCategories = response.categories.filter((cat, index, self) =>
             index === self.findIndex(c => c.code === cat.code)
           );
@@ -130,7 +391,6 @@ function ApplicationForm() {
       try {
         const response = await getCategoryDegreeTypes(selectedCollege, selectedCategory);
         if (response.success && response.degree_types) {
-          // Remove duplicates by code
           const uniqueDegreeTypes = response.degree_types.filter((deg, index, self) =>
             index === self.findIndex(d => d.code === deg.code)
           );
@@ -158,7 +418,6 @@ function ApplicationForm() {
       try {
         const response = await getDegreeCourses(selectedCollege, selectedCategory, selectedDegreeType);
         if (response.success && response.courses) {
-          // Remove duplicates by id
           const uniqueCourses = response.courses.filter((course, index, self) =>
             index === self.findIndex(c => c.id === course.id)
           );
@@ -227,13 +486,95 @@ function ApplicationForm() {
     setCurrentStep(5);
   };
 
-  const handleFormChange = (event) => {
-    const { name, value } = event.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const handleCloseModal = () => {
+    setShowSuccessModal(false);
+    navigate('/', {
+      state: { successMessage: 'Application submitted successfully!' },
+    });
+  };
+
+  // Validate all form fields before submission
+  const validateForm = () => {
+    const errors = {};
+    const requiredFields = [
+      'first_name', 'mobile_number', 'date_of_birth', 'email_id',
+      'city', 'pincode', 'gender', 'community'
+    ];
+
+    requiredFields.forEach(field => {
+      let value = formData[field];
+      if (field === 'aadhar_number') {
+        value = value.replace(/\s/g, '');
+      }
+      const error = validateField(field, value);
+      if (error) errors[field] = error;
+    });
+
+    // Optional fields validation
+    if (formData.last_name) {
+      const error = validateField('last_name', formData.last_name);
+      if (error) errors.last_name = error;
+    }
+
+    if (formData.father_name) {
+      const error = validateField('father_name', formData.father_name);
+      if (error) errors.father_name = error;
+    }
+
+    if (formData.father_mobile) {
+      const error = validateField('father_mobile', formData.father_mobile);
+      if (error) errors.father_mobile = error;
+    }
+
+    if (formData.mother_name) {
+      const error = validateField('mother_name', formData.mother_name);
+      if (error) errors.mother_name = error;
+    }
+
+    if (formData.mother_mobile) {
+      const error = validateField('mother_mobile', formData.mother_mobile);
+      if (error) errors.mother_mobile = error;
+    }
+
+    if (formData.aadhar_number) {
+      const cleanAadhar = formData.aadhar_number.replace(/\s/g, '');
+      const error = validateField('aadhar_number', cleanAadhar);
+      if (error) errors.aadhar_number = error;
+    }
+
+    if (formData.tenth_marks_percentage) {
+      const error = validateField('tenth_marks_percentage', formData.tenth_marks_percentage);
+      if (error) errors.tenth_marks_percentage = error;
+    }
+
+    if (formData.twelfth_marks_percentage) {
+      const error = validateField('twelfth_marks_percentage', formData.twelfth_marks_percentage);
+      if (error) errors.twelfth_marks_percentage = error;
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    // Mark all fields as touched
+    const allFields = { ...touched };
+    Object.keys(formData).forEach(field => { allFields[field] = true; });
+    setTouched(allFields);
+
+    // Validate form
+    if (!validateForm()) {
+      setError('Please fix the errors before submitting');
+      const firstErrorField = Object.keys(validationErrors)[0];
+      if (firstErrorField) {
+        const element = document.querySelector(`[name="${firstErrorField}"]`);
+        if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -249,12 +590,12 @@ function ApplicationForm() {
       mobile_number: formData.mobile_number,
       date_of_birth: formData.date_of_birth,
       email_id: formData.email_id,
-      aadhar_number: formData.aadhar_number,
-      father_name: formData.father_name,
-      father_mobile: formData.father_mobile,
-      mother_name: formData.mother_name,
+      aadhar_number: formData.aadhar_number.replace(/\s/g, '') || '',
+      father_name: formData.father_name || '',
+      father_mobile: formData.father_mobile || '',
+      mother_name: formData.mother_name || '',
       mother_mobile: formData.mother_mobile || '',
-      address_line1: formData.address_line1,
+      address_line1: formData.address_line1 || '',
       address_line2: formData.address_line2 || '',
       city: formData.city,
       pincode: formData.pincode,
@@ -265,12 +606,11 @@ function ApplicationForm() {
       selected_course_id: parseInt(selectedCourse),
       selected_category: selectedCategory,
       selected_degree_type: selectedDegreeType,
-      gender: formData.gender || 'male',
-      community: formData.community || 'OC',
+      gender: formData.gender,
+      community: formData.community,
       blood_group: formData.blood_group || '',
       tenth_marks_percentage: formData.tenth_marks_percentage ? parseFloat(formData.tenth_marks_percentage) : null,
       twelfth_marks_percentage: formData.twelfth_marks_percentage ? parseFloat(formData.twelfth_marks_percentage) : null,
-
       has_diploma: false,
       has_ug: false,
       reference_name: formData.reference_name || '',
@@ -281,8 +621,6 @@ function ApplicationForm() {
       if (result.success) {
         setShowSuccessModal(true);
         setCountdown(5);
-
-        // Clear form data after successful submission
         setFormData({
           first_name: '',
           last_name: '',
@@ -305,6 +643,8 @@ function ApplicationForm() {
           twelfth_marks_percentage: '',
           reference_name: '',
         });
+        setValidationErrors({});
+        setTouched({});
       } else {
         setError(result.error || 'Failed to submit application');
       }
@@ -321,7 +661,6 @@ function ApplicationForm() {
     let countdownInterval;
 
     if (showSuccessModal) {
-      // Countdown timer
       countdownInterval = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
@@ -332,12 +671,10 @@ function ApplicationForm() {
         });
       }, 1000);
 
-      // Redirect to home page after 5 seconds with success message
       timer = setTimeout(() => {
+        setShowSuccessModal(false);
         navigate('/', {
-          state: {
-            successMessage: 'Application submitted successfully!',
-          },
+          state: { successMessage: 'Application submitted successfully!' },
         });
       }, 5000);
     }
@@ -357,24 +694,70 @@ function ApplicationForm() {
     { number: 4, title: 'Course', icon: <FaUserGraduate />, isComplete: !!selectedCourse },
   ];
 
+  // Helper function to render input with validation
+  const renderInput = (label, name, type = "text", required = true, placeholder = "", options = null, customProps = {}) => {
+    const hasError = validationErrors[name] && touched[name];
+
+    return (
+      <div className={`input-group ${hasError ? 'has-error' : ''}`}>
+        <label>
+          {label} {required && <span className="required-star">*</span>}
+        </label>
+        {options ? (
+          <select
+            name={name}
+            value={formData[name]}
+            onChange={handleFormChange}
+            onBlur={() => handleBlur(name)}
+            required={required}
+          >
+            <option value="">Select {label}</option>
+            {options.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            type={type}
+            name={name}
+            value={formData[name]}
+            onChange={handleFormChange}
+            onBlur={() => handleBlur(name)}
+            placeholder={placeholder}
+            required={required}
+            {...customProps}
+          />
+        )}
+        {hasError && (
+          <div className="error-message">
+            <FaExclamationCircle /> {validationErrors[name]}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <main className="app-shell-modern">
+      {/* Success Modal */}
       {showSuccessModal && (
-        <div className="success-modal-modern">
-          <div className="success-icon-modern">
-            <FaCheckCircle />
+        <div className="success-modal-overlay" onClick={handleCloseModal}>
+          <div className="success-modal-modern" onClick={(e) => e.stopPropagation()}>
+            <button className="success-modal-close" onClick={handleCloseModal}>×</button>
+            <SuccessIconWithBurst />
+            <h3>Application Submitted Successfully!</h3>
+            <p>We will reach you soon. Thank you for choosing <span className='brand-name-modern'>Vamshi Educare</span></p>
+            <p className="redirect-note">
+              Redirecting to <strong>Home Page</strong> in <span className="countdown">{countdown}</span> second{countdown !== 1 ? 's' : ''}...
+            </p>
           </div>
-          <h3>Application Submitted Successfully!</h3>
-          <p>We will reach you soon. Thank you for choosing <span className='brand-name-modern'>Vamshi Educare</span></p>
-          <p className="redirect-note">
-            Redirecting to <strong>Home Page</strong> in <span className="countdown">{countdown}</span> second{countdown !== 1 ? 's' : ''}...
-          </p>
         </div>
       )}
 
       {!showSuccessModal && (
         <div className="form-container-modern">
-          {/* Header */}
           <div className="form-header-modern">
             <div className="logo-section">
               <img src="/Logo.png" alt="Logo" className="logo-modern" />
@@ -387,7 +770,6 @@ function ApplicationForm() {
             <p>Fill in the details to apply for your desired course</p>
           </div>
 
-          {/* Progress Steps */}
           <div className="progress-steps">
             {steps.map((step, index) => (
               <div key={step.number} className={`step-item ${step.isComplete ? 'completed' : ''} ${currentStep === step.number ? 'active' : ''}`}>
@@ -403,10 +785,7 @@ function ApplicationForm() {
           <form onSubmit={handleSubmit} className="form-modern">
             {/* Course Selection Section */}
             <div className="card-modern">
-              <div className="card-title">
-                <FaGraduationCap /> Course Selection
-              </div>
-
+              <div className="card-title"><FaGraduationCap /> Course Selection</div>
               <div className="form-grid-2">
                 <div className="input-group">
                   <label>Select College *</label>
@@ -422,12 +801,7 @@ function ApplicationForm() {
 
                 <div className="input-group">
                   <label>Select Category *</label>
-                  <select
-                    value={selectedCategory}
-                    onChange={handleCategoryChange}
-                    disabled={!selectedCollege || loadingFields.categories}
-                    required
-                  >
+                  <select value={selectedCategory} onChange={handleCategoryChange} disabled={!selectedCollege || loadingFields.categories} required>
                     <option value="">-- Choose Category --</option>
                     {categories.map((cat, index) => (
                       <option key={`category-${cat.code}-${index}`} value={cat.code}>
@@ -439,12 +813,7 @@ function ApplicationForm() {
 
                 <div className="input-group">
                   <label>Select Degree Type *</label>
-                  <select
-                    value={selectedDegreeType}
-                    onChange={handleDegreeTypeChange}
-                    disabled={!selectedCategory || loadingFields.degreeTypes}
-                    required
-                  >
+                  <select value={selectedDegreeType} onChange={handleDegreeTypeChange} disabled={!selectedCategory || loadingFields.degreeTypes} required>
                     <option value="">-- Choose Degree Type --</option>
                     {degreeTypes.map((deg, index) => (
                       <option key={`degree-${deg.code}-${index}`} value={deg.code}>
@@ -456,12 +825,7 @@ function ApplicationForm() {
 
                 <div className="input-group">
                   <label>Select Course *</label>
-                  <select
-                    value={selectedCourse}
-                    onChange={handleCourseChange}
-                    disabled={!selectedDegreeType || loadingFields.courses}
-                    required
-                  >
+                  <select value={selectedCourse} onChange={handleCourseChange} disabled={!selectedDegreeType || loadingFields.courses} required>
                     <option value="">-- Choose Course --</option>
                     {courses.map((course, index) => (
                       <option key={`course-${course.id}-${index}`} value={course.id}>
@@ -472,7 +836,6 @@ function ApplicationForm() {
                 </div>
               </div>
 
-              {/* Selection Summary */}
               {isSelectionComplete && (
                 <div className="selection-summary-modern">
                   <div className="summary-title">Selected Course Summary</div>
@@ -485,43 +848,45 @@ function ApplicationForm() {
                 </div>
               )}
 
-              {/* Reference Name Field */}
               <div className="input-group full-width">
                 <label>Reference Name</label>
-                <input
-                  type="text"
-                  name="reference_name"
-                  value={formData.reference_name || ''}
-                  onChange={handleFormChange}
-                  placeholder="Enter reference name"
-                />
+                <input type="text" name="reference_name" value={formData.reference_name || ''} onChange={handleFormChange} placeholder="Enter reference name" />
                 <small className="field-hint">Who referred you to this college? (Optional)</small>
               </div>
             </div>
 
-            {/* Personal Details Section - Only show if course is selected */}
+            {/* Personal Details Section */}
             {isSelectionComplete && (
               <>
                 <div className="card-modern">
                   <div className="card-title"><FaUserGraduate /> Personal Details</div>
                   <div className="form-grid-2">
-                    <div className="input-group"><label>First Name *</label><input type="text" name="first_name" value={formData.first_name} onChange={handleFormChange} required /></div>
-                    <div className="input-group"><label>Last Name</label><input type="text" name="last_name" value={formData.last_name} onChange={handleFormChange} /></div>
-                    <div className="input-group"><label>Mobile Number *</label><input type="tel" name="mobile_number" value={formData.mobile_number} onChange={handleFormChange} maxLength={10} required /></div>
-                    <div className="input-group"><label>Date of Birth *</label><input type="date" name="date_of_birth" value={formData.date_of_birth} onChange={handleFormChange} required /></div>
-                    <div className="input-group"><label>Email ID *</label><input type="email" name="email_id" value={formData.email_id} onChange={handleFormChange} required /></div>
-                    <div className="input-group"><label>Aadhar Number</label><input type="text" name="aadhar_number" value={formData.aadhar_number} onChange={handleFormChange} maxLength={12} /></div>
-                    <div className="input-group"><label>Gender *</label>
-                      <select name="gender" value={formData.gender} onChange={handleFormChange} required>
-                        <option value="">Select</option>
+                    {renderInput('First Name', 'first_name', 'text', true, 'Enter first name')}
+                    {renderInput('Last Name', 'last_name', 'text', false, 'Enter last name')}
+                    {renderInput('Mobile Number', 'mobile_number', 'tel', true, '10-digit mobile number')}
+                    {renderInput('Date of Birth', 'date_of_birth', 'date', true, 'YYYY-MM-DD', null, {
+                      max: dateLimits.max,
+                      min: dateLimits.min
+                    })}
+                    {renderInput('Email ID', 'email_id', 'email', true, 'example@domain.com')}
+                    {renderInput('Aadhar Number', 'aadhar_number', 'text', false, 'XXXX XXXX XXXX')}
+
+                    <div className="input-group">
+                      <label>Gender *</label>
+                      <select name="gender" value={formData.gender} onChange={handleFormChange} onBlur={() => handleBlur('gender')} required>
+                        <option value="">Select Gender</option>
                         <option value="male">Male</option>
                         <option value="female">Female</option>
                         <option value="other">Other</option>
                       </select>
+                      {validationErrors.gender && touched.gender && (
+                        <div className="error-message"><FaExclamationCircle /> {validationErrors.gender}</div>
+                      )}
                     </div>
+
                     <div className="input-group">
                       <label>Community *</label>
-                      <select name="community" value={formData.community} onChange={handleFormChange} required>
+                      <select name="community" value={formData.community} onChange={handleFormChange} onBlur={() => handleBlur('community')} required>
                         <option value="">Select Community</option>
                         <option value="OC">OC</option>
                         <option value="BC">BC</option>
@@ -532,6 +897,9 @@ function ApplicationForm() {
                         <option value="BCM">BCM</option>
                         <option value="DNC">DNC</option>
                       </select>
+                      {validationErrors.community && touched.community && (
+                        <div className="error-message"><FaExclamationCircle /> {validationErrors.community}</div>
+                      )}
                     </div>
 
                     <div className="input-group">
@@ -554,29 +922,37 @@ function ApplicationForm() {
                 <div className="card-modern">
                   <div className="card-title"><FaUsers /> Parent Details</div>
                   <div className="form-grid-2">
-                    <div className="input-group"><label>Father Name</label><input type="text" name="father_name" value={formData.father_name} onChange={handleFormChange} /></div>
-                    <div className="input-group"><label>Father Mobile</label><input type="tel" name="father_mobile" value={formData.father_mobile} onChange={handleFormChange} maxLength={10} /></div>
-                    <div className="input-group"><label>Mother Name</label><input type="text" name="mother_name" value={formData.mother_name} onChange={handleFormChange} /></div>
-                    <div className="input-group"><label>Mother Mobile</label><input type="tel" name="mother_mobile" value={formData.mother_mobile} onChange={handleFormChange} maxLength={10} /></div>
+                    {renderInput('Father Name', 'father_name', 'text', false, "Enter father's name")}
+                    {renderInput('Father Mobile', 'father_mobile', 'tel', false, "10-digit mobile number")}
+                    {renderInput('Mother Name', 'mother_name', 'text', false, "Enter mother's name")}
+                    {renderInput('Mother Mobile', 'mother_mobile', 'tel', false, "10-digit mobile number")}
                   </div>
                 </div>
 
                 <div className="card-modern">
                   <div className="card-title"><FaGraduationCap /> Education Details</div>
                   <div className="form-grid-2">
-                    <div className="input-group"><label>10th Percentage</label><input type="number" step="0.01" name="tenth_marks_percentage" value={formData.tenth_marks_percentage} onChange={handleFormChange} placeholder="Enter percentage" /></div>
-                    <div className="input-group"><label>12th Percentage</label><input type="number" step="0.01" name="twelfth_marks_percentage" value={formData.twelfth_marks_percentage} onChange={handleFormChange} placeholder="Enter percentage" />
-                      <span className='input-small'>If result not declared, enter 0 as percentage.</span></div>
+                    {renderInput('10th Percentage', 'tenth_marks_percentage', 'text', false, 'Enter percentage (0-100)')}
+                    {renderInput('12th Percentage', 'twelfth_marks_percentage', 'text', false, 'Enter percentage (0-100)')}
+                    <div className="full-width">
+                      <small className="input-small">Note: If result not declared, enter 0 as percentage.</small>
+                    </div>
                   </div>
                 </div>
 
                 <div className="card-modern">
                   <div className="card-title"><FaMapMarkerAlt /> Address Details</div>
                   <div className="form-grid-2">
-                    <div className="input-group full-width"><label>Address Line 1</label><input type="text" name="address_line1" value={formData.address_line1} onChange={handleFormChange} placeholder="Street/House name" /></div>
-                    <div className="input-group full-width"><label>Address Line 2</label><input type="text" name="address_line2" value={formData.address_line2} onChange={handleFormChange} placeholder="Area/Locality" /></div>
-                    <div className="input-group"><label>City/District *</label><input type="text" name="city" value={formData.city} onChange={handleFormChange} required /></div>
-                    <div className="input-group"><label>Pincode *</label><input type="text" name="pincode" value={formData.pincode} onChange={handleFormChange} maxLength={6} required /></div>
+                    <div className="input-group full-width">
+                      <label>Address Line 1</label>
+                      <input type="text" name="address_line1" value={formData.address_line1} onChange={handleFormChange} placeholder="Street/House name" />
+                    </div>
+                    <div className="input-group full-width">
+                      <label>Address Line 2</label>
+                      <input type="text" name="address_line2" value={formData.address_line2} onChange={handleFormChange} placeholder="Area/Locality" />
+                    </div>
+                    {renderInput('City/District', 'city', 'text', true, 'Enter city or district name')}
+                    {renderInput('Pincode', 'pincode', 'text', true, '6-digit pincode')}
                   </div>
                 </div>
               </>

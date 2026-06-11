@@ -10,8 +10,8 @@ import '../styles/navbar.css';
 
 /* ── animation variants ──────────────────────────────── */
 const navVariants = {
-  top: { backgroundColor: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(20px)', boxShadow: '0 4px 30px rgba(0,0,0,0.08)' },
-  scrolled: { backgroundColor: 'rgba(255,255,255,0.0)', backdropFilter: 'blur(20px)', boxShadow: 'none' },
+  top: { backgroundColor: '#ffffff', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' },
+  scrolled: { backgroundColor: '#ffffff', boxShadow: '0 8px 32px rgba(0,0,0,0.10)' },
 };
 
 const dropdownVariants = {
