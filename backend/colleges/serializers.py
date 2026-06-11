@@ -597,7 +597,7 @@ class EnquiryFormCreateSerializer(serializers.ModelSerializer):
         identifier = validated_data.get('email_id') or validated_data.get('mobile_number', 'anonymous')
         # Clean identifier to remove special characters
         clean_identifier = ''.join(c for c in identifier if c.isalnum())[:30]
-        validated_data['application_id'] = f"APP-{clean_identifier}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        validated_data['application_id'] = f"APP-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         
         # Create the enquiry form
         enquiry = EnquiryForm.objects.create(**validated_data)

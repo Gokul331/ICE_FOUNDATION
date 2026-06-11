@@ -239,7 +239,7 @@ else:
     if not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
         print("⚠️ WARNING: Email credentials not configured. Email functionality will not work.")
 # Default from email
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'ICE Foundation <noreply@icefoundation.com>')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'VAMSHI EDUCARE <noreply@dsuvamshieducare.org>')
 SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
 # Frontend URL for email links
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://dsuvamshieducare.org')
