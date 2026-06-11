@@ -525,45 +525,6 @@
     font-size: 14px;
   }
 
-  /* Filters bar */
-  .filters-sticky-bar {
-    padding: 10px 0;
-    top: 60px;
-  }
-
-  .filters-layout {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-
-  .filter-chips {
-    overflow-x: auto;
-    padding-bottom: 4px;
-    gap: 8px;
-    scrollbar-width: none;
-  }
-
-  .filter-chips::-webkit-scrollbar {
-    display: none;
-  }
-
-  .filter-chip {
-    padding: 7px 16px;
-    font-size: 12px;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-
-  .sort-view-controls {
-    justify-content: space-between;
-  }
-
-  .sort-select {
-    font-size: 13px;
-    padding: 7px 12px;
-  }
-
   /* Results */
   .results-section {
     padding: 30px 0 60px;
@@ -583,5 +544,57 @@
   .btn-apply-now {
     padding: 10px;
     font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .courses-hero {
+    padding: 80px 12px 36px;
+  }
+
+  .courses-hero h1 {
+    font-size: 1.6rem;
+  }
+
+  .courses-hero p {
+    font-size: 0.9rem;
+  }
+
+  .course-name {
+    font-size: 1.2rem;
+  }
+
+  .course-card-premium {
+    padding: 20px;
+  }
+
+  .course-card-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .btn-view-clg,
+  .btn-apply-now {
+    padding: 12px;
+    font-size: 13px;
+  }
+
+  .filter-chip {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 375px) {
+  .courses-hero h1 {
+    font-size: 1.4rem;
+  }
+
+  .course-name {
+    font-size: 1.1rem;
+  }
+
+  .course-card-premium {
+    padding: 16px;
+    border-radius: 18px;
   }
 }
