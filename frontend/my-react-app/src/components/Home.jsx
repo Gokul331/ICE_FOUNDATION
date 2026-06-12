@@ -635,9 +635,6 @@ function Home() {
                   alt="Welcome to VAMSHI EDUCARE"
                   className="popup-banner-img"
                 />
-                <div className="popup-banner-overlay">
-                  <div className="popup-banner-text">Welcome to VAMSHI EDUCARE!</div>
-                </div>
               </div>
 
 
