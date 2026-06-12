@@ -58,31 +58,19 @@ function Home() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [alertMessage, setAlertMessage] = useState({ show: false, message: "", type: "" });
 
-  // Check if popup has been closed before (persists across reloads)
+  // Show popup EVERY TIME the page loads (including reloads)
   useEffect(() => {
-    const popupClosed = localStorage.getItem("popupClosed");
+    // Small delay for better UX
+    const timer = setTimeout(() => {
+      setShowPopup(true);
+    }, 500); // Reduced delay to 500ms for quicker appearance
 
-    // Show popup only if it hasn't been closed before
-    if (!popupClosed) {
-      // Show popup after a short delay for better UX
-      const timer = setTimeout(() => {
-        setShowPopup(true);
-      }, 1000);
+    return () => clearTimeout(timer);
+  }, []); // Empty dependency array means this runs on every mount/reload
 
-      return () => clearTimeout(timer);
-    }
-  }, []);
-
-  // Handle popup close - persists even after page reload
+  // Handle popup close
   const handleClosePopup = () => {
     setShowPopup(false);
-    localStorage.setItem("popupClosed", "true");
-  };
-
-  // Optional: Reset popup visibility (for testing or admin purposes)
-  const resetPopup = () => {
-    localStorage.removeItem("popupClosed");
-    setShowPopup(true);
   };
 
   useEffect(() => {
@@ -618,7 +606,7 @@ function Home() {
 
       <Footer />
 
-      {/* ── FIRST-TIME VISITOR POPUP WITH BANNER ── */}
+      {/* ── WELCOME POPUP WITH BANNER - SHOWS EVERY TIME ── */}
       <AnimatePresence>
         {showPopup && (
           <motion.div
@@ -648,7 +636,7 @@ function Home() {
                   className="popup-banner-img"
                 />
                 <div className="popup-banner-overlay">
-                  <div className="popup-banner-text">Special Offer!</div>
+                  <div className="popup-banner-text">Welcome to VAMSHI EDUCARE!</div>
                 </div>
               </div>
 
