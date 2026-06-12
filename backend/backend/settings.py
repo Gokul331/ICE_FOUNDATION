@@ -1,19 +1,25 @@
 import os
 import dj_database_url
 from pathlib import Path
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
 # ==================== CREATE REQUIRED DIRECTORIES ====================
 # Create saved_applications directory if it doesn't exist (for storing submitted applications)
 SAVED_APPLICATIONS_DIR = BASE_DIR / 'saved_applications'
 os.makedirs(SAVED_APPLICATIONS_DIR, exist_ok=True)
+
 # ==================== SECURITY ====================
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-&z+ca)$#0^a(l^nve5dhf0y*8c32om^-$ey#oij06cst@1cpy8')
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'  # Changed to False by default
+
 # ALLOWED_HOSTS - critical for Render (NO SPACES)
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,ice-foundation-1.onrender.com,.vercel.app,dsuvamshieducare.org,www.dsuvamshieducare.org').split(',')
+
 # CSRF settings for Render - Includes ice-foundation-1 and dsuvamshieducare.org
 CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://ice-foundation-1.onrender.com,https://*.vercel.app,https://dsuvamshieducare.org,https://www.dsuvamshieducare.org,http://localhost:5173,http://localhost:3000').split(',')
+
 # ==================== APPLICATION DEFINITION ====================
 INSTALLED_APPS = [
     'admin_interface',
@@ -27,9 +33,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
+    'anymail',  # Keep this for Resend
     'backend',  # Your main app
     'colleges',  # College app
 ]
+
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # Must be at the top
     'django.middleware.security.SecurityMiddleware',
@@ -41,7 +49,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
 ROOT_URLCONF = 'backend.urls'
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -57,12 +67,15 @@ TEMPLATES = [
         },
     },
 ]
+
 WSGI_APPLICATION = 'backend.wsgi.application'
+
 # ==================== DATABASE - FIXED FOR RENDER ====================
 # Try to get database URLs from environment variables
 RENDER_INTERNAL_DATABASE_URL = os.environ.get('RENDER_INTERNAL_DATABASE_URL')
 RENDER_EXTERNAL_DATABASE_URL = os.environ.get('RENDER_EXTERNAL_DATABASE_URL')
 DATABASE_URL = RENDER_INTERNAL_DATABASE_URL or RENDER_EXTERNAL_DATABASE_URL or os.environ.get('DATABASE_URL')
+
 if DATABASE_URL:
     # Check if using internal connection (no SSL needed)
     using_internal = bool(RENDER_INTERNAL_DATABASE_URL and DATABASE_URL == RENDER_INTERNAL_DATABASE_URL)
@@ -111,10 +124,12 @@ else:
         }
     }
     print("📦 Using SQLite database for development")
+
 # ==================== CORS SETTINGS ====================
 # Allow all origins only in development by default; allow overriding with env var
 # Set environment variable CORS_ALLOW_ALL_ORIGINS=True to enable in production (use carefully)
 CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL_ORIGINS', str(DEBUG)).lower() == 'true'
+
 # Explicitly allowed origins
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
@@ -131,18 +146,22 @@ CORS_ALLOWED_ORIGINS = [
     "https://www.dsuvamshieducare.org",
     "https://ice-foundation-1.onrender.com", 
 ]
+
 # Add any CORS origins from environment variable
 env_cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '')
 if env_cors_origins:
     CORS_ALLOWED_ORIGINS.extend([origin.strip() for origin in env_cors_origins.split(',') if origin.strip()])
+
 # Allow ice-foundation-1 and other Render.com subdomains via regex
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://ice-foundation-1\.onrender\.com$",
     r"^https://.*\.vercel\.app$",
     r"^https://(www\.)?dsuvamshieducare\.org$",
 ]
+
 # Allow credentials (cookies, authorization headers)
 CORS_ALLOW_CREDENTIALS = True
+
 # Allowed methods
 CORS_ALLOW_METHODS = [
     'DELETE',
@@ -152,6 +171,7 @@ CORS_ALLOW_METHODS = [
     'POST',
     'PUT',
 ]
+
 # Allowed headers
 CORS_ALLOW_HEADERS = [
     'accept',
@@ -164,6 +184,7 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
+
 # ==================== REST FRAMEWORK ====================
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -176,10 +197,12 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
 }
+
 # ==================== AUTHENTICATION ====================
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
+
 # ==================== PASSWORD VALIDATION ====================
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -187,27 +210,33 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
+
 # ==================== INTERNATIONALIZATION ====================
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Kolkata'  # IST
 USE_I18N = True
 USE_TZ = True
+
 # ==================== STATIC & MEDIA FILES ====================
 STATIC_URL = '/static/'
 STATIC_ROOT = str(BASE_DIR / 'staticfiles')
 
 STATICFILES_DIRS = [
-        str(BASE_DIR / 'static'),  # This points to your static folder at the project root
+    str(BASE_DIR / 'static'),  # This points to your static folder at the project root
 ]
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = str(BASE_DIR / 'media')
+
 # ==================== FILE UPLOAD SETTINGS ====================
 # Maximum file size for uploads (5MB)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5MB in bytes
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5MB in bytes
+
 # Allowed file extensions for uploads
 ALLOWED_DOCUMENT_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png']
+
 # ==================== SECURITY SETTINGS (Production) ====================
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -220,32 +249,35 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000  # 1 year
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
-# ==================== EMAIL SETTINGS ====================
+
+# ==================== EMAIL SETTINGS WITH RESEND ====================
 if DEBUG:
     # Use console email backend for development
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
     print("📧 Using console email backend (development)")
 else:
-    # Use SMTP backend for production
-    EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
-    EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
-    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-    EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
-    EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() == 'true'
-    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'gokulece303@gmail.com')
-    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-    EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 30))
-        
-    # Validate email settings
-    if not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
-        print("⚠️ WARNING: Email credentials not configured. Email functionality will not work.")
-# Default from email
+    # Use Resend for production (via django-anymail)
+    EMAIL_BACKEND = "anymail.backends.resend.EmailBackend"
+    
+    # Resend configuration
+    ANYMAIL = {
+        "RESEND_API_KEY": os.environ.get("RESEND_API_KEY"),
+        # Optional: Add webhook signing secret if you're using webhooks
+        # "RESEND_SIGNING_SECRET": os.environ.get("RESEND_SIGNING_SECRET"),
+    }
+    
+    print("📧 Using Resend email provider (production)")
+
+# Default from email - must be a verified domain in Resend for production
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'VAMSHI EDUCARE <noreply@dsuvamshieducare.org>')
 SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
+
 # Frontend URL for email links
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://dsuvamshieducare.org')
+
 # ==================== LOGGING ====================
 LOG_LEVEL = os.environ.get('DJANGO_LOG_LEVEL', 'INFO')
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -292,6 +324,7 @@ LOGGING = {
         },
     },
 }
+
 # ==================== AUTO SUPERUSER CREATION ====================
 # Run on Render in production or when DATABASE_URL is set
 if os.environ.get('DATABASE_URL') and os.environ.get('DJANGO_SUPERUSER_USERNAME'):
@@ -312,6 +345,8 @@ if os.environ.get('DATABASE_URL') and os.environ.get('DJANGO_SUPERUSER_USERNAME'
             print(f"ℹ️ Superuser '{username}' already exists")
     except Exception as e:
         print(f"⚠️ Could not create superuser: {e}")
+
 # ==================== DEFAULT PRIMARY KEY FIELD ====================
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 print(f"🚀 Django running in {'DEVELOPMENT' if DEBUG else 'PRODUCTION'} mode")
