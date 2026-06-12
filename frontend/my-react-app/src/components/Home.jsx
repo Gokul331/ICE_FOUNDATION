@@ -9,7 +9,9 @@ import img1 from "/5.jpeg";
 import img2 from "/2.jpg";
 import img3 from "/3.jpg";
 import img4 from "/1.jpg";
+import welcomeBanner from "/Banner.jpeg"; // Add your banner image
 import { FaExternalLinkSquareAlt, FaCheckCircle, FaTimes } from "react-icons/fa";
+
 /* ── animation helpers ── */
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -48,11 +50,40 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [showPopup, setShowPopup] = useState(false);
   const scrollContainerRef = useRef(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(true);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [alertMessage, setAlertMessage] = useState({ show: false, message: "", type: "" });
+
+  // Check if popup has been closed before (persists across reloads)
+  useEffect(() => {
+    const popupClosed = localStorage.getItem("popupClosed");
+
+    // Show popup only if it hasn't been closed before
+    if (!popupClosed) {
+      // Show popup after a short delay for better UX
+      const timer = setTimeout(() => {
+        setShowPopup(true);
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // Handle popup close - persists even after page reload
+  const handleClosePopup = () => {
+    setShowPopup(false);
+    localStorage.setItem("popupClosed", "true");
+  };
+
+  // Optional: Reset popup visibility (for testing or admin purposes)
+  const resetPopup = () => {
+    localStorage.removeItem("popupClosed");
+    setShowPopup(true);
+  };
 
   useEffect(() => {
     if (location.state?.success) {
@@ -586,6 +617,46 @@ function Home() {
       </section>
 
       <Footer />
+
+      {/* ── FIRST-TIME VISITOR POPUP WITH BANNER ── */}
+      <AnimatePresence>
+        {showPopup && (
+          <motion.div
+            className="popup-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={handleClosePopup}
+          >
+            <motion.div
+              className="popup-container"
+              initial={{ scale: 0.8, opacity: 0, y: 50 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: 50 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button className="popup-close" onClick={handleClosePopup}>
+                <FaTimes />
+              </button>
+
+              {/* Banner Image Section */}
+              <div className="popup-banner">
+                <img
+                  src={welcomeBanner}
+                  alt="Welcome to VAMSHI EDUCARE"
+                  className="popup-banner-img"
+                />
+                <div className="popup-banner-overlay">
+                  <div className="popup-banner-text">Special Offer!</div>
+                </div>
+              </div>
+
+
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Scroll to Top ── */}
       <AnimatePresence>
