@@ -230,7 +230,7 @@ function ApplicationForm() {
 
   const validateName = (name, fieldName) => {
     if (!name) return `${fieldName} is required`;
-    if (name.length < 2) return `${fieldName} must be at least 2 characters`;
+    if (name.length < 1) return `${fieldName} must be at least 2 characters`;
     if (name.length > 50) return `${fieldName} must be less than 50 characters`;
     if (!/^[a-zA-Z\s]*$/.test(name)) return `${fieldName} should only contain letters`;
     return '';
