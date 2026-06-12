@@ -129,6 +129,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "https://dsuvamshieducare.org",
     "https://www.dsuvamshieducare.org",
+    "https://ice-foundation-1.onrender.com", 
 ]
 # Add any CORS origins from environment variable
 env_cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '')
@@ -231,10 +232,10 @@ else:
     EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
     EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
     EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() == 'true'
-    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'gokulece303@gmail.com')
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
     EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', 30))
-    
+        
     # Validate email settings
     if not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
         print("⚠️ WARNING: Email credentials not configured. Email functionality will not work.")
