@@ -640,10 +640,9 @@ class EnquiryFormCreateSerializer(serializers.ModelSerializer):
             f"Best regards,\nVAMSHI EDUCARE Team"
         )
     
-        # ✅ Use RESEND_FROM_EMAIL instead of DEFAULT_FROM_EMAIL
+        # Create email using Django's EmailMultiAlternatives
         from_email = getattr(settings, 'RESEND_FROM_EMAIL', settings.DEFAULT_FROM_EMAIL)
         
-        # Create email using Django's EmailMultiAlternatives
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
@@ -653,23 +652,42 @@ class EnquiryFormCreateSerializer(serializers.ModelSerializer):
         )
         email.attach_alternative(html_content, "text/html")
     
+        # ✅ DEBUG: Log PDF generation attempt
+        logger.info(f"Attempting to generate PDF for {enquiry.application_id}")
+        
         # Generate and attach PDF
         try:
             pdf_buffer = generate_application_pdf(enquiry)
-            email.attach(
-                filename=f"{enquiry.application_id}_application.pdf",
-                content=pdf_buffer.getvalue(),
-                mimetype="application/pdf",
-            )
-            logger.info(f"PDF generated for {enquiry.application_id}")
+            
+            # ✅ DEBUG: Check if PDF buffer has content
+            if pdf_buffer is None:
+                logger.error(f"PDF buffer is None for {enquiry.application_id}")
+            else:
+                pdf_content = pdf_buffer.getvalue()
+                logger.info(f"PDF generated: {len(pdf_content)} bytes for {enquiry.application_id}")
+                
+                if len(pdf_content) == 0:
+                    logger.error(f"PDF is empty (0 bytes) for {enquiry.application_id}")
+                else:
+                    email.attach(
+                        filename=f"{enquiry.application_id}_application.pdf",
+                        content=pdf_content,
+                        mimetype="application/pdf",
+                    )
+                    logger.info(f"PDF attached successfully to email for {enquiry.application_id}")
+                    
         except Exception as pdf_err:
-            logger.warning(f"Could not generate PDF for {enquiry.application_id}: {pdf_err}")
+            logger.error(f"Could not generate or attach PDF for {enquiry.application_id}: {str(pdf_err)}")
+            import traceback
+            logger.error(traceback.format_exc())
     
-        # Send email (will use Resend in production, console in development)
+        # Send email
         try:
             email.send(fail_silently=False)
             logger.info(f"Email sent successfully to {enquiry.email_id} for {enquiry.application_id}")
         except Exception as e:
             logger.error(f"Failed to send email: {str(e)}")
-            # Don't raise here - we don't want to break the application submission
-            # The user already got success response, email failure shouldn't stop that
+            import traceback
+            logger.error(traceback.format_exc())
+    
+            

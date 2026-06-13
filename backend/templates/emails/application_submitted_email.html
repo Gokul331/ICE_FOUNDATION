@@ -76,6 +76,9 @@
 
         .header h1 {
             background: linear-gradient(180deg, #1a2a6c 0%, #f3a900 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
         }
 
         .section-title {
@@ -171,7 +174,6 @@
                 <p><span class="label">Application ID:</span> {{ application_id }}</p>
                 <p><span class="label">College Name:</span> {{ college_name }}</p>
                 <p><span class="label">Course Name:</span> {{ course_name }}</p>
-                <p><span class="label">Quota Type:</span> {{ quota_type }}</p>
                 <p><span class="label">Submission Date:</span> {{ submission_date }}</p>
                 <p><span class="label">Status:</span> <strong style="color: #28a745;">Submitted</strong></p>
             </div>

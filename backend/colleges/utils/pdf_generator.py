@@ -1,496 +1,330 @@
-# colleges/utils/pdf_generator.py
-# ICE Foundation – Student Application PDF Generator
-# Matches the exact fields from ApplicationForm component
-
+# utils/pdf_generator.py
+import logging
 from io import BytesIO
 from datetime import datetime
-import os
-import tempfile
-
-from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
-from reportlab.platypus import (
-    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-)
+from reportlab.lib.units import inch, mm
+from reportlab.lib.colors import HexColor, black, white, grey
+from reportlab.pdfgen import canvas
+from reportlab.platypus import Table, TableStyle
+from reportlab.lib.fonts import addMapping
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import os
 
+logger = logging.getLogger(__name__)
+
+# Colors
+PRIMARY_COLOR = HexColor('#000000')  # Black
+SECONDARY_COLOR = HexColor('#333333')  # Dark Gray
+ACCENT_COLOR = HexColor('#28a745')  # Green for success
+BORDER_COLOR = HexColor('#dddddd')
+HEADER_BG = HexColor('#f5f5f5')
+
+# Try to register a Unicode font (optional, falls back to Helvetica if not available)
 try:
-    from PIL import Image as PILImage
-    PIL_AVAILABLE = True
-except ImportError:
-    PIL_AVAILABLE = False
-
-
-# ─── Black & White Theme ───────────────────────────────────────────────────
-BLACK       = colors.HexColor('#000000')
-WHITE       = colors.HexColor('#FFFFFF')
-GREY_DARK   = colors.HexColor('#333333')
-GREY_MID    = colors.HexColor('#666666')
-GREY_LIGHT  = colors.HexColor('#F5F5F5')
-BORDER      = colors.HexColor('#CCCCCC')
-HEADER_BG   = colors.HexColor('#000000')
-LABEL_BG    = colors.HexColor('#F0F0F0')
-VALUE_BG    = colors.HexColor('#FFFFFF')
-
-# ─── Page geometry ────────────────────────────────────────────────────────
-PAGE_W, PAGE_H = A4
-LM = RM = 28
-TM = BM = 30
-CONTENT_W = PAGE_W - LM - RM
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# Helpers
-# ═══════════════════════════════════════════════════════════════════════════
-
-def _v(value):
-    """Return empty string if value is None or empty"""
-    if value is None or value == '':
-        return ''
-    return str(value)
-
-
-def _format_percentage(value):
-    """Safely format a percentage value"""
-    if value is None or value == '':
-        return ''
-    try:
-        return f"{float(value)}%"
-    except (ValueError, TypeError):
-        return str(value)
-
-
-def _age(dob):
-    """Calculate age from date of birth"""
-    if not dob:
-        return ''
-    today = datetime.now().date()
-    years = today.year - dob.year
-    months = today.month - dob.month
-    if today.day < dob.day:
-        months -= 1
-    if months < 0:
-        years -= 1
-        months += 12
-    
-    if years == 0:
-        return f"{months} MONTH{'S' if months != 1 else ''}"
-    elif months == 0:
-        return f"{years} YEAR{'S' if years != 1 else ''}"
+    # For better Unicode support (Devanagari, Tamil, etc.)
+    font_path = os.path.join(os.path.dirname(__file__), 'fonts', 'NotoSans-Regular.ttf')
+    if os.path.exists(font_path):
+        pdfmetrics.registerFont(TTFont('NotoSans', font_path))
+        DEFAULT_FONT = 'NotoSans'
     else:
-        return f"{years} YEARS, {months} MONTH{'S' if months != 1 else ''}"
+        DEFAULT_FONT = 'Helvetica'
+except:
+    DEFAULT_FONT = 'Helvetica'
 
 
-def _resize_photo(file_field, max_w=90, max_h=110):
-    """Resize photo for PDF embedding"""
-    if not PIL_AVAILABLE or not file_field or not file_field.name:
-        return None
-    try:
-        # Try to get file path
-        if hasattr(file_field, 'path') and file_field.path and os.path.exists(file_field.path):
-            path = file_field.path
-        else:
-            # For in-memory files, save temporarily
-            file_field.seek(0)
-            tmp = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
-            tmp.write(file_field.read())
-            tmp.close()
-            file_field.seek(0)
-            path = tmp.name
-        
-        with PILImage.open(path) as img:
-            if img.mode in ('RGBA', 'LA', 'P'):
-                bg = PILImage.new('RGB', img.size, (255, 255, 255))
-                if img.mode == 'P':
-                    img = img.convert('RGBA')
-                bg.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
-                img = bg
-            img.thumbnail((max_w, max_h), PILImage.Resampling.LANCZOS)
-            tmp_resized = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
-            img.save(tmp_resized.name, 'JPEG', quality=85)
-            return tmp_resized.name
-    except Exception as e:
-        print(f"[pdf_generator] photo resize error: {e}")
-        return None
-
-
-def _get_display_name(value):
-    """Convert enum values to display names"""
-    if not value:
-        return ''
-    value_lower = str(value).lower()
-    if value_lower in ['yes', 'true', '1']:
-        return 'YES'
-    if value_lower in ['no', 'false', '0']:
-        return 'NO'
-    if value_lower == 'single':
-        return 'SINGLE'
-    if value_lower == 'married':
-        return 'MARRIED'
-    if value_lower == 'male':
-        return 'MALE'
-    if value_lower == 'female':
-        return 'FEMALE'
-    if value_lower == 'other':
-        return 'OTHER'
-    if value_lower == 'declared':
-        return 'DECLARED'
-    if value_lower == 'awaited':
-        return 'AWAITED'
-    return _v(value)
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# Style helpers
-# ═══════════════════════════════════════════════════════════════════════════
-
-_base_styles = getSampleStyleSheet()
-
-
-def _ps(name, **kw):
-    return ParagraphStyle(name, parent=_base_styles['Normal'], **kw)
-
-
-S_NORMAL  = _ps('ice_n',  fontSize=8,  textColor=BLACK, fontName='Helvetica', leading=11)
-S_BOLD    = _ps('ice_b',  fontSize=8,  textColor=BLACK, fontName='Helvetica-Bold', leading=11)
-S_LABEL   = _ps('ice_lb', fontSize=8,  textColor=BLACK, fontName='Helvetica-Bold', leading=11)
-S_SEC     = _ps('ice_sh', fontSize=10, textColor=WHITE, fontName='Helvetica-Bold', alignment=TA_LEFT, leading=13)
-S_TITLE   = _ps('ice_t1', fontSize=14, textColor=WHITE, fontName='Helvetica-Bold', alignment=TA_CENTER, leading=20)
-S_SUBTTL  = _ps('ice_t2', fontSize=9,  textColor=WHITE, fontName='Helvetica', alignment=TA_CENTER, leading=13)
-S_APPID   = _ps('ice_ai', fontSize=8,  textColor=WHITE, fontName='Helvetica-Bold', alignment=TA_RIGHT, leading=12)
-
-
-def P(text, style=S_NORMAL):
-    return Paragraph(_v(text), style)
-
-
-def _section_bar(title):
-    """Black full-width section title bar"""
-    t = Table([[P(title, S_SEC)]], colWidths=[CONTENT_W])
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), HEADER_BG),
-        ('LEFTPADDING', (0, 0), (-1, -1), 8),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-    ]))
-    return t
-
-
-def _sub_bar(title):
-    """Light grey sub-section bar"""
-    t = Table([[P(title, S_BOLD)]], colWidths=[CONTENT_W])
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), LABEL_BG),
-        ('LEFTPADDING', (0, 0), (-1, -1), 8),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ('BOX', (0, 0), (-1, -1), 0.5, BORDER),
-    ]))
-    return t
-
-
-def _grid(rows, col_widths):
-    """Create a label-value grid table with alternating backgrounds"""
-    if not rows:
-        return Spacer(1, 0)
+def generate_application_pdf(enquiry):
+    """
+    Generate a professional PDF for the scholarship application
     
-    t = Table(rows, colWidths=col_widths)
-    styles = [
-        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 8),
-        ('TOPPADDING', (0, 0), (-1, -1), 5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-        ('LEFTPADDING', (0, 0), (-1, -1), 7),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 7),
-        ('GRID', (0, 0), (-1, -1), 0.4, BORDER),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-    ]
-    for r in range(len(rows)):
-        for c in range(len(col_widths)):
-            if c % 2 == 0:
-                styles.append(('BACKGROUND', (c, r), (c, r), LABEL_BG))
-                styles.append(('FONTNAME', (c, r), (c, r), 'Helvetica-Bold'))
-            else:
-                styles.append(('BACKGROUND', (c, r), (c, r), VALUE_BG))
-    t.setStyle(TableStyle(styles))
-    return t
-
-
-def _footer(canvas, doc):
-    """Footer on every page"""
-    canvas.saveState()
-    canvas.setFont('Helvetica', 7)
-    canvas.setFillColor(GREY_MID)
-    canvas.drawString(LM, 16, "ICE Foundation | Student Application Form")
-    canvas.drawRightString(PAGE_W - RM, 16, f"Page {doc.page}")
-    canvas.restoreState()
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# Main generator - Matches ApplicationForm fields exactly
-# ═══════════════════════════════════════════════════════════════════════════
-
-def generate_application_pdf(application):
-    """Generate PDF matching the ApplicationForm component fields"""
-
-    # Column widths
-    CW2 = [CONTENT_W * 0.30, CONTENT_W * 0.70]
-    CW4 = [CONTENT_W * 0.25, CONTENT_W * 0.25, CONTENT_W * 0.25, CONTENT_W * 0.25]
-    CW6 = [CONTENT_W * 0.155, CONTENT_W * 0.18, CONTENT_W * 0.155, CONTENT_W * 0.18, CONTENT_W * 0.155, CONTENT_W * 0.175]
-
-    story = []
-
-    # ==================== HEADER ====================
-    college_name = application.college.college_name.upper() if application.college and application.college.college_name else "ICE FOUNDATION"
-    app_id = _v(application.application_id)
-    sub_date = application.submitted_at.strftime('%d/%m/%Y') if application.submitted_at else datetime.now().strftime('%d/%m/%Y')
-
-    header_rows = [[P(college_name, S_TITLE), P(f"Application ID: {app_id}\nDate: {sub_date}", S_APPID)]]
-    hdr_t = Table(header_rows, colWidths=[CONTENT_W * 0.70, CONTENT_W * 0.30])
-    hdr_t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), HEADER_BG),
-        ('LEFTPADDING', (0, 0), (-1, -1), 12),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
-        ('TOPPADDING', (0, 0), (-1, -1), 12),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-    ]))
-    story.append(hdr_t)
-    story.append(Spacer(1, 2))
-
-    # ==================== BASIC DETAILS ====================
-    story.append(_section_bar("Basic Details"))
-
-    # Personal Details (Bio-data)
-    story.append(_sub_bar("Bio-data Details"))
-    dob = application.date_of_birth
-    per_rows = [
-        [P("First Name", S_LABEL), P(application.first_name),
-         P("Last Name", S_LABEL), P(application.last_name),
-         P("Gender", S_LABEL), P(_get_display_name(application.gender))],
-        [P("Date of Birth", S_LABEL), P(dob.strftime('%d/%m/%Y') if dob else ''),
-         P("Mobile Number", S_LABEL), P(application.mobile_number),
-         P("Email ID", S_LABEL), P(application.email_id)],
-        [P("Blood Group", S_LABEL), P(application.blood_group or ''),
-         P("Nationality", S_LABEL), P(application.nationality or 'Indian'),
-         P("Community", S_LABEL), P(application.community or '')],
-        [P("Sub-Caste", S_LABEL), P(application.sub_caste or ''),
-         P("Marital Status", S_LABEL), P(_get_display_name(application.marital_status)),
-         P("Mother Tongue", S_LABEL), P(application.mother_tongue or '')],
-        [P("Aadhar Number", S_LABEL), P(application.aadhar_number or ''),
-         P("First Graduation", S_LABEL), P(_get_display_name(application.first_graduation)),
-         P("Age", S_LABEL), P(_age(dob))],
-    ]
-    story.append(_grid(per_rows, CW6))
-    story.append(Spacer(1, 4))
-
-    # ==================== PARENT'S DETAILS ====================
-    story.append(_section_bar("Parent's Details"))
-
-    story.append(_sub_bar("Father's Details"))
-    fat_rows = [
-        [P("Father's Name", S_LABEL), P(application.father_name or ''),
-         P("Father's Mobile Number", S_LABEL), P(application.father_mobile or ''),
-         P("Father's Occupation", S_LABEL), P(application.father_occupation or '')],
-    ]
-    story.append(_grid(fat_rows, CW6))
-
-    story.append(_sub_bar("Mother's Details"))
-    mot_rows = [
-        [P("Mother's Name", S_LABEL), P(application.mother_name or ''),
-         P("Mother's Mobile Number", S_LABEL), P(application.mother_mobile or ''),
-         P("Mother's Occupation", S_LABEL), P(application.mother_occupation or '')],
-    ]
-    story.append(_grid(mot_rows, CW6))
-
-    story.append(_sub_bar("Family Details"))
-    income = application.family_annual_income
-    income_str = f"₹{int(income):,}" if income and str(income).isdigit() else (income if income else '')
-    fam_rows = [
-        [P("Family Annual Income (INR)", S_LABEL), P(income_str),
-         P("", S_LABEL), P(""),
-         P("", S_LABEL), P("")],
-    ]
-    story.append(_grid(fam_rows, CW6))
-    story.append(Spacer(1, 4))
-
-    # ==================== ADDRESS DETAILS ====================
-    story.append(_section_bar("Address Details"))
-
-    addr_rows = [
-        [P("Address Line 1", S_LABEL), P(application.address_line1 or ''),
-         P("Address Line 2", S_LABEL), P(application.address_line2 or ''),
-         P("City", S_LABEL), P(application.city or '')],
-        [P("State", S_LABEL), P(application.state or ''),
-         P("Pincode", S_LABEL), P(application.pincode or ''),
-         P("", S_LABEL), P("")],
-    ]
-    story.append(_grid(addr_rows, CW6))
-    story.append(Spacer(1, 4))
-
-    # ==================== EDUCATION DETAILS ====================
-    story.append(_section_bar("Education Details"))
-
-    # 10th Standard
-    if application.tenth_school_name:
-        story.append(_sub_bar("10th Standard"))
-        tenth_rows = [
-            [P("School Name", S_LABEL), P(application.tenth_school_name or ''),
-             P("Board", S_LABEL), P(application.tenth_board or ''),
-             P("Year of Passing", S_LABEL), P(_v(application.tenth_year_of_passing))],
-            [P("Result Status", S_LABEL), P(_get_display_name(application.tenth_result_status)),
-             P("Marks Scored (%)", S_LABEL), P(_format_percentage(application.tenth_marks_percentage)),
-             P("", S_LABEL), P("")],
-        ]
-        story.append(_grid(tenth_rows, CW6))
-        story.append(Spacer(1, 2))
-
-    # 12th Standard
-    if application.twelfth_school_name:
-        story.append(_sub_bar("12th Standard"))
-        twelfth_rows = [
-            [P("School Name", S_LABEL), P(application.twelfth_school_name or ''),
-             P("Board", S_LABEL), P(application.twelfth_board or ''),
-             P("Year of Passing", S_LABEL), P(_v(application.twelfth_year_of_passing))],
-            [P("Result Status", S_LABEL), P(_get_display_name(application.twelfth_result_status)),
-             P("Marks Scored (%)", S_LABEL), P(_format_percentage(application.twelfth_marks_percentage)),
-             P("", S_LABEL), P("")],
-        ]
-        story.append(_grid(twelfth_rows, CW6))
-        story.append(Spacer(1, 2))
-
-    # Diploma Details (conditional)
-    if application.has_diploma and application.diploma_college_name:
-        story.append(_sub_bar("Diploma Details"))
-        diploma_rows = [
-            [P("College Name", S_LABEL), P(application.diploma_college_name or ''),
-             P("Board / University", S_LABEL), P(application.diploma_board_university or ''),
-             P("Year of Passing", S_LABEL), P(_v(application.diploma_year_of_passing))],
-            [P("Result Status", S_LABEL), P(_get_display_name(application.diploma_result_status)),
-             P("Marks Scored (%)", S_LABEL), P(_format_percentage(application.diploma_marks_percentage)),
-             P("", S_LABEL), P("")],
-        ]
-        story.append(_grid(diploma_rows, CW6))
-        story.append(Spacer(1, 2))
-
-    # UG Details (conditional)
-    if application.has_ug and application.ug_college_name:
-        story.append(_sub_bar("Undergraduate (UG) Details"))
-        ug_rows = [
-            [P("College Name", S_LABEL), P(application.ug_college_name or ''),
-             P("Board / University", S_LABEL), P(application.ug_board_university or ''),
-             P("Year of Passing", S_LABEL), P(_v(application.ug_year_of_passing))],
-            [P("Result Status", S_LABEL), P(_get_display_name(application.ug_result_status)),
-             P("Marks Scored (%)", S_LABEL), P(_format_percentage(application.ug_marks_percentage)),
-             P("", S_LABEL), P("")],
-        ]
-        story.append(_grid(ug_rows, CW6))
-        story.append(Spacer(1, 2))
-
-    # ==================== COURSE DETAILS ====================
-    story.append(_section_bar("Course Details"))
-    course_rows = [
-        [P("College Name", S_LABEL), P(application.college.college_name if application.college and application.college.college_name else ''),
-         P("Course Name", S_LABEL), P(_v(application.course_name)),
-         P("Quota Type", S_LABEL), P(application.quota_type.upper() if application.quota_type else 'MANAGEMENT')],
-    ]
-    story.append(_grid(course_rows, CW6))
-    story.append(Spacer(1, 4))
-
-    # ==================== DOCUMENT UPLOADS ====================
-    story.append(_section_bar("Document Uploads"))
-
-    doc_fields = [
-        ('photo', 'Photo'),
-        ('aadhar_card', 'Aadhar Card'),
-        ('tenth_marksheet', '10th Marksheet'),
-        ('twelfth_marksheet', '12th Marksheet'),
-        ('diploma_marksheet', 'Diploma Marksheet'),
-        ('ug_marksheet', 'UG Marksheet'),
-        ('community_marksheet', 'Community Certificate'),
-    ]
-
-    doc_rows = []
-    current_row = []
-    for field_name, display_name in doc_fields:
-        file_obj = getattr(application, field_name, None)
-        uploaded = "✓ Uploaded" if file_obj and file_obj.name else "✗ Not Uploaded"
-        current_row.append(P(display_name, S_LABEL))
-        current_row.append(P(uploaded, S_BOLD if uploaded == "✓ Uploaded" else S_NORMAL))
-        if len(current_row) == 4:
-            doc_rows.append(current_row)
-            current_row = []
-    if current_row:
-        while len(current_row) < 4:
-            current_row.append(P(""))
-            current_row.append(P(""))
-        doc_rows.append(current_row)
-
-    if doc_rows:
-        doc_table = Table(doc_rows, colWidths=[CONTENT_W * 0.25, CONTENT_W * 0.25, CONTENT_W * 0.25, CONTENT_W * 0.25])
-        doc_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('LEFTPADDING', (0, 0), (-1, -1), 7),
-            ('GRID', (0, 0), (-1, -1), 0.4, BORDER),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-        story.append(doc_table)
-    story.append(Spacer(1, 4))
-
-    # ==================== DECLARATION ====================
-    story.append(_section_bar("Declaration"))
-    story.append(_sub_bar("Declaration"))
-
-    decl_text = "I hereby declare that all the information provided by me in this application form is true and correct to the best of my knowledge. I understand that any false information or suppression of facts will lead to rejection of my application or cancellation of admission at any stage."
-    decl_t = Table([[P(decl_text, S_NORMAL)]], colWidths=[CONTENT_W])
-    decl_t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), GREY_LIGHT),
-        ('TOPPADDING', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-        ('LEFTPADDING', (0, 0), (-1, -1), 12),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
-        ('BOX', (0, 0), (-1, -1), 0.5, BORDER),
-    ]))
-    story.append(decl_t)
-    story.append(Spacer(1, 6))
-
-    # Signature
-    sig_rows = [[
-        P(f"Applicant's Name: {application.first_name} {application.last_name}".strip(), S_BOLD),
-        P(f"Date: {datetime.now().strftime('%d/%m/%Y')}", S_NORMAL),
-    ]]
-    sig_table = Table(sig_rows, colWidths=[CONTENT_W * 0.5, CONTENT_W * 0.5])
-    sig_table.setStyle(TableStyle([
-        ('TOPPADDING', (0, 0), (-1, -1), 5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-    ]))
-    story.append(sig_table)
-    story.append(Spacer(1, 2))
-
-    note_text = "Note: The fee paid at the time of admission process shall not be refunded in case of admission cancellation."
-    note_t = Table([[P(note_text, S_NORMAL)]], colWidths=[CONTENT_W])
-    note_t.setStyle(TableStyle([
-        ('TOPPADDING', (0, 0), (-1, -1), 5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-    ]))
-    story.append(note_t)
-
-    # Build PDF
+    Args:
+        enquiry: EnquiryForm object instance
+    
+    Returns:
+        BytesIO buffer containing the PDF
+    """
     buffer = BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        rightMargin=RM, leftMargin=LM,
-        topMargin=TM, bottomMargin=30,
-        title="ICE Foundation – Student Application Form",
-        author="ICE Foundation",
-    )
-    doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
+    
+    try:
+        # Create PDF canvas
+        p = canvas.Canvas(buffer, pagesize=A4)
+        width, height = A4
+        p.setFont(DEFAULT_FONT, 10)
+        
+        # ==================== HEADER SECTION ====================
+        # Top border line
+        p.setStrokeColor(PRIMARY_COLOR)
+        p.setLineWidth(2)
+        p.line(50, height - 50, width - 50, height - 50)
+        
+        # Logo placeholder / Title
+        p.setFont(DEFAULT_FONT, 20)
+        p.setFillColor(PRIMARY_COLOR)
+        p.drawString(50, height - 40, "VAMSHI EDUCARE")
+        
+        p.setFont(DEFAULT_FONT, 10)
+        p.setFillColor(SECONDARY_COLOR)
+        p.drawString(50, height - 58, "Career Guidance Center")
+        
+        # Application ID on right side
+        p.setFont(DEFAULT_FONT, 9)
+        p.setFillColor(grey)
+        p.drawRightString(width - 50, height - 40, f"Application ID: {enquiry.application_id}")
+        p.drawRightString(width - 50, height - 55, f"Date: {datetime.now().strftime('%d %b %Y, %I:%M %p')}")
+        
+        # Title
+        p.setFont(DEFAULT_FONT, 16)
+        p.setFillColor(PRIMARY_COLOR)
+        p.drawCentredString(width / 2, height - 90, "SCHOLARSHIP APPLICATION FORM")
+        
+        # Underline for title
+        p.setStrokeColor(ACCENT_COLOR)
+        p.setLineWidth(1)
+        p.line(width / 2 - 100, height - 95, width / 2 + 100, height - 95)
+        
+        y_position = height - 120
+        
+        # ==================== COURSE SELECTION SECTION ====================
+        p.setFont(DEFAULT_FONT, 12)
+        p.setFillColor(PRIMARY_COLOR)
+        p.drawString(50, y_position, "COURSE SELECTION DETAILS")
+        y_position -= 15
+        
+        # Divider line
+        p.setStrokeColor(BORDER_COLOR)
+        p.setLineWidth(0.5)
+        p.line(50, y_position + 5, width - 50, y_position + 5)
+        y_position -= 10
+        
+        # Course selection table data
+        course_data = [
+            ["College:", enquiry.college.college_name if enquiry.college else "N/A"],
+            ["College Location:", f"{enquiry.college.location_city}, {enquiry.college.location_state}" if enquiry.college else "N/A"],
+            ["Category:", enquiry.get_selected_category_display() or enquiry.selected_category or "N/A"],
+            ["Degree Type:", enquiry.get_selected_degree_type_display() or enquiry.selected_degree_type or "N/A"],
+            ["Selected Course:", enquiry.course_name or "N/A"],
+            ["Department:", enquiry.department_name or "N/A"],
+            ["Quota/Community:", enquiry.get_community_display() or enquiry.community or "N/A"],
+        ]
+        
+        # Create table
+        course_table = Table(course_data, colWidths=[100, 350])
+        course_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('TEXTCOLOR', (0, 0), (0, -1), PRIMARY_COLOR),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        
+        course_table.wrapOn(p, width - 100, y_position)
+        course_table.drawOn(p, 50, y_position - 80)
+        y_position -= 100
+        
+        # ==================== PERSONAL DETAILS SECTION ====================
+        p.setFont(DEFAULT_FONT, 12)
+        p.setFillColor(PRIMARY_COLOR)
+        p.drawString(50, y_position, "PERSONAL DETAILS")
+        y_position -= 15
+        p.line(50, y_position + 5, width - 50, y_position + 5)
+        y_position -= 10
+        
+        personal_data = [
+            ["Full Name:", f"{enquiry.first_name} {enquiry.last_name or ''}".strip()],
+            ["Gender:", enquiry.get_gender_display() or enquiry.gender or "N/A"],
+            ["Date of Birth:", enquiry.date_of_birth.strftime('%d %b %Y') if enquiry.date_of_birth else "N/A"],
+            ["Age:", f"{calculate_age(enquiry.date_of_birth)} years" if enquiry.date_of_birth else "N/A"],
+            ["Mobile Number:", enquiry.mobile_number or "N/A"],
+            ["Email ID:", enquiry.email_id or "N/A"],
+            ["Aadhar Number:", format_aadhar(enquiry.aadhar_number) if enquiry.aadhar_number else "N/A"],
+            ["Blood Group:", enquiry.blood_group or "N/A"],
+        ]
+        
+        personal_table = Table(personal_data, colWidths=[100, 350])
+        personal_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('TEXTCOLOR', (0, 0), (0, -1), PRIMARY_COLOR),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        
+        personal_table.wrapOn(p, width - 100, y_position)
+        personal_table.drawOn(p, 50, y_position - 80)
+        y_position -= 100
+        
+        # Check if we need a new page
+        if y_position < 200:
+            p.showPage()
+            y_position = height - 50
+            p.setFont(DEFAULT_FONT, 10)
+        
+        # ==================== PARENT DETAILS SECTION ====================
+        p.setFont(DEFAULT_FONT, 12)
+        p.setFillColor(PRIMARY_COLOR)
+        p.drawString(50, y_position, "PARENT / GUARDIAN DETAILS")
+        y_position -= 15
+        p.line(50, y_position + 5, width - 50, y_position + 5)
+        y_position -= 10
+        
+        parent_data = [
+            ["Father's Name:", enquiry.father_name or "N/A"],
+            ["Father's Mobile:", enquiry.father_mobile or "N/A"],
+            ["Mother's Name:", enquiry.mother_name or "N/A"],
+            ["Mother's Mobile:", enquiry.mother_mobile or "N/A"],
+        ]
+        
+        parent_table = Table(parent_data, colWidths=[100, 350])
+        parent_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('TEXTCOLOR', (0, 0), (0, -1), PRIMARY_COLOR),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        
+        parent_table.wrapOn(p, width - 100, y_position)
+        parent_table.drawOn(p, 50, y_position - 80)
+        y_position -= 100
+        
+        # ==================== EDUCATION DETAILS SECTION ====================
+        p.setFont(DEFAULT_FONT, 12)
+        p.setFillColor(PRIMARY_COLOR)
+        p.drawString(50, y_position, "EDUCATION DETAILS")
+        y_position -= 15
+        p.line(50, y_position + 5, width - 50, y_position + 5)
+        y_position -= 10
+        
+        education_data = [
+            ["10th Percentage:", f"{enquiry.tenth_marks_percentage}%" if enquiry.tenth_marks_percentage else "N/A"],
+            ["12th Percentage:", f"{enquiry.twelfth_marks_percentage}%" if enquiry.twelfth_marks_percentage else "N/A"],
+        ]
+        
+        education_table = Table(education_data, colWidths=[100, 350])
+        education_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('TEXTCOLOR', (0, 0), (0, -1), PRIMARY_COLOR),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        
+        education_table.wrapOn(p, width - 100, y_position)
+        education_table.drawOn(p, 50, y_position - 50)
+        y_position -= 70
+        
+        # ==================== ADDRESS DETAILS SECTION ====================
+        p.setFont(DEFAULT_FONT, 12)
+        p.setFillColor(PRIMARY_COLOR)
+        p.drawString(50, y_position, "ADDRESS DETAILS")
+        y_position -= 15
+        p.line(50, y_position + 5, width - 50, y_position + 5)
+        y_position -= 10
+        
+        # Format full address
+        address_parts = []
+        if enquiry.address_line1:
+            address_parts.append(enquiry.address_line1)
+        if enquiry.address_line2:
+            address_parts.append(enquiry.address_line2)
+        if enquiry.city:
+            address_parts.append(enquiry.city)
+        if enquiry.pincode:
+            address_parts.append(f"Pincode: {enquiry.pincode}")
+        
+        address_data = [
+            ["Address:", "\n".join(address_parts) if address_parts else "N/A"],
+        ]
+        
+        address_table = Table(address_data, colWidths=[100, 350])
+        address_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('TEXTCOLOR', (0, 0), (0, -1), PRIMARY_COLOR),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        
+        address_table.wrapOn(p, width - 100, y_position)
+        address_table.drawOn(p, 50, y_position - 50)
+        y_position -= 70
+        
+        # ==================== REFERENCE SECTION ====================
+        if enquiry.reference_name:
+            p.setFont(DEFAULT_FONT, 10)
+            p.setFillColor(SECONDARY_COLOR)
+            p.drawString(50, y_position, f"Reference: {enquiry.reference_name}")
+            y_position -= 20
+        
+        # ==================== FOOTER SECTION ====================
+        # Only add footer if there's space, otherwise new page
+        if y_position > 100:
+            draw_footer(p, width, height)
+        else:
+            p.showPage()
+            draw_footer(p, width, height)
+        
+        # Save the PDF
+        p.save()
+        buffer.seek(0)
+        
+        pdf_size = len(buffer.getvalue())
+        logger.info(f"PDF generated successfully for {enquiry.application_id}: {pdf_size} bytes")
+        
+        if pdf_size == 0:
+            logger.error(f"PDF is empty for {enquiry.application_id}")
+            return None
+            
+        return buffer
+        
+    except Exception as e:
+        logger.error(f"Error generating PDF for {enquiry.application_id}: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return None
 
-    buffer.seek(0)
-    return buffer
+
+def draw_footer(p, width, height):
+    """Draw footer on the page"""
+    p.setFont(DEFAULT_FONT, 8)
+    p.setFillColor(grey)
+    
+    # Bottom border line
+    p.setStrokeColor(BORDER_COLOR)
+    p.setLineWidth(0.5)
+    p.line(50, 50, width - 50, 50)
+    
+    # Footer text
+    p.drawCentredString(width / 2, 35, "VAMSHI EDUCARE - Career Guidance Center")
+    p.drawCentredString(width / 2, 22, "This is a computer-generated document. No signature required.")
+    
+    # Page number
+    page_num = p.getPageNumber()
+    p.drawRightString(width - 50, 22, f"Page {page_num}")
+
+
+def calculate_age(date_of_birth):
+    """Calculate age from date of birth"""
+    if not date_of_birth:
+        return None
+    today = datetime.now().date()
+    return today.year - date_of_birth.year - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+
+
+def format_aadhar(aadhar_number):
+    """Format Aadhar number as XXXX XXXX XXXX"""
+    aadhar_str = str(aadhar_number).replace(' ', '')
+    if len(aadhar_str) == 12:
+        return f"{aadhar_str[:4]} {aadhar_str[4:8]} {aadhar_str[8:12]}"
+    return aadhar_number
