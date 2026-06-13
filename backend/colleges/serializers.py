@@ -1,8 +1,10 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
 from django.conf import settings
 from .models import College, Course, UserProfile, EnquiryForm
+from .utils.pdf_generator import generate_application_pdf
 import logging
 
 logger = logging.getLogger(__name__)
@@ -611,46 +613,49 @@ class EnquiryFormCreateSerializer(serializers.ModelSerializer):
         return enquiry
     
     def _send_confirmation_email(self, enquiry):
-        """Send confirmation email to the applicant"""
+        """Send the branded confirmation email to the applicant, with the application PDF attached."""
+        context = {
+            "first_name":       enquiry.first_name,
+            "application_id":   enquiry.application_id,
+            "college_name":     enquiry.college.college_name if enquiry.college else "ICE Foundation",
+            "course_name":      enquiry.course_name or "—",
+            # EnquiryForm has no quota field; map community (OC/BC/SC/ST/...) into the template
+            "quota_type":       enquiry.get_community_display() or "N/A",
+            "submission_date":  enquiry.submitted_at.strftime("%d %b %Y, %I:%M %p") if enquiry.submitted_at else "",
+            "frontend_url":     settings.FRONTEND_URL,
+        }
+
         subject = f"Application Received - {enquiry.application_id}"
-        html_content = f"""
-        <html>
-            <body>
-                <h2>Thank you for your application!</h2>
-                <p>Dear {enquiry.first_name},</p>
-                <p>Your application has been received successfully.</p>
-                <p><strong>Application ID:</strong> {enquiry.application_id}</p>
-                <p><strong>Course Applied:</strong> {enquiry.course_name}</p>
-                <p><strong>Referred By:</strong> {enquiry.reference_name or 'N/A'}</p>
-                <p>Our team will review your application and contact you shortly.</p>
-                <br>
-                <p>Best regards,<br>VAMSHI EDUCARE Team</p>
-            </body>
-        </html>
-        """
-        
-        text_content = f"""
-        Thank you for your application!
-        
-        Dear {enquiry.first_name},
-        
-        Your application has been received successfully.
-        
-        Application ID: {enquiry.application_id}
-        Course Applied: {enquiry.course_name}
-        Referred By: {enquiry.reference_name or 'N/A'}
-        
-        Our team will review your application and contact you shortly.
-        
-        Best regards,
-        VAMSHI EDUCARE Team
-        """
-        
+        html_content = render_to_string("emails/application_submitted_email.html", context)
+        text_content = (
+            f"Dear {enquiry.first_name},\n\n"
+            f"Your application has been received successfully.\n"
+            f"Application ID: {enquiry.application_id}\n"
+            f"College:        {context['college_name']}\n"
+            f"Course:         {context['course_name']}\n"
+            f"Community:      {context['quota_type']}\n\n"
+            f"Our team will review your application and contact you shortly.\n\n"
+            f"Best regards,\nVAMSHI EDUCARE Team"
+        )
+
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[enquiry.email_id]
+            to=[enquiry.email_id],
         )
         email.attach_alternative(html_content, "text/html")
+
+        # Attach the application PDF (the template advertises this)
+        try:
+            pdf_buffer = generate_application_pdf(enquiry)
+            email.attach(
+                filename=f"{enquiry.application_id}_application.pdf",
+                content=pdf_buffer.getvalue(),
+                mimetype="application/pdf",
+            )
+        except Exception as pdf_err:
+            # PDF failure should not block the email
+            logger.warning(f"Could not generate PDF for {enquiry.application_id}: {pdf_err}")
+
         email.send()
