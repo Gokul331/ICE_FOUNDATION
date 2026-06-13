@@ -250,7 +250,6 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
-# ==================== EMAIL SETTINGS WITH RESEND ====================
 if DEBUG:
     # Use console email backend for development
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
@@ -268,6 +267,9 @@ else:
     
     print("📧 Using Resend email provider (production)")
 
+# ✅ Define RESEND_API_KEY from environment variable
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+
 # Default from email - must be a verified domain in Resend for production
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'VAMSHI EDUCARE <noreply@dsuvamshieducare.org>')
 SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
@@ -275,6 +277,7 @@ SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
 # Frontend URL for email links
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://dsuvamshieducare.org')
 
+# ✅ Now this check will work
 if not DEBUG and not RESEND_API_KEY:
     print("⚠️ WARNING: RESEND_API_KEY not set! Email sending will fail.")
 # ==================== LOGGING ====================
