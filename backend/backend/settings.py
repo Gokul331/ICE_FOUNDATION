@@ -275,6 +275,8 @@ SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
 # Frontend URL for email links
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://dsuvamshieducare.org')
 
+if not DEBUG and not RESEND_API_KEY:
+    print("⚠️ WARNING: RESEND_API_KEY not set! Email sending will fail.")
 # ==================== LOGGING ====================
 LOG_LEVEL = os.environ.get('DJANGO_LOG_LEVEL', 'INFO')
 

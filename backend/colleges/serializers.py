@@ -615,8 +615,8 @@ class EnquiryFormCreateSerializer(serializers.ModelSerializer):
         return enquiry
     
     def _send_confirmation_email(self, enquiry):
-        """Send confirmation email using Resend API with PDF attachment"""
-    
+        """Send confirmation email using Django's email system (with Resend backend)"""
+        
         context = {
             "first_name":       enquiry.first_name,
             "application_id":   enquiry.application_id,
@@ -626,7 +626,7 @@ class EnquiryFormCreateSerializer(serializers.ModelSerializer):
             "submission_date":  enquiry.submitted_at.strftime("%d %b %Y, %I:%M %p") if enquiry.submitted_at else "",
             "frontend_url":     settings.FRONTEND_URL,
         }
-
+    
         subject = f"Application Received - {enquiry.application_id}"
         html_content = render_to_string("emails/application_submitted_email.html", context)
         text_content = (
@@ -639,52 +639,37 @@ class EnquiryFormCreateSerializer(serializers.ModelSerializer):
             f"Our team will review your application and contact you shortly.\n\n"
             f"Best regards,\nVAMSHI EDUCARE Team"
         )
-
-        # Generate PDF
-        pdf_buffer = None
-        attachment_base64 = None
-
+    
+        # ✅ Use RESEND_FROM_EMAIL instead of DEFAULT_FROM_EMAIL
+        from_email = getattr(settings, 'RESEND_FROM_EMAIL', settings.DEFAULT_FROM_EMAIL)
+        
+        # Create email using Django's EmailMultiAlternatives
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=from_email,
+            to=[enquiry.email_id],
+            reply_to=[from_email],
+        )
+        email.attach_alternative(html_content, "text/html")
+    
+        # Generate and attach PDF
         try:
             pdf_buffer = generate_application_pdf(enquiry)
-            # Convert PDF to base64 for Resend
-            attachment_base64 = base64.b64encode(pdf_buffer.getvalue()).decode('utf-8')
+            email.attach(
+                filename=f"{enquiry.application_id}_application.pdf",
+                content=pdf_buffer.getvalue(),
+                mimetype="application/pdf",
+            )
+            logger.info(f"PDF generated for {enquiry.application_id}")
         except Exception as pdf_err:
             logger.warning(f"Could not generate PDF for {enquiry.application_id}: {pdf_err}")
-
-        # Prepare Resend API payload
-        resend_payload = {
-            "from": "ICE Foundation <noreply@YOUR_VERIFIED_DOMAIN.com>",  # ⚠️ Replace with your verified Resend domain
-            "to": [enquiry.email_id],
-            "subject": subject,
-            "html": html_content,
-            "text": text_content,
-        }
-
-        # Add attachment if generated successfully
-        if attachment_base64:
-            resend_payload["attachments"] = [
-                {
-                    "filename": f"{enquiry.application_id}_application.pdf",
-                    "content": attachment_base64,
-                    "encoding": "base64"
-                }
-            ]
-
-        # Send via Resend API
+    
+        # Send email (will use Resend in production, console in development)
         try:
-            response = requests.post(
-                "https://api.resend.com/emails",
-                headers={
-                    "Authorization": f"Bearer {settings.RESEND_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json=resend_payload
-            )
-
-            if response.status_code >= 400:
-                logger.error(f"Resend API error: {response.status_code} - {response.text}")
-            else:
-                logger.info(f"Email sent successfully via Resend: {response.json().get('id')}")
-
+            email.send(fail_silently=False)
+            logger.info(f"Email sent successfully to {enquiry.email_id} for {enquiry.application_id}")
         except Exception as e:
-            logger.error(f"Failed to send email via Resend: {e}")
+            logger.error(f"Failed to send email: {str(e)}")
+            # Don't raise here - we don't want to break the application submission
+            # The user already got success response, email failure shouldn't stop that
