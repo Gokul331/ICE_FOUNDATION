@@ -746,10 +746,10 @@ class EnquiryFormAdmin(admin.ModelAdmin):
         """Export selected applications as CSV"""
         import csv
         from django.http import HttpResponse
-        
+
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="applications.csv"'
-        
+
         writer = csv.writer(response)
         writer.writerow([
             # Application Info
@@ -773,7 +773,7 @@ class EnquiryFormAdmin(admin.ModelAdmin):
             # Timestamps
             'Submitted Date', 'Updated Date', 'User Type'
         ])
-        
+
         for obj in queryset:
             writer.writerow([
                 # Application Info
@@ -811,20 +811,17 @@ class EnquiryFormAdmin(admin.ModelAdmin):
                 obj.ug_marks_percentage if obj.has_ug else 'N/A',
                 # Reference Information
                 obj.reference_name or 'N/A',
-                # Selection Path (Optional)
-                obj.selected_course or 'N/A',
-                obj.selected_category or 'N/A',
-                obj.selected_degree_type or 'N/A',
-                
+            
+
                 # Timestamps
                 obj.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if obj.submitted_at else 'N/A',
                 obj.updated_at.strftime('%Y-%m-%d %H:%M:%S') if obj.updated_at else 'N/A',
                 'Registered' if obj.user else 'Guest'
             ])
-        
+
         self.message_user(request, f"Exported {queryset.count()} applications to CSV.")
         return response
-    
+
 
     export_as_csv.short_description = "Export selected applications to CSV"
     
