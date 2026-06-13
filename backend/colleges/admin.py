@@ -742,89 +742,89 @@ class EnquiryFormAdmin(admin.ModelAdmin):
     
     actions = ['export_as_csv', 'mark_as_has_diploma', 'clear_user_association']
     
-   def export_as_csv(self, request, queryset):
-    """Export selected applications as CSV"""
-    import csv
-    from django.http import HttpResponse
-    
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="applications.csv"'
-    
-    writer = csv.writer(response)
-    writer.writerow([
-        # Application Info
-        'Application ID', 'User', 'College', 'Course Name', 'Department Name',
-        # Bio-data
-        'First Name', 'Last Name', 'Gender', 'Date of Birth', 'Mobile Number',
-        'Email ID', 'Blood Group', 'Community', 'Aadhar Number',
-        # Parent's Details
-        "Father's Name", "Father's Mobile", "Mother's Name", "Mother's Mobile",
-        # Address
-        'Address Line 1', 'Address Line 2', 'City', 'Pincode',
-        # Education Details
-        '10th Marks (%)', '12th Marks (%)', 'Has Diploma', 'Diploma Marks (%)',
-        'Has UG', 'UG Marks (%)',
-        # Reference Information
-        'Reference Name',
-        # Selection Path (Optional)
-        'Selected Course', 'Selected Category', 'Selected Degree Type',
-        # Document Uploads
-        'Photo', 'Aadhar Card',
-        # Timestamps
-        'Submitted Date', 'Updated Date', 'User Type'
-    ])
-    
-    for obj in queryset:
+    def export_as_csv(self, request, queryset):
+        """Export selected applications as CSV"""
+        import csv
+        from django.http import HttpResponse
+        
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="applications.csv"'
+        
+        writer = csv.writer(response)
         writer.writerow([
             # Application Info
-            obj.application_id,
-            str(obj.user) if obj.user else 'N/A',
-            obj.college.college_name if obj.college else 'N/A',
-            obj.course_name or 'N/A',
-            obj.department_name or 'N/A',
+            'Application ID', 'User', 'College', 'Course Name', 'Department Name',
             # Bio-data
-            obj.first_name or 'N/A',
-            obj.last_name or 'N/A',
-            obj.gender or 'N/A',
-            obj.date_of_birth.strftime('%Y-%m-%d') if obj.date_of_birth else 'N/A',
-            obj.mobile_number or 'N/A',
-            obj.email_id or 'N/A',
-            obj.blood_group or 'N/A',
-            obj.community or 'N/A',
-            obj.aadhar_number or 'N/A',
+            'First Name', 'Last Name', 'Gender', 'Date of Birth', 'Mobile Number',
+            'Email ID', 'Blood Group', 'Community', 'Aadhar Number',
             # Parent's Details
-            obj.father_name or 'N/A',
-            obj.father_mobile or 'N/A',
-            obj.mother_name or 'N/A',
-            obj.mother_mobile or 'N/A',
+            "Father's Name", "Father's Mobile", "Mother's Name", "Mother's Mobile",
             # Address
-            obj.address_line1 or 'N/A',
-            obj.address_line2 or 'N/A',
-            obj.city or 'N/A',
-            obj.pincode or 'N/A',
+            'Address Line 1', 'Address Line 2', 'City', 'Pincode',
             # Education Details
-            obj.tenth_marks_percentage or 'N/A',
-            obj.twelfth_marks_percentage or 'N/A',
-            'Yes' if obj.has_diploma else 'No',
-            obj.diploma_marks_percentage if obj.has_diploma else 'N/A',
-            'Yes' if obj.has_ug else 'No',
-            obj.ug_marks_percentage if obj.has_ug else 'N/A',
+            '10th Marks (%)', '12th Marks (%)', 'Has Diploma', 'Diploma Marks (%)',
+            'Has UG', 'UG Marks (%)',
             # Reference Information
-            obj.reference_name or 'N/A',
+            'Reference Name',
             # Selection Path (Optional)
-            obj.selected_course or 'N/A',
-            obj.selected_category or 'N/A',
-            obj.selected_degree_type or 'N/A',
-            
+            'Selected Course', 'Selected Category', 'Selected Degree Type',
+            # Document Uploads
+            'Photo', 'Aadhar Card',
             # Timestamps
-            obj.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if obj.submitted_at else 'N/A',
-            obj.updated_at.strftime('%Y-%m-%d %H:%M:%S') if obj.updated_at else 'N/A',
-            'Registered' if obj.user else 'Guest'
+            'Submitted Date', 'Updated Date', 'User Type'
         ])
+        
+        for obj in queryset:
+            writer.writerow([
+                # Application Info
+                obj.application_id,
+                str(obj.user) if obj.user else 'N/A',
+                obj.college.college_name if obj.college else 'N/A',
+                obj.course_name or 'N/A',
+                obj.department_name or 'N/A',
+                # Bio-data
+                obj.first_name or 'N/A',
+                obj.last_name or 'N/A',
+                obj.gender or 'N/A',
+                obj.date_of_birth.strftime('%Y-%m-%d') if obj.date_of_birth else 'N/A',
+                obj.mobile_number or 'N/A',
+                obj.email_id or 'N/A',
+                obj.blood_group or 'N/A',
+                obj.community or 'N/A',
+                obj.aadhar_number or 'N/A',
+                # Parent's Details
+                obj.father_name or 'N/A',
+                obj.father_mobile or 'N/A',
+                obj.mother_name or 'N/A',
+                obj.mother_mobile or 'N/A',
+                # Address
+                obj.address_line1 or 'N/A',
+                obj.address_line2 or 'N/A',
+                obj.city or 'N/A',
+                obj.pincode or 'N/A',
+                # Education Details
+                obj.tenth_marks_percentage or 'N/A',
+                obj.twelfth_marks_percentage or 'N/A',
+                'Yes' if obj.has_diploma else 'No',
+                obj.diploma_marks_percentage if obj.has_diploma else 'N/A',
+                'Yes' if obj.has_ug else 'No',
+                obj.ug_marks_percentage if obj.has_ug else 'N/A',
+                # Reference Information
+                obj.reference_name or 'N/A',
+                # Selection Path (Optional)
+                obj.selected_course or 'N/A',
+                obj.selected_category or 'N/A',
+                obj.selected_degree_type or 'N/A',
+                
+                # Timestamps
+                obj.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if obj.submitted_at else 'N/A',
+                obj.updated_at.strftime('%Y-%m-%d %H:%M:%S') if obj.updated_at else 'N/A',
+                'Registered' if obj.user else 'Guest'
+            ])
+        
+        self.message_user(request, f"Exported {queryset.count()} applications to CSV.")
+        return response
     
-    self.message_user(request, f"Exported {queryset.count()} applications to CSV.")
-    return response
-
 
     export_as_csv.short_description = "Export selected applications to CSV"
     
