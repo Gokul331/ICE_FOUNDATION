@@ -133,11 +133,8 @@ function ApplicationForm() {
 
   // Format Aadhar number with spaces (xxxx xxxx xxxx)
   const formatAadhar = (value) => {
-    // Remove all non-digits
     const cleaned = value.replace(/\D/g, '');
-    // Limit to 12 digits
     const truncated = cleaned.slice(0, 12);
-    // Add spaces every 4 digits
     const formatted = truncated.replace(/(\d{4})(?=\d)/g, '$1 ');
     return formatted;
   };
@@ -147,25 +144,25 @@ function ApplicationForm() {
     return value.replace(/\D/g, '').slice(0, 10);
   };
 
+  // Format pincode (limit to 6 digits)
+  const formatPincode = (value) => {
+    return value.replace(/\D/g, '').slice(0, 6);
+  };
+
   // Format percentage (limit to 3 digits before decimal, 2 after)
   const formatPercentage = (value) => {
-    // Allow only numbers and decimal point
     let cleaned = value.replace(/[^\d.]/g, '');
-    // Ensure only one decimal point
     const parts = cleaned.split('.');
     if (parts.length > 2) {
       cleaned = parts[0] + '.' + parts.slice(1).join('');
     }
-    // Limit integer part to 3 digits
     if (parts[0].length > 3) {
       parts[0] = parts[0].slice(0, 3);
       cleaned = parts.join('.');
     }
-    // Limit decimal part to 2 digits
     if (parts[1] && parts[1].length > 2) {
       cleaned = parts[0] + '.' + parts[1].slice(0, 2);
     }
-    // Limit total length
     if (cleaned.length > 6) {
       cleaned = cleaned.slice(0, 6);
     }
@@ -182,23 +179,20 @@ function ApplicationForm() {
 
   const validateDateOfBirth = (dob) => {
     if (!dob) return 'Date of birth is required';
-
     const birthDate = new Date(dob);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
-
     if (age < 15) return 'Age must be 15 years or above';
     if (age > 100) return 'Please enter a valid date of birth';
     return '';
   };
 
   const validatePercentage = (percentage, fieldName) => {
-    if (!percentage) return '';
+    if (!percentage) return `${fieldName} is required`;
     const num = parseFloat(percentage);
     if (isNaN(num)) return 'Please enter a valid number';
     if (num < 0 || num > 100) return `${fieldName} must be between 0 and 100`;
@@ -213,8 +207,7 @@ function ApplicationForm() {
   };
 
   const validateAadhar = (aadhar) => {
-    if (!aadhar) return '';
-    // Remove spaces for validation
+    if (!aadhar) return 'Aadhar number is required';
     const cleanAadhar = aadhar.replace(/\s/g, '');
     const aadharRegex = /^\d{12}$/;
     if (!aadharRegex.test(cleanAadhar)) return 'Aadhar number must be 12 digits';
@@ -230,9 +223,16 @@ function ApplicationForm() {
 
   const validateName = (name, fieldName) => {
     if (!name) return `${fieldName} is required`;
-    if (name.length < 1) return `${fieldName} must be at least 2 characters`;
+    if (name.length < 2) return `${fieldName} must be at least 2 characters`;
     if (name.length > 50) return `${fieldName} must be less than 50 characters`;
     if (!/^[a-zA-Z\s]*$/.test(name)) return `${fieldName} should only contain letters`;
+    return '';
+  };
+
+  const validateAddress = (address, fieldName) => {
+    if (!address) return `${fieldName} is required`;
+    if (address.length < 5) return `${fieldName} must be at least 5 characters`;
+    if (address.length > 200) return `${fieldName} must be less than 200 characters`;
     return '';
   };
 
@@ -241,7 +241,7 @@ function ApplicationForm() {
       case 'first_name':
         return validateName(value, 'First name');
       case 'last_name':
-        return value ? validateName(value, 'Last name') : '';
+        return validateName(value, 'Last name');
       case 'mobile_number':
         return validateMobileNumber(value);
       case 'date_of_birth':
@@ -251,17 +251,19 @@ function ApplicationForm() {
       case 'aadhar_number':
         return validateAadhar(value);
       case 'father_name':
-        return value ? validateName(value, 'Father name') : '';
+        return validateName(value, 'Father name');
       case 'father_mobile':
-        return value ? validateMobileNumber(value) : '';
+        return validateMobileNumber(value);
       case 'mother_name':
-        return value ? validateName(value, 'Mother name') : '';
+        return validateName(value, 'Mother name');
       case 'mother_mobile':
-        return value ? validateMobileNumber(value) : '';
+        return value ? validateMobileNumber(value) : ''; // Optional field
+      case 'address_line1':
+        return validateAddress(value, 'Address line 1');
+      case 'address_line2':
+        return value ? validateAddress(value, 'Address line 2') : '';
       case 'city':
-        if (!value) return 'City/District is required';
-        if (!/^[a-zA-Z\s]*$/.test(value)) return 'City should only contain letters';
-        return '';
+        return validateName(value, 'City/District');
       case 'pincode':
         return validatePincode(value);
       case 'tenth_marks_percentage':
@@ -283,7 +285,6 @@ function ApplicationForm() {
     setTouched({ ...touched, [fieldName]: true });
     let value = formData[fieldName];
 
-    // Special handling for Aadhar - remove spaces for validation
     if (fieldName === 'aadhar_number') {
       value = value.replace(/\s/g, '');
     }
@@ -309,6 +310,8 @@ function ApplicationForm() {
       formattedValue = formatMobile(value);
     } else if (name === 'tenth_marks_percentage' || name === 'twelfth_marks_percentage') {
       formattedValue = formatPercentage(value);
+    } else if (name === 'pincode') {
+      formattedValue = formatPincode(value);
     }
 
     setFormData((prev) => ({ ...prev, [name]: formattedValue }));
@@ -496,9 +499,12 @@ function ApplicationForm() {
   // Validate all form fields before submission
   const validateForm = () => {
     const errors = {};
+    // All fields except mother_mobile are required
     const requiredFields = [
-      'first_name', 'mobile_number', 'date_of_birth', 'email_id',
-      'city', 'pincode', 'gender', 'community'
+      'first_name', 'last_name', 'mobile_number', 'date_of_birth', 'email_id',
+      'aadhar_number', 'father_name', 'father_mobile', 'mother_name',
+      'address_line1', 'city', 'pincode', 'gender', 'community',
+      'tenth_marks_percentage', 'twelfth_marks_percentage'
     ];
 
     requiredFields.forEach(field => {
@@ -510,46 +516,16 @@ function ApplicationForm() {
       if (error) errors[field] = error;
     });
 
-    // Optional fields validation
-    if (formData.last_name) {
-      const error = validateField('last_name', formData.last_name);
-      if (error) errors.last_name = error;
-    }
-
-    if (formData.father_name) {
-      const error = validateField('father_name', formData.father_name);
-      if (error) errors.father_name = error;
-    }
-
-    if (formData.father_mobile) {
-      const error = validateField('father_mobile', formData.father_mobile);
-      if (error) errors.father_mobile = error;
-    }
-
-    if (formData.mother_name) {
-      const error = validateField('mother_name', formData.mother_name);
-      if (error) errors.mother_name = error;
-    }
-
+    // Optional field validation (mother_mobile)
     if (formData.mother_mobile) {
       const error = validateField('mother_mobile', formData.mother_mobile);
       if (error) errors.mother_mobile = error;
     }
 
-    if (formData.aadhar_number) {
-      const cleanAadhar = formData.aadhar_number.replace(/\s/g, '');
-      const error = validateField('aadhar_number', cleanAadhar);
-      if (error) errors.aadhar_number = error;
-    }
-
-    if (formData.tenth_marks_percentage) {
-      const error = validateField('tenth_marks_percentage', formData.tenth_marks_percentage);
-      if (error) errors.tenth_marks_percentage = error;
-    }
-
-    if (formData.twelfth_marks_percentage) {
-      const error = validateField('twelfth_marks_percentage', formData.twelfth_marks_percentage);
-      if (error) errors.twelfth_marks_percentage = error;
+    // Address line 2 is optional but validate if provided
+    if (formData.address_line2) {
+      const error = validateField('address_line2', formData.address_line2);
+      if (error) errors.address_line2 = error;
     }
 
     setValidationErrors(errors);
@@ -697,11 +673,13 @@ function ApplicationForm() {
   // Helper function to render input with validation
   const renderInput = (label, name, type = "text", required = true, placeholder = "", options = null, customProps = {}) => {
     const hasError = validationErrors[name] && touched[name];
+    const isOptional = name === 'mother_mobile' || name === 'address_line2';
 
     return (
       <div className={`input-group ${hasError ? 'has-error' : ''}`}>
         <label>
-          {label} {required && <span className="required-star">*</span>}
+          {label} {required && !isOptional && <span className="required-star">*</span>}
+          {!required && <span className="optional-badge">Optional</span>}
         </label>
         {options ? (
           <select
@@ -709,7 +687,7 @@ function ApplicationForm() {
             value={formData[name]}
             onChange={handleFormChange}
             onBlur={() => handleBlur(name)}
-            required={required}
+            required={required && !isOptional}
           >
             <option value="">Select {label}</option>
             {options.map(option => (
@@ -726,9 +704,14 @@ function ApplicationForm() {
             onChange={handleFormChange}
             onBlur={() => handleBlur(name)}
             placeholder={placeholder}
-            required={required}
+            required={required && !isOptional}
             {...customProps}
           />
+        )}
+        {name === 'pincode' && formData[name] && (
+          <small className="character-counter">
+            {formData[name].length}/6 digits
+          </small>
         )}
         {hasError && (
           <div className="error-message">
@@ -862,14 +845,14 @@ function ApplicationForm() {
                   <div className="card-title"><FaUserGraduate /> Personal Details</div>
                   <div className="form-grid-2">
                     {renderInput('First Name', 'first_name', 'text', true, 'Enter first name')}
-                    {renderInput('Last Name', 'last_name', 'text', false, 'Enter last name')}
+                    {renderInput('Last Name', 'last_name', 'text', true, 'Enter last name')}
                     {renderInput('Mobile Number', 'mobile_number', 'tel', true, '10-digit mobile number')}
                     {renderInput('Date of Birth', 'date_of_birth', 'date', true, 'YYYY-MM-DD', null, {
                       max: dateLimits.max,
                       min: dateLimits.min
                     })}
                     {renderInput('Email ID', 'email_id', 'email', true, 'example@domain.com')}
-                    {renderInput('Aadhar Number', 'aadhar_number', 'text', false, 'XXXX XXXX XXXX')}
+                    {renderInput('Aadhar Number', 'aadhar_number', 'text', true, 'XXXX XXXX XXXX')}
 
                     <div className="input-group">
                       <label>Gender *</label>
@@ -922,18 +905,18 @@ function ApplicationForm() {
                 <div className="card-modern">
                   <div className="card-title"><FaUsers /> Parent Details</div>
                   <div className="form-grid-2">
-                    {renderInput('Father Name', 'father_name', 'text', false, "Enter father's name")}
-                    {renderInput('Father Mobile', 'father_mobile', 'tel', false, "10-digit mobile number")}
-                    {renderInput('Mother Name', 'mother_name', 'text', false, "Enter mother's name")}
-                    {renderInput('Mother Mobile', 'mother_mobile', 'tel', false, "10-digit mobile number")}
+                    {renderInput('Father Name', 'father_name', 'text', true, "Enter father's name")}
+                    {renderInput('Father Mobile', 'father_mobile', 'tel', true, "10-digit mobile number")}
+                    {renderInput('Mother Name', 'mother_name', 'text', true, "Enter mother's name")}
+                    {renderInput('Mother Mobile', 'mother_mobile', 'tel', false, "10-digit mobile number (Optional)")}
                   </div>
                 </div>
 
                 <div className="card-modern">
                   <div className="card-title"><FaGraduationCap /> Education Details</div>
                   <div className="form-grid-2">
-                    {renderInput('10th Percentage', 'tenth_marks_percentage', 'text', false, 'Enter percentage (0-100)')}
-                    {renderInput('12th Percentage', 'twelfth_marks_percentage', 'text', false, 'Enter percentage (0-100)')}
+                    {renderInput('10th Percentage', 'tenth_marks_percentage', 'text', true, 'Enter percentage (0-100)')}
+                    {renderInput('12th Percentage', 'twelfth_marks_percentage', 'text', true, 'Enter percentage (0-100)')}
                     <div className="full-width">
                       <small className="input-small">Note: If result not declared, enter 0 as percentage.</small>
                     </div>
@@ -943,16 +926,10 @@ function ApplicationForm() {
                 <div className="card-modern">
                   <div className="card-title"><FaMapMarkerAlt /> Address Details</div>
                   <div className="form-grid-2">
-                    <div className="input-group full-width">
-                      <label>Address Line 1</label>
-                      <input type="text" name="address_line1" value={formData.address_line1} onChange={handleFormChange} placeholder="Street/House name" />
-                    </div>
-                    <div className="input-group full-width">
-                      <label>Address Line 2</label>
-                      <input type="text" name="address_line2" value={formData.address_line2} onChange={handleFormChange} placeholder="Area/Locality" />
-                    </div>
+                    {renderInput('Address Line 1', 'address_line1', 'text', true, 'Street/House name')}
+                    {renderInput('Address Line 2', 'address_line2', 'text', false, 'Area/Locality (Optional)')}
                     {renderInput('City/District', 'city', 'text', true, 'Enter city or district name')}
-                    {renderInput('Pincode', 'pincode', 'text', true, '6-digit pincode')}
+                    {renderInput('Pincode', 'pincode', 'text', true, 'Enter 6-digit pincode', null, { maxLength: 6 })}
                   </div>
                 </div>
               </>

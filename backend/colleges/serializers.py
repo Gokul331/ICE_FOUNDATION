@@ -6,6 +6,8 @@ from django.conf import settings
 from .models import College, Course, UserProfile, EnquiryForm
 from .utils.pdf_generator import generate_application_pdf
 import logging
+import requests
+import base64
 
 logger = logging.getLogger(__name__)
 
@@ -613,13 +615,13 @@ class EnquiryFormCreateSerializer(serializers.ModelSerializer):
         return enquiry
     
     def _send_confirmation_email(self, enquiry):
-        """Send the branded confirmation email to the applicant, with the application PDF attached."""
+        """Send confirmation email using Resend API with PDF attachment"""
+    
         context = {
             "first_name":       enquiry.first_name,
             "application_id":   enquiry.application_id,
             "college_name":     enquiry.college.college_name if enquiry.college else "ICE Foundation",
             "course_name":      enquiry.course_name or "—",
-            # EnquiryForm has no quota field; map community (OC/BC/SC/ST/...) into the template
             "quota_type":       enquiry.get_community_display() or "N/A",
             "submission_date":  enquiry.submitted_at.strftime("%d %b %Y, %I:%M %p") if enquiry.submitted_at else "",
             "frontend_url":     settings.FRONTEND_URL,
@@ -638,24 +640,51 @@ class EnquiryFormCreateSerializer(serializers.ModelSerializer):
             f"Best regards,\nVAMSHI EDUCARE Team"
         )
 
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[enquiry.email_id],
-        )
-        email.attach_alternative(html_content, "text/html")
+        # Generate PDF
+        pdf_buffer = None
+        attachment_base64 = None
 
-        # Attach the application PDF (the template advertises this)
         try:
             pdf_buffer = generate_application_pdf(enquiry)
-            email.attach(
-                filename=f"{enquiry.application_id}_application.pdf",
-                content=pdf_buffer.getvalue(),
-                mimetype="application/pdf",
-            )
+            # Convert PDF to base64 for Resend
+            attachment_base64 = base64.b64encode(pdf_buffer.getvalue()).decode('utf-8')
         except Exception as pdf_err:
-            # PDF failure should not block the email
             logger.warning(f"Could not generate PDF for {enquiry.application_id}: {pdf_err}")
 
-        email.send()
+        # Prepare Resend API payload
+        resend_payload = {
+            "from": "ICE Foundation <noreply@YOUR_VERIFIED_DOMAIN.com>",  # ⚠️ Replace with your verified Resend domain
+            "to": [enquiry.email_id],
+            "subject": subject,
+            "html": html_content,
+            "text": text_content,
+        }
+
+        # Add attachment if generated successfully
+        if attachment_base64:
+            resend_payload["attachments"] = [
+                {
+                    "filename": f"{enquiry.application_id}_application.pdf",
+                    "content": attachment_base64,
+                    "encoding": "base64"
+                }
+            ]
+
+        # Send via Resend API
+        try:
+            response = requests.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json=resend_payload
+            )
+
+            if response.status_code >= 400:
+                logger.error(f"Resend API error: {response.status_code} - {response.text}")
+            else:
+                logger.info(f"Email sent successfully via Resend: {response.json().get('id')}")
+
+        except Exception as e:
+            logger.error(f"Failed to send email via Resend: {e}")
