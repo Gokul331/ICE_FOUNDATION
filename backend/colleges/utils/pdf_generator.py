@@ -1,330 +1,297 @@
-# utils/pdf_generator.py
 import logging
 from io import BytesIO
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import inch, mm
 from reportlab.lib.colors import HexColor, black, white, grey
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Table, TableStyle
-from reportlab.lib.fonts import addMapping
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 import os
 
 logger = logging.getLogger(__name__)
 
-# Colors
-PRIMARY_COLOR = HexColor('#000000')  # Black
-SECONDARY_COLOR = HexColor('#333333')  # Dark Gray
-ACCENT_COLOR = HexColor('#28a745')  # Green for success
-BORDER_COLOR = HexColor('#dddddd')
-HEADER_BG = HexColor('#f5f5f5')
+# ── Colour palette ────────────────────────────────────────────────────────────
+PRIMARY      = HexColor('#1a1a2e')   # deep navy
+ACCENT       = HexColor('#28a745')   # green
+HEADER_BG    = HexColor('#1a1a2e')   # same navy for header bar
+SECTION_BG   = HexColor('#eef2f7')   # light blue-grey for section headers
+BORDER       = HexColor('#c0c8d8')
+LABEL_COLOR  = HexColor('#444444')
+VALUE_COLOR  = HexColor('#111111')
+WHITE        = white
+GREY_TEXT    = HexColor('#888888')
 
-# Try to register a Unicode font (optional, falls back to Helvetica if not available)
+# ── Font setup ────────────────────────────────────────────────────────────────
 try:
-    # For better Unicode support (Devanagari, Tamil, etc.)
-    font_path = os.path.join(os.path.dirname(__file__), 'fonts', 'NotoSans-Regular.ttf')
-    if os.path.exists(font_path):
-        pdfmetrics.registerFont(TTFont('NotoSans', font_path))
-        DEFAULT_FONT = 'NotoSans'
+    _font_path = os.path.join(os.path.dirname(__file__), 'fonts', 'NotoSans-Regular.ttf')
+    _bold_path = os.path.join(os.path.dirname(__file__), 'fonts', 'NotoSans-Bold.ttf')
+    if os.path.exists(_font_path):
+        pdfmetrics.registerFont(TTFont('NotoSans', _font_path))
+        FONT       = 'NotoSans'
+        FONT_BOLD  = 'NotoSans'          # fall back to same if no bold variant
     else:
-        DEFAULT_FONT = 'Helvetica'
-except:
-    DEFAULT_FONT = 'Helvetica'
+        FONT       = 'Helvetica'
+        FONT_BOLD  = 'Helvetica-Bold'
+except Exception:
+    FONT      = 'Helvetica'
+    FONT_BOLD = 'Helvetica-Bold'
+
+MARGIN   = 40
+COL_W    = [130, 0]   # label width; value width is computed at render time
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Public entry point
+# ─────────────────────────────────────────────────────────────────────────────
 def generate_application_pdf(enquiry):
     """
-    Generate a professional PDF for the scholarship application
-    
+    Generate a professional, well-aligned PDF for the scholarship application.
+
     Args:
-        enquiry: EnquiryForm object instance
-    
+        enquiry: EnquiryForm model instance
     Returns:
-        BytesIO buffer containing the PDF
+        BytesIO buffer containing the PDF, or None on error
     """
     buffer = BytesIO()
-    
     try:
-        # Create PDF canvas
-        p = canvas.Canvas(buffer, pagesize=A4)
-        width, height = A4
-        p.setFont(DEFAULT_FONT, 10)
-        
-        # ==================== HEADER SECTION ====================
-        # Top border line
-        p.setStrokeColor(PRIMARY_COLOR)
-        p.setLineWidth(2)
-        p.line(50, height - 50, width - 50, height - 50)
-        
-        # Logo placeholder / Title
-        p.setFont(DEFAULT_FONT, 20)
-        p.setFillColor(PRIMARY_COLOR)
-        p.drawString(50, height - 40, "VAMSHI EDUCARE")
-        
-        p.setFont(DEFAULT_FONT, 10)
-        p.setFillColor(SECONDARY_COLOR)
-        p.drawString(50, height - 58, "Career Guidance Center")
-        
-        # Application ID on right side
-        p.setFont(DEFAULT_FONT, 9)
-        p.setFillColor(grey)
-        p.drawRightString(width - 50, height - 40, f"Application ID: {enquiry.application_id}")
-        p.drawRightString(width - 50, height - 55, f"Date: {datetime.now().strftime('%d %b %Y, %I:%M %p')}")
-        
-        # Title
-        p.setFont(DEFAULT_FONT, 16)
-        p.setFillColor(PRIMARY_COLOR)
-        p.drawCentredString(width / 2, height - 90, "SCHOLARSHIP APPLICATION FORM")
-        
-        # Underline for title
-        p.setStrokeColor(ACCENT_COLOR)
-        p.setLineWidth(1)
-        p.line(width / 2 - 100, height - 95, width / 2 + 100, height - 95)
-        
-        y_position = height - 120
-        
-        # ==================== COURSE SELECTION SECTION ====================
-        p.setFont(DEFAULT_FONT, 12)
-        p.setFillColor(PRIMARY_COLOR)
-        p.drawString(50, y_position, "COURSE SELECTION DETAILS")
-        y_position -= 15
-        
-        # Divider line
-        p.setStrokeColor(BORDER_COLOR)
-        p.setLineWidth(0.5)
-        p.line(50, y_position + 5, width - 50, y_position + 5)
-        y_position -= 10
-        
-        # Course selection table data
-        course_data = [
-            ["College:", enquiry.college.college_name if enquiry.college else "N/A"],
-            ["College Location:", f"{enquiry.college.location_city}, {enquiry.college.location_state}" if enquiry.college else "N/A"],
-            ["Category:", enquiry.get_selected_category_display() or enquiry.selected_category or "N/A"],
-            ["Degree Type:", enquiry.get_selected_degree_type_display() or enquiry.selected_degree_type or "N/A"],
-            ["Selected Course:", enquiry.course_name or "N/A"],
-            ["Department:", enquiry.department_name or "N/A"],
-            ["Quota/Community:", enquiry.get_community_display() or enquiry.community or "N/A"],
+        c = canvas.Canvas(buffer, pagesize=A4)
+        W, H = A4
+
+        y = _draw_header(c, W, H, enquiry)
+        y = _draw_title(c, W, y)
+
+        # ── Sections ─────────────────────────────────────────────────────────
+        personal_rows = [
+            ("Full Name",     f"{enquiry.first_name} {enquiry.last_name or ''}".strip()),
+            ("Gender",        enquiry.get_gender_display() or enquiry.gender or "N/A"),
+            ("Date of Birth", enquiry.date_of_birth.strftime('%d %b %Y') if enquiry.date_of_birth else "N/A"),
+            ("Age",           f"{_age(enquiry.date_of_birth)} years" if enquiry.date_of_birth else "N/A"),
+            ("Mobile Number", enquiry.mobile_number or "N/A"),
+            ("Email ID",      enquiry.email_id or "N/A"),
+            ("Aadhar Number", _fmt_aadhar(enquiry.aadhar_number) if enquiry.aadhar_number else "N/A"),
+            ("Blood Group",   enquiry.blood_group or "N/A"),
         ]
-        
-        # Create table
-        course_table = Table(course_data, colWidths=[100, 350])
-        course_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('TEXTCOLOR', (0, 0), (0, -1), PRIMARY_COLOR),
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ]))
-        
-        course_table.wrapOn(p, width - 100, y_position)
-        course_table.drawOn(p, 50, y_position - 80)
-        y_position -= 100
-        
-        # ==================== PERSONAL DETAILS SECTION ====================
-        p.setFont(DEFAULT_FONT, 12)
-        p.setFillColor(PRIMARY_COLOR)
-        p.drawString(50, y_position, "PERSONAL DETAILS")
-        y_position -= 15
-        p.line(50, y_position + 5, width - 50, y_position + 5)
-        y_position -= 10
-        
-        personal_data = [
-            ["Full Name:", f"{enquiry.first_name} {enquiry.last_name or ''}".strip()],
-            ["Gender:", enquiry.get_gender_display() or enquiry.gender or "N/A"],
-            ["Date of Birth:", enquiry.date_of_birth.strftime('%d %b %Y') if enquiry.date_of_birth else "N/A"],
-            ["Age:", f"{calculate_age(enquiry.date_of_birth)} years" if enquiry.date_of_birth else "N/A"],
-            ["Mobile Number:", enquiry.mobile_number or "N/A"],
-            ["Email ID:", enquiry.email_id or "N/A"],
-            ["Aadhar Number:", format_aadhar(enquiry.aadhar_number) if enquiry.aadhar_number else "N/A"],
-            ["Blood Group:", enquiry.blood_group or "N/A"],
+
+        parent_rows = [
+            ("Father's Name",   enquiry.father_name   or "N/A"),
+            ("Father's Mobile", enquiry.father_mobile or "N/A"),
+            ("Mother's Name",   enquiry.mother_name   or "N/A"),
+            ("Mother's Mobile", enquiry.mother_mobile or "N/A"),
         ]
-        
-        personal_table = Table(personal_data, colWidths=[100, 350])
-        personal_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('TEXTCOLOR', (0, 0), (0, -1), PRIMARY_COLOR),
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ]))
-        
-        personal_table.wrapOn(p, width - 100, y_position)
-        personal_table.drawOn(p, 50, y_position - 80)
-        y_position -= 100
-        
-        # Check if we need a new page
-        if y_position < 200:
-            p.showPage()
-            y_position = height - 50
-            p.setFont(DEFAULT_FONT, 10)
-        
-        # ==================== PARENT DETAILS SECTION ====================
-        p.setFont(DEFAULT_FONT, 12)
-        p.setFillColor(PRIMARY_COLOR)
-        p.drawString(50, y_position, "PARENT / GUARDIAN DETAILS")
-        y_position -= 15
-        p.line(50, y_position + 5, width - 50, y_position + 5)
-        y_position -= 10
-        
-        parent_data = [
-            ["Father's Name:", enquiry.father_name or "N/A"],
-            ["Father's Mobile:", enquiry.father_mobile or "N/A"],
-            ["Mother's Name:", enquiry.mother_name or "N/A"],
-            ["Mother's Mobile:", enquiry.mother_mobile or "N/A"],
+
+        academic_rows = [
+            ("College",          enquiry.college.college_name if enquiry.college else "N/A"),
+            ("College Location", f"{enquiry.college.location_city}, {enquiry.college.location_state}" if enquiry.college else "N/A"),
+            ("Category",         enquiry.get_selected_category_display() or enquiry.selected_category or "N/A"),
+            ("Degree Type",      enquiry.get_selected_degree_type_display() or enquiry.selected_degree_type or "N/A"),
+            ("Course",           enquiry.course_name     or "N/A"),
+            ("10th Percentage",  f"{enquiry.tenth_marks_percentage}%"   if enquiry.tenth_marks_percentage   else "N/A"),
+            ("12th Percentage",  f"{enquiry.twelfth_marks_percentage}%" if enquiry.twelfth_marks_percentage else "N/A"),
         ]
-        
-        parent_table = Table(parent_data, colWidths=[100, 350])
-        parent_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('TEXTCOLOR', (0, 0), (0, -1), PRIMARY_COLOR),
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ]))
-        
-        parent_table.wrapOn(p, width - 100, y_position)
-        parent_table.drawOn(p, 50, y_position - 80)
-        y_position -= 100
-        
-        # ==================== EDUCATION DETAILS SECTION ====================
-        p.setFont(DEFAULT_FONT, 12)
-        p.setFillColor(PRIMARY_COLOR)
-        p.drawString(50, y_position, "EDUCATION DETAILS")
-        y_position -= 15
-        p.line(50, y_position + 5, width - 50, y_position + 5)
-        y_position -= 10
-        
-        education_data = [
-            ["10th Percentage:", f"{enquiry.tenth_marks_percentage}%" if enquiry.tenth_marks_percentage else "N/A"],
-            ["12th Percentage:", f"{enquiry.twelfth_marks_percentage}%" if enquiry.twelfth_marks_percentage else "N/A"],
+
+        addr_parts = [
+            enquiry.address_line1,
+            enquiry.address_line2,
+            enquiry.city,
+            f"Pincode: {enquiry.pincode}" if enquiry.pincode else None,
         ]
-        
-        education_table = Table(education_data, colWidths=[100, 350])
-        education_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('TEXTCOLOR', (0, 0), (0, -1), PRIMARY_COLOR),
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ]))
-        
-        education_table.wrapOn(p, width - 100, y_position)
-        education_table.drawOn(p, 50, y_position - 50)
-        y_position -= 70
-        
-        # ==================== ADDRESS DETAILS SECTION ====================
-        p.setFont(DEFAULT_FONT, 12)
-        p.setFillColor(PRIMARY_COLOR)
-        p.drawString(50, y_position, "ADDRESS DETAILS")
-        y_position -= 15
-        p.line(50, y_position + 5, width - 50, y_position + 5)
-        y_position -= 10
-        
-        # Format full address
-        address_parts = []
-        if enquiry.address_line1:
-            address_parts.append(enquiry.address_line1)
-        if enquiry.address_line2:
-            address_parts.append(enquiry.address_line2)
-        if enquiry.city:
-            address_parts.append(enquiry.city)
-        if enquiry.pincode:
-            address_parts.append(f"Pincode: {enquiry.pincode}")
-        
-        address_data = [
-            ["Address:", "\n".join(address_parts) if address_parts else "N/A"],
+        address_rows = [
+            ("Address", "\n".join(p for p in addr_parts if p) or "N/A"),
         ]
-        
-        address_table = Table(address_data, colWidths=[100, 350])
-        address_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, -1), DEFAULT_FONT),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('TEXTCOLOR', (0, 0), (0, -1), PRIMARY_COLOR),
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ]))
-        
-        address_table.wrapOn(p, width - 100, y_position)
-        address_table.drawOn(p, 50, y_position - 50)
-        y_position -= 70
-        
-        # ==================== REFERENCE SECTION ====================
-        if enquiry.reference_name:
-            p.setFont(DEFAULT_FONT, 10)
-            p.setFillColor(SECONDARY_COLOR)
-            p.drawString(50, y_position, f"Reference: {enquiry.reference_name}")
-            y_position -= 20
-        
-        # ==================== FOOTER SECTION ====================
-        # Only add footer if there's space, otherwise new page
-        if y_position > 100:
-            draw_footer(p, width, height)
-        else:
-            p.showPage()
-            draw_footer(p, width, height)
-        
-        # Save the PDF
-        p.save()
+
+        sections = [
+            ("PERSONAL DETAILS",      personal_rows),
+            ("PARENT / GUARDIAN DETAILS", parent_rows),
+            ("ACADEMIC DETAILS",       academic_rows),
+            ("ADDRESS DETAILS",        address_rows),
+        ]
+
+        for title, rows in sections:
+            y = _maybe_new_page(c, W, H, y, needed=60)
+            y = _draw_section(c, W, H, y, title, rows)
+
+        # ── Reference ────────────────────────────────────────────────────────
+        if getattr(enquiry, 'reference_name', None):
+            y = _maybe_new_page(c, W, H, y, needed=30)
+            c.setFont(FONT, 9)
+            c.setFillColor(GREY_TEXT)
+            c.drawString(MARGIN, y, f"Reference: {enquiry.reference_name}")
+            y -= 20
+
+        _draw_footer(c, W)
+        c.save()
+
         buffer.seek(0)
-        
-        pdf_size = len(buffer.getvalue())
-        logger.info(f"PDF generated successfully for {enquiry.application_id}: {pdf_size} bytes")
-        
-        if pdf_size == 0:
-            logger.error(f"PDF is empty for {enquiry.application_id}")
-            return None
-            
-        return buffer
-        
+        size = len(buffer.getvalue())
+        logger.info(f"PDF generated for {enquiry.application_id}: {size} bytes")
+        return buffer if size else None
+
     except Exception as e:
-        logger.error(f"Error generating PDF for {enquiry.application_id}: {str(e)}")
-        import traceback
-        logger.error(traceback.format_exc())
+        logger.error(f"PDF generation failed: {e}", exc_info=True)
         return None
 
 
-def draw_footer(p, width, height):
-    """Draw footer on the page"""
-    p.setFont(DEFAULT_FONT, 8)
-    p.setFillColor(grey)
-    
-    # Bottom border line
-    p.setStrokeColor(BORDER_COLOR)
-    p.setLineWidth(0.5)
-    p.line(50, 50, width - 50, 50)
-    
-    # Footer text
-    p.drawCentredString(width / 2, 35, "VAMSHI EDUCARE - Career Guidance Center")
-    p.drawCentredString(width / 2, 22, "This is a computer-generated document. No signature required.")
-    
-    # Page number
-    page_num = p.getPageNumber()
-    p.drawRightString(width - 50, 22, f"Page {page_num}")
+# ─────────────────────────────────────────────────────────────────────────────
+# Internal helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _draw_header(c, W, H, enquiry):
+    """
+    Dark navy header bar.
+    LEFT  → company name + subtitle
+    RIGHT → Application ID + date
+    Returns y position below the header.
+    """
+    BAR_H = 64
+    # Background rectangle
+    c.setFillColor(HEADER_BG)
+    c.rect(0, H - BAR_H, W, BAR_H, fill=1, stroke=0)
+
+    # ── Left: Company name ────────────────────────────────────────────────
+    c.setFillColor(WHITE)
+    c.setFont(FONT_BOLD, 16)
+    c.drawString(MARGIN, H - 26, "VAMSHI EDUCARE")
+
+    c.setFont(FONT, 9)
+    c.setFillColor(HexColor('#aabbcc'))
+    c.drawString(MARGIN, H - 42, "Career Guidance Center")
+
+    # ── Right: App ID + date ──────────────────────────────────────────────
+    c.setFillColor(WHITE)
+    c.setFont(FONT_BOLD, 9)
+    c.drawRightString(W - MARGIN, H - 24, f"Application ID:  {enquiry.application_id}")
+
+    c.setFont(FONT, 8)
+    c.setFillColor(HexColor('#aabbcc'))
+    c.drawRightString(W - MARGIN, H - 38, datetime.now().strftime('%d %b %Y  %I:%M %p'))
+
+    # ── Accent underline ──────────────────────────────────────────────────
+    c.setStrokeColor(ACCENT)
+    c.setLineWidth(2)
+    c.line(0, H - BAR_H, W, H - BAR_H)
+
+    return H - BAR_H - 14   # y below header
 
 
-def calculate_age(date_of_birth):
-    """Calculate age from date of birth"""
-    if not date_of_birth:
+def _draw_title(c, W, y):
+    """Centred page title with green underline."""
+    c.setFont(FONT_BOLD, 14)
+    c.setFillColor(PRIMARY)
+    c.drawCentredString(W / 2, y, "SCHOLARSHIP APPLICATION FORM")
+
+    c.setStrokeColor(ACCENT)
+    c.setLineWidth(1.5)
+    ul_w = 180
+    c.line(W / 2 - ul_w / 2, y - 4, W / 2 + ul_w / 2, y - 4)
+
+    return y - 22
+
+
+def _draw_section(c, W, H, y, title, rows):
+    """
+    Draw a labelled section with a bordered table.
+    Returns the y position after the section.
+    """
+    avail_w  = W - 2 * MARGIN
+    label_w  = 140
+    value_w  = avail_w - label_w
+
+    # ── Section header bar ────────────────────────────────────────────────
+    HEADER_H = 18
+    c.setFillColor(SECTION_BG)
+    c.setStrokeColor(BORDER)
+    c.setLineWidth(0.5)
+    c.rect(MARGIN, y - HEADER_H + 4, avail_w, HEADER_H, fill=1, stroke=1)
+
+    c.setFont(FONT_BOLD, 9)
+    c.setFillColor(PRIMARY)
+    c.drawString(MARGIN + 6, y - HEADER_H + 8, title)
+
+    y -= HEADER_H
+
+    # ── Data table ────────────────────────────────────────────────────────
+    table_data = [[label, value] for label, value in rows]
+
+    tbl = Table(table_data, colWidths=[label_w, value_w])
+    tbl.setStyle(TableStyle([
+        # Font
+        ('FONTNAME',    (0, 0), (-1, -1), FONT),
+        ('FONTSIZE',    (0, 0), (-1, -1), 9),
+
+        # Label column styling
+        ('FONTNAME',    (0, 0), (0, -1), FONT_BOLD),
+        ('TEXTCOLOR',   (0, 0), (0, -1), LABEL_COLOR),
+        ('BACKGROUND',  (0, 0), (0, -1), HexColor('#f7f9fc')),
+
+        # Value column styling
+        ('TEXTCOLOR',   (1, 0), (1, -1), VALUE_COLOR),
+        ('BACKGROUND',  (1, 0), (1, -1), WHITE),
+
+        # Alignment
+        ('ALIGN',       (0, 0), (0, -1), 'LEFT'),
+        ('ALIGN',       (1, 0), (1, -1), 'LEFT'),
+        ('VALIGN',      (0, 0), (-1, -1), 'TOP'),
+
+        # Padding
+        ('TOPPADDING',    (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 8),
+
+        # Borders
+        ('BOX',         (0, 0), (-1, -1), 0.5, BORDER),
+        ('INNERGRID',   (0, 0), (-1, -1), 0.3, BORDER),
+
+        # Alternating row tint on value column
+        *[('BACKGROUND', (1, i), (1, i), HexColor('#fafbfd') if i % 2 == 0 else WHITE)
+          for i in range(len(rows))],
+    ]))
+
+    tbl_w, tbl_h = tbl.wrapOn(c, avail_w, y)
+    # Check page break
+    if y - tbl_h < 70:
+        c.showPage()
+        _draw_footer(c, W)
+        y = H - 50
+
+    tbl.drawOn(c, MARGIN, y - tbl_h)
+    return y - tbl_h - 14    # gap between sections
+
+
+def _draw_footer(c, W):
+    c.setStrokeColor(BORDER)
+    c.setLineWidth(0.5)
+    c.line(MARGIN, 48, W - MARGIN, 48)
+
+    c.setFont(FONT_BOLD, 8)
+    c.setFillColor(PRIMARY)
+    c.drawCentredString(W / 2, 34, "VAMSHI EDUCARE  ·  Career Guidance Center")
+
+    c.setFont(FONT, 7.5)
+    c.setFillColor(GREY_TEXT)
+    c.drawCentredString(W / 2, 22, "Computer-generated document — no signature required.")
+
+    page_num = c.getPageNumber()
+    c.drawRightString(W - MARGIN, 22, f"Page {page_num}")
+
+
+def _maybe_new_page(c, W, H, y, needed=120):
+    """Start a new page if there isn't enough vertical space."""
+    if y < needed + 60:
+        c.showPage()
+        _draw_footer(c, W)
+        return H - 50
+    return y
+
+
+def _age(dob):
+    if not dob:
         return None
     today = datetime.now().date()
-    return today.year - date_of_birth.year - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+    return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
 
 
-def format_aadhar(aadhar_number):
-    """Format Aadhar number as XXXX XXXX XXXX"""
-    aadhar_str = str(aadhar_number).replace(' ', '')
-    if len(aadhar_str) == 12:
-        return f"{aadhar_str[:4]} {aadhar_str[4:8]} {aadhar_str[8:12]}"
-    return aadhar_number
+def _fmt_aadhar(num):
+    s = str(num).replace(' ', '')
+    return f"{s[:4]} {s[4:8]} {s[8:12]}" if len(s) == 12 else num
