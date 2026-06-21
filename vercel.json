@@ -2,17 +2,16 @@
   "installCommand": "cd frontend/my-react-app && npm install",
   "buildCommand": "cd frontend/my-react-app && npm run build",
   "outputDirectory": "frontend/my-react-app/dist",
+  "cleanUrls": true,
   "rewrites": [
+    {
+      "source": "/(.*\\..*)",
+      "destination": "/$1"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
     }
   ],
-  "framework": "vite",
-  "builds": [
-    {
-      "src": "frontend/my-react-app/package.json",
-      "use": "@vercel/static-build"
-    }
-  ]
+  "framework": "vite"
 }
