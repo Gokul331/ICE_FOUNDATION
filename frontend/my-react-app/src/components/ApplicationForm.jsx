@@ -1,10 +1,11 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import '../styles/applicationForm.css';
 import { FaGraduationCap, FaUserGraduate, FaUsers, FaMapMarkerAlt, FaBookOpen, FaUniversity, FaArrowRight, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
 import {
   submitApplication,
+  getColleges,
   getCollegeCategories,
   getCategoryDegreeTypes,
   getDegreeCourses,
@@ -335,17 +336,16 @@ function ApplicationForm() {
 
   // Fetch colleges on mount
   useEffect(() => {
-    const fetchColleges = async () => {
+    const fetchCollegesData = async () => {
       try {
-        const response = await fetch('https://ice-foundation-1.onrender.com/api/colleges/');
-        const data = await response.json();
+        const data = await getColleges();
         const collegesArray = Array.isArray(data) ? data : data.results || [];
         setColleges(collegesArray);
       } catch (err) {
         console.error('Error fetching colleges:', err);
       }
     };
-    fetchColleges();
+    fetchCollegesData();
   }, []);
 
   // Load categories when college changes

@@ -1,4 +1,6 @@
 import axios from "axios";
+import collegesData from "../data/colleges.json";
+import coursesData from "../data/courses.json";
 
 const API_URL = "https://ice-foundation-1.onrender.com";
 
@@ -48,21 +50,49 @@ export const confirmPasswordReset = async (resetData) => {
   }
 };
 
+// ==================== INLINED COLLEGES & COURSES ENDPOINTS ====================
+
 // Colleges
-export const getColleges = async (params) => {
+export const getColleges = async (params = {}) => {
   try {
-    const response = await API.get("colleges/", { params });
-    return response.data;
+    let result = [...collegesData];
+    if (params.search) {
+      const q = params.search.toLowerCase();
+      result = result.filter(c =>
+        c.college_name?.toLowerCase().includes(q) ||
+        c.location_city?.toLowerCase().includes(q) ||
+        c.short_name?.toLowerCase().includes(q)
+      );
+    }
+    if (params.city && params.city !== "All") {
+      result = result.filter(c => c.location_city === params.city);
+    }
+    if (params.category && params.category !== "All") {
+      result = result.filter(c => {
+        if (Array.isArray(c.courses_offered_display)) {
+          return c.courses_offered_display.includes(params.category);
+        }
+        return c.courses_offered === params.category || c.category === params.category;
+      });
+    }
+    return result;
   } catch (error) {
     console.error("Error fetching colleges:", error);
-    throw error;
+    return collegesData;
   }
 };
 
 export const getCollegeDetail = async (id) => {
   try {
-    const response = await API.get(`colleges/${id}/`);
-    return response.data;
+    const numericId = Number(id);
+    const college = collegesData.find(c =>
+      c.college_id === numericId ||
+      c.id === numericId ||
+      c.slug === String(id) ||
+      c.college_name?.toLowerCase() === String(id).toLowerCase()
+    );
+    if (college) return college;
+    throw new Error(`College with ID ${id} not found`);
   } catch (error) {
     console.error(`Error fetching college ${id}:`, error);
     throw error;
@@ -71,8 +101,11 @@ export const getCollegeDetail = async (id) => {
 
 export const getCollegeCourses = async (collegeId) => {
   try {
-    const response = await API.get(`colleges/${collegeId}/courses/`);
-    return response.data;
+    const numericId = Number(collegeId);
+    return coursesData.filter(c =>
+      c.college === numericId ||
+      c.college_details?.college_id === numericId
+    );
   } catch (error) {
     console.log(`No courses found for college ${collegeId}`);
     return [];
@@ -130,31 +163,58 @@ export const getHostelByRoomType = async (collegeId, roomType) => {
   }
 };
 
-export const suggestColleges = async (params) => {
+export const suggestColleges = async (params = {}) => {
   try {
-    const response = await API.get("colleges/suggest/", { params });
-    return response.data;
+    const query = (params.q || params.search || "").toLowerCase();
+    if (!query) return collegesData.slice(0, 5);
+    return collegesData.filter(c =>
+      c.college_name?.toLowerCase().includes(query) ||
+      c.short_name?.toLowerCase().includes(query) ||
+      c.location_city?.toLowerCase().includes(query)
+    );
   } catch (error) {
     console.error("Error suggesting colleges:", error);
-    throw error;
+    return [];
   }
 };
 
 // Courses
-export const getCourses = async (params) => {
+export const getCourses = async (params = {}) => {
   try {
-    const response = await API.get("courses/", { params });
-    return response.data;
+    let result = [...coursesData];
+    if (params.category && params.category !== "All") {
+      result = result.filter(c =>
+        c.category === params.category ||
+        c.category_display === params.category
+      );
+    }
+    if (params.degree_type && params.degree_type !== "All") {
+      result = result.filter(c =>
+        c.degree_type === params.degree_type ||
+        c.degree_type_display === params.degree_type
+      );
+    }
+    if (params.search) {
+      const q = params.search.toLowerCase();
+      result = result.filter(c =>
+        c.course_name?.toLowerCase().includes(q) ||
+        c.course_name_display?.toLowerCase().includes(q) ||
+        c.course_code?.toLowerCase().includes(q)
+      );
+    }
+    return result;
   } catch (error) {
     console.error("Error fetching courses:", error);
-    throw error;
+    return coursesData;
   }
 };
 
 export const getCourseDetail = async (id) => {
   try {
-    const response = await API.get(`courses/${id}/`);
-    return response.data;
+    const numericId = Number(id);
+    const course = coursesData.find(c => c.course_id === numericId || c.id === numericId);
+    if (course) return course;
+    throw new Error(`Course with ID ${id} not found`);
   } catch (error) {
     console.error(`Error fetching course ${id}:`, error);
     throw error;
@@ -228,48 +288,88 @@ export const getTimelineEvents = async (params) => {
 
 export const getAllCollegesWithCategories = async () => {
   try {
-    const response = await API.get("colleges/with-categories/");
-    return response.data;
+    return collegesData.map(c => {
+      const collegeCourses = coursesData.filter(cr => cr.college === c.college_id);
+      const categoriesMap = {};
+      collegeCourses.forEach(cr => {
+        if (!categoriesMap[cr.category]) {
+          categoriesMap[cr.category] = cr.category_display || cr.category;
+        }
+      });
+      const categories = Object.keys(categoriesMap).map(code => ({
+        code,
+        name: categoriesMap[code]
+      }));
+      return { ...c, categories };
+    });
   } catch (error) {
     console.error("Error fetching colleges with categories:", error);
-    throw error;
+    return collegesData;
   }
 };
 
 export const getCollegeCategories = async (collegeId) => {
   try {
-    const response = await API.get(`colleges/${collegeId}/categories/`);
-    return response.data;
+    const numericId = Number(collegeId);
+    const collegeCourses = coursesData.filter(c => c.college === numericId);
+    const categoriesMap = {};
+    collegeCourses.forEach(cr => {
+      if (cr.category && !categoriesMap[cr.category]) {
+        categoriesMap[cr.category] = cr.category_display || cr.category;
+      }
+    });
+    const categories = Object.keys(categoriesMap).map(code => ({
+      code,
+      name: categoriesMap[code]
+    }));
+    return { success: true, categories };
   } catch (error) {
     console.error(`Error fetching categories for college ${collegeId}:`, error);
-    throw error;
+    return { success: false, categories: [] };
   }
 };
 
 export const getCategoryDegreeTypes = async (collegeId, category) => {
   try {
-    const response = await API.get(`colleges/${collegeId}/categories/${category}/degree-types/`);
-    return response.data;
+    const numericId = Number(collegeId);
+    const filteredCourses = coursesData.filter(c => c.college === numericId && c.category === category);
+    const degreeMap = {};
+    filteredCourses.forEach(cr => {
+      if (cr.degree_type && !degreeMap[cr.degree_type]) {
+        degreeMap[cr.degree_type] = cr.degree_type_display || cr.degree_type.toUpperCase();
+      }
+    });
+    const degree_types = Object.keys(degreeMap).map(code => ({
+      code,
+      name: degreeMap[code]
+    }));
+    return { success: true, degree_types };
   } catch (error) {
     console.error(`Error fetching degree types for college ${collegeId} category ${category}:`, error);
-    throw error;
+    return { success: false, degree_types: [] };
   }
 };
 
 export const getDegreeCourses = async (collegeId, category, degreeType) => {
   try {
-    const response = await API.get(`colleges/${collegeId}/categories/${category}/degrees/${degreeType}/courses/`);
-    return response.data;
+    const numericId = Number(collegeId);
+    const filteredCourses = coursesData.filter(c =>
+      c.college === numericId &&
+      c.category === category &&
+      c.degree_type === degreeType
+    );
+    return { success: true, courses: filteredCourses };
   } catch (error) {
     console.error(`Error fetching courses:`, error);
-    throw error;
+    return { success: false, courses: [] };
   }
 };
 
 export const getCourseDetailsForSelection = async (courseId) => {
   try {
-    const response = await API.get(`courses/${courseId}/details/`);
-    return response.data;
+    const numericId = Number(courseId);
+    const course = coursesData.find(c => c.course_id === numericId || c.id === numericId);
+    return { success: true, course };
   } catch (error) {
     console.error(`Error fetching course details for ${courseId}:`, error);
     throw error;
@@ -278,8 +378,10 @@ export const getCourseDetailsForSelection = async (courseId) => {
 
 export const getCollegeHierarchy = async (collegeId) => {
   try {
-    const response = await API.get(`colleges/${collegeId}/hierarchy/`);
-    return response.data;
+    const numericId = Number(collegeId);
+    const college = collegesData.find(c => c.college_id === numericId);
+    const collegeCourses = coursesData.filter(c => c.college === numericId);
+    return { success: true, college, courses: collegeCourses };
   } catch (error) {
     console.error(`Error fetching college hierarchy for ${collegeId}:`, error);
     throw error;
@@ -290,31 +392,38 @@ export const getCollegeHierarchy = async (collegeId) => {
 
 export const getCollegeGallery = async (collegeId) => {
   try {
-    const response = await API.get(`colleges/${collegeId}/gallery/`);
-    return response.data;
+    const numericId = Number(collegeId);
+    const college = collegesData.find(c => c.college_id === numericId);
+    if (!college) return { college_images: [], campus_images: [] };
+    return {
+      college_images: college.college_images || [],
+      campus_images: college.campus_images || [],
+      banner_image: college.banner_image || ""
+    };
   } catch (error) {
     console.error(`Error fetching gallery for college ${collegeId}:`, error);
-    throw error;
+    return { college_images: [], campus_images: [] };
   }
 };
 
 export const getCollegeImagesByCategory = async (collegeId, category) => {
   try {
-    const response = await API.get(`colleges/${collegeId}/gallery/${category}/`);
-    return response.data;
+    const gallery = await getCollegeGallery(collegeId);
+    if (category === "college") return gallery.college_images;
+    if (category === "campus") return gallery.campus_images;
+    return [...(gallery.college_images || []), ...(gallery.campus_images || [])];
   } catch (error) {
     console.error(`Error fetching ${category} images:`, error);
-    throw error;
+    return [];
   }
 };
 
 export const getFeaturedColleges = async (limit = 6) => {
   try {
-    const response = await API.get(`colleges/featured/`, { params: { limit } });
-    return response.data;
+    return collegesData.slice(0, limit);
   } catch (error) {
     console.error("Error fetching featured colleges:", error);
-    throw error;
+    return collegesData.slice(0, limit);
   }
 };
 
@@ -322,31 +431,44 @@ export const getFeaturedColleges = async (limit = 6) => {
 
 export const getCourseCategories = async () => {
   try {
-    const response = await API.get("colleges/categories/");
-    return response.data;
+    const categoriesMap = {};
+    coursesData.forEach(c => {
+      if (c.category && !categoriesMap[c.category]) {
+        categoriesMap[c.category] = c.category_display || c.category;
+      }
+    });
+    return Object.keys(categoriesMap).map(code => ({
+      code,
+      name: categoriesMap[code]
+    }));
   } catch (error) {
     console.error("Error fetching course categories:", error);
-    throw error;
+    return [];
   }
 };
 
-export const getCollegesByCategory = async (params) => {
+export const getCollegesByCategory = async (params = {}) => {
   try {
-    const response = await API.get("colleges/by-category/", { params });
-    return response.data;
+    const category = params.category;
+    if (!category) return collegesData;
+    const matchingCollegeIds = new Set(
+      coursesData.filter(c => c.category === category || c.category_display === category).map(c => c.college)
+    );
+    return collegesData.filter(c => matchingCollegeIds.has(c.college_id));
   } catch (error) {
     console.error("Error fetching colleges by category:", error);
-    throw error;
+    return collegesData;
   }
 };
 
-export const getCoursesByCategory = async (params) => {
+export const getCoursesByCategory = async (params = {}) => {
   try {
-    const response = await API.get("courses/categories/", { params });
-    return response.data;
+    const category = params.category;
+    if (!category) return coursesData;
+    return coursesData.filter(c => c.category === category || c.category_display === category);
   } catch (error) {
     console.error("Error fetching courses by category:", error);
-    throw error;
+    return coursesData;
   }
 };
 
@@ -354,11 +476,23 @@ export const getCoursesByCategory = async (params) => {
 
 export const getApplicationFormData = async () => {
   try {
-    const response = await API.get('application-form-data/');
-    return response.data;
+    const categoriesMap = {};
+    coursesData.forEach(c => {
+      if (c.category && !categoriesMap[c.category]) {
+        categoriesMap[c.category] = c.category_display || c.category;
+      }
+    });
+    const categories = Object.keys(categoriesMap).map(code => ({
+      code,
+      name: categoriesMap[code]
+    }));
+    return {
+      colleges: collegesData,
+      categories
+    };
   } catch (error) {
     console.error('Error fetching application form data:', error);
-    throw error;
+    return { colleges: collegesData, categories: [] };
   }
 };
 
